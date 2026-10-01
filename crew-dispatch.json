@@ -1,0 +1,13 @@
+{  "rules": [    { 
+      "when": "Research or research cross-check scouts (R1-R6 and the cross-check), and any new factual research question",      "use": {        "harness": "pi",        "model": "gpt-6.1-sol",        "effort": "medium"      }, 
+      "why": "Owner requires gpt-6.1-sol or gpt-6-luna for research"    }, 
+    { 
+      "when": "Plan synthesis, plan critique, algorithm audits, privacy/consent/security reviews, and medical-content fact-checks",      "use": {        "harness": "pi",        "model": "REPLACE_WITH_STRONG_MODEL_ID",        "effort": "high"      }, 
+      "why": "Highest-stakes judgment; errors here are expensive to find later"    }, 
+    { 
+      "when": "High-risk implementation: prediction engine, encryption, key exchange, sync, permissions, data layer, migrations",      "use": {        "harness": "pi",        "model": "REPLACE_WITH_CHEAP_MODEL_ID",        "effort": "high"      },      "why": "Start cheap with more thinking; escalate to the strong model after two failed rounds"    }, 
+    {      "when": "Routine implementation, UI components, tests, docs, integration tasks, code review and UX/accessibility verification of low-risk work",      "use": {        "harness": "pi",        "model": "REPLACE_WITH_CHEAP_MODEL_ID",        "effort": "medium"      }, 
+      "why": "High-volume work; keep it cheap"    } 
+  ], 
+  "default": {    "harness": "pi",    "model": "REPLACE_WITH_CHEAP_MODEL_ID",    "effort": "medium"  } 
+}
