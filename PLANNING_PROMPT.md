@@ -58,7 +58,7 @@ No application code is written before I approve at Stage F. Stage C is the most 
 | Budget and infrastructure | $0 recurring cost. We have **no always-on home server**. Free tiers of third-party services are acceptable only if they never see unencrypted health data and we can move away from them. |
 | Data storage and sync | Health data is stored only on storage we control, and it is encrypted end to end, including while syncing between our two phones. Weigh the options and pick the best trade-off of privacy, effort, and persistence (Step 5). |
 | AI features | **Local-only.** The symptom checker and assistant are rule-based and explain their reasoning. An optional on-device model is a stretch goal. Health data is never sent to a cloud AI or any third-party API. |
-| Sub-agent models (credit cost) | Run all research and research cross-check scouts on `gpt-6.1-sol` or `gpt-6-luna` through Pi (GitHub Copilot login); set the model explicitly. Model routing lives in Firstmate's `config/crew-dispatch.json`. For other roles, propose cost-aware model choices (Step 9). |
+| Sub-agent models (credit cost) | Use Pi through GitHub Copilot with explicit provider-qualified model IDs and thinking of **high or above**. Research defaults to `github-copilot/gpt-6.1-sol`; a documented per-task override may use `github-copilot/gpt-6-luna`. Bounded implementation and low-risk reviews use Luna; extensive work, design decisions, escalation, and high-risk verification use `github-copilot/claude-opus-5.5`. `~/firstmate/config/crew-dispatch.json` is the routing source of truth; Step 9 defines the workflow. Validate credit costs against actual usage, not model names. |
 | Project management | Firstmate's backlog is the task tracker and source of truth, with dependencies. Code lives in a private GitHub repository (or local-only, decided in Phase 0). A GitHub Projects board is optional and, if used, shows phases and gates only, not every task. I may create the repository myself, or you can create it in Phase 0 after I sign in to the GitHub CLI. |
 | When to stop for my approval | 1. This plan. 2. Creating any account, repository, credential, or token. 3. Anything that costs money. 4. Destructive data actions, such as deleting or migrating real data or force-pushing. 5. Production deploys. 6. A short demo and review at the end of every phase. Decide everything else yourself and log each decision. |
 | Workspace | `~/code/flo_remade` inside WSL2 Ubuntu on Windows (bash). It contains only this prompt (`PLANNING_PROMPT.md`) and an empty `.agents/skills/` folder, committed to a fresh local git repository. Firstmate lives in `~/firstmate`. |
@@ -145,7 +145,7 @@ Work through these steps in order, following the stages in Section 1a. Plan file
 - Also write 3–5 non-blocking "Questions for my girlfriend", for example which categories she'd share by default and what she most wants from the app. Until she answers, sharing defaults to off.
 
 ### Step 1 — Research in parallel (orchestrated, low-cost)
-Dispatch R1–R6 as Firstmate scout tasks, at most 3 running at once, each on `gpt-6.1-sol` or `gpt-6-luna`. Scouts don't share the first mate's context, so give each one a self-contained, focused brief and the citation rules above. Each report starts with a summary of one page or less listing the findings that affect decisions, and stays under about 3,000 words plus citations.
+Dispatch R1–R6 as Firstmate scout tasks, at most 3 running at once, defaulting to `github-copilot/gpt-6.1-sol` with **high or above** thinking. A documented per-task override may use `github-copilot/gpt-6-luna` at high or above. Scouts don't share the first mate's context, so give each one a self-contained, focused brief and the citation rules above. These tasks collect factual evidence; architectural decisions and evaluative medical, algorithm, privacy, or security audits use the Opus profile in Step 9. Each report starts with a summary of one page or less listing the findings that affect decisions, and stays under about 3,000 words plus citations.
 
 - **R1 — Flo feature inventory:**
   - Cover every free and Premium feature as of today, and how the free/Premium split has changed over time.
@@ -193,7 +193,7 @@ Dispatch R1–R6 as Firstmate scout tasks, at most 3 running at once, each on `g
   - Ideas from first principles. For example: quick logging via iOS Shortcuts; correlations between sleep, stress, or alcohol and symptoms; tracking heavy bleeding with a validated chart (PBAC); a check-in flow for a late period or pregnancy scare; and privacy extras such as a quick-hide screen.
   - Score each candidate on value to us, effort, and privacy risk.
 
-Then dispatch one cross-check scout, also on `gpt-6.1-sol` or `gpt-6-luna`, to check the decision-relevant claims in each report and flag contradictions. Every claim about whether a feature is free or Premium needs at least two independent sources.
+Then dispatch one cross-check scout in a separate session, defaulting to `github-copilot/gpt-6.1-sol` with **high or above** thinking (or a documented `github-copilot/gpt-6-luna` override at high or above), to check the decision-relevant claims in each report and flag contradictions. Give it a self-contained brief and the source evidence, not just the researchers' conclusions. This evidence cross-check does not replace the independent Opus medical-safety and algorithm audits. Every claim about whether a feature is free or Premium needs at least two independent sources.
 
 ### Step 2 — Feature inventory and parity matrix
 Build a table with these columns: ID (`F-###`), source (Flo or Beyond Flo), feature, Flo tier (Free, Premium, or moved between tiers), what it does, inputs and outputs, decision, priority (MoSCoW), and phase.
@@ -313,7 +313,7 @@ Firstmate already provides the orchestration loop, worktree isolation, supervisi
 - **Roles, mapped to Firstmate:**
   - **Orchestrator:** the first mate. It owns the backlog and task graph, writes briefs, dispatches, enforces gates, and brings me decisions. It stays read-only over project files; integration is its own ship task after each wave.
   - **Implementers:** ship tasks, one crewmate per task, each in an isolated worktree. Each crewmate runs the build, linters, and tests itself before reporting, so there's no separate test-runner agent.
-  - **Independent verifiers:** scout tasks. A scout never ships changes, so verifiers are read-only by construction (Pi itself has no permission system). Verifier types:
+  - **Independent verifiers:** scout tasks in separate sessions from their implementers, reviewing the exact candidate revision in their own isolated workspace. They do not edit reviewed source, commit, merge, or ship changes; reports and test artifacts go outside the reviewed source. A scout label or separate worktree is not a read-only security boundary. Pi has no built-in sandbox or per-call approval system, so verify tool and operating-system safeguards as described below. Verifier types:
     - a code reviewer;
     - a spec and acceptance verifier;
     - an algorithm auditor, who recomputes expected results from the spec and citations before looking at the implementation;
@@ -321,12 +321,15 @@ Firstmate already provides the orchestration loop, worktree isolation, supervisi
     - a privacy, consent, and security reviewer;
     - a medical-content fact-checker.
   - **Plan critic** and **researcher:** scout tasks.
-- **Model and credit policy (`config/crew-dispatch.json` in `~/firstmate`):**
-  - Write natural-language dispatch rules that map each role to harness `pi`, a model, and an effort level.
-  - Research and research cross-checks run on `gpt-6.1-sol` or `gpt-6-luna`.
-  - Use cheaper models and lower effort for high-volume work (routine implementation, UI tasks, low-risk reviews). Keep stronger models for planning, plan critique, algorithm audits, and security and privacy review.
-  - Move a task to a stronger model only after two failed rounds on a cheaper one.
-  - Check the exact model IDs in Pi's model picker before writing the rules.
+- **Model and credit policy (`~/firstmate/config/crew-dispatch.json`):**
+  - This is the routing source of truth, not a second project-local dispatch file. Firstmate interprets its natural-language rules and passes explicit harness, model, and effort flags; the JSON does not automatically count retries, enforce rule priority, restrict tools, or gate merges.
+  - Apply this priority at dispatch: **Opus high-risk verification → Opus extensive/design/escalated work → Sol source research → Luna bounded high-risk implementation → Luna bounded routine work**. Prefer the more specific high-risk or extensive profile when conditions overlap; use the Luna default only for other bounded low-risk work after assessing risk. Unknown risk is not low risk.
+  - Research and factual evidence cross-checks default to `github-copilot/gpt-6.1-sol`. A documented per-task override may use `github-copilot/gpt-6-luna`. Medical-safety judgments, algorithm audits, architectural decisions, and privacy/consent/security reviews use Opus even when they consult sources.
+  - Bounded routine implementation and low-risk independent reviews use `github-copilot/gpt-6-luna`. Bounded high-risk implementation may also start on Luna, but only with an approved design and clear acceptance tests, and with independent Opus verification required before merge.
+  - Plan synthesis, plan critique, architectural decisions, extensive or ambiguous multi-file implementation and refactors, and high-risk work lacking an approved design or clear tests use `github-copilot/claude-opus-5.5` from the outset; do not require failed Luna attempts first.
+  - **High is the minimum thinking level for every role.** Use a higher level only when supported and warranted by task complexity, and record it. Verify the resolved model and actual thinking at worker startup because Pi clamps thinking to model capabilities; do not silently downgrade below high or substitute another model. Request `max` only for an explicit task-level instruction.
+  - For an implementation task, escalate the next attempt to Opus after **two documented failed fix-and-test rounds**. One round is an attempted correction followed by the relevant tests and review of outstanding findings. Firstmate records the round number, model, actual effort, candidate revision, failed checks or independent findings, attempted fix, and retest evidence in backlog notes and the next brief. Missing credentials, infrastructure failures, and unresolved requirements are blockers, not failed implementation rounds; changing models does not reset the task's three-fix-round limit.
+  - Check exact IDs in `pi --list-models` before dispatch. Treat the cost-conscious model split as a policy to validate with measured Copilot usage, latency, and failure rates; the catalog proves availability, not relative price or quality.
 - **Loop for every task:**
   1. Write the brief.
   2. Implement, with tests.
@@ -336,18 +339,25 @@ Firstmate already provides the orchestration loop, worktree isolation, supervisi
   6. Mark the task done, or blocked with evidence.
   7. Merge.
 
-  A task is never verified by the crewmate that implemented it. Verifiers report evidence (commands run, outputs, failing cases), not opinions.
+  A task is never verified by the crewmate that implemented it. Give the verifier the specification, acceptance criteria, exact candidate revision, test vectors, and source evidence, not just the implementer's summary. Algorithm auditors derive expected results from the specification and citations before inspecting the implementation. Verifiers report evidence (commands run, outputs, failing cases), not opinions; link their reports in the backlog.
 - **Risk-based verification depth** (saves credits without lowering quality):
-  - High-risk tasks (algorithms, encryption, sync, permissions, the data layer, and medical content) get a dedicated verify scout, using only the verifier types that apply, usually one or two, not all six.
-  - Low-risk UI tasks get the automated gates plus one review scout per wave.
+  - High-risk tasks (prediction and medical algorithms, encryption, key exchange, sync, permissions and consent, the data layer, migrations, backup and recovery, and medical content) get a dedicated verify scout on `github-copilot/claude-opus-5.5` at high or above, using only the verifier types that apply, usually one or two, not all six.
+  - File verification as a required dependency before merge. Automated tests passing, successful implementation on the first attempt, or escalation to Opus never waives independent review. Do not mark the task verified or authorize merging until the required reports pass. If reviewed source changes, rerun the affected gates and obtain renewed independent review of the changed scope against the new candidate revision.
+  - Low-risk UI tasks get the automated gates plus one independent Luna/high-or-above review scout per wave.
+- **Verifier safeguards (prove during Phase 0):**
+  - Use an isolated workspace for the exact candidate revision and restrict tools to the review's needs while preserving Firstmate's required status/report delivery. Permit report and test-artifact writes only outside the reviewed source; keep tests on synthetic data and exclude unrelated projects and secrets.
+  - Disabling `edit` and `write` alone is insufficient when `bash`, extensions, or other executable tools can still write. If such tools are needed for tests or screenshots, use an operating-system sandbox or read-only filesystem boundary for reviewed source and unrelated host paths, with a separate writable scratch/output area. A worktree or prompt instruction alone does not provide this protection.
+  - Validate these restrictions with a disposable fixture before relying on them: prove reading and reporting work, source writes are refused through every enabled executable path, and unrelated host resources are not exposed. Record the launch configuration and evidence in `docs/plan/agent-operating-model.md`. If the safeguards cannot be verified with the installed Firstmate adapter, record that as a Phase 0 blocker instead of claiming read-only enforcement or silently changing the launcher.
 - **Task briefs are self-contained.** Each one includes:
   - the goal and background;
   - the files the task owns, and files it must not touch;
   - interfaces and contracts;
   - acceptance criteria in Given/When/Then form;
-  - test commands;
+  - test commands and any reference test vectors or source evidence;
   - the relevant constitution rules;
-  - the expected report format: files changed, evidence, and open issues, in about 15 lines or fewer.
+  - risk, matched dispatch rule, resolved model and effort, prior fix-round count, and the evidence for any escalation;
+  - for verifiers, the exact candidate revision, report/output location, source-write restrictions, and the mandatory independent review gate;
+  - the expected report format: files changed or revision reviewed, evidence, and open issues, in about 15 lines or fewer.
 
   Briefs point to files by path instead of pasting their contents.
 - **Parallelism:**
@@ -363,7 +373,7 @@ Firstmate already provides the orchestration loop, worktree isolation, supervisi
   - Make one git commit per task, using Conventional Commits. Record decisions as ADRs in `docs/adr/`, and keep a progress log in `docs/progress.md`.
 - **Escalation:**
   - Decide everything yourself except at the Section 3 checkpoints.
-  - If a task still fails after 3 fix rounds, try a different approach or revise the plan. Save anything still unresolved and bring it to me together at the next checkpoint.
+  - Escalate the next implementation attempt to Opus after two documented failed fix-and-test rounds, as defined above. If the task still fails after three total fix rounds, stop retrying that approach, mark it blocked with evidence, and propose a different approach or plan revision. A revised approach needs a new explicit brief and recorded rationale, not a silent reset of the counter. Save anything still unresolved and bring it to me together at the next checkpoint.
   - Collect all account, repository, and credential requests (GitHub, hosting, push-notification keys) in Phase 0, so that later phases can run without me.
 - **Phase demo package:**
   - what's new;
@@ -377,7 +387,7 @@ Firstmate already provides the orchestration loop, worktree isolation, supervisi
 - **Set up this model during Phase 0:**
   - the git repository (private GitHub, or local-only), registered as a Firstmate project;
   - `AGENTS.md` at the repository root with the constitution, coding standards, and Definition of Done. Keep it under about 150 lines, because every crewmate loads it; put long references in skills or `docs/` instead;
-  - `config/crew-dispatch.json` with the role rules above;
+  - validate the role rules in `~/firstmate/config/crew-dispatch.json`, verify model availability and actual thinking, and prove the verifier safeguards above; do not create a competing project-local dispatch configuration;
   - reusable skills in `.agents/skills/<name>/SKILL.md`, for example the task-brief format, the verification protocol for each verifier type, and a cycle-math reference. Check that Pi loads skills from that folder; if it doesn't, use the folder Pi documents, or reference the files from `AGENTS.md`;
   - the Firstmate backlog, loaded from `docs/plan/backlog-import.md`.
 
@@ -455,7 +465,9 @@ Write full task detail only for P0–P2 (see "Plan depth" in Section 9). Each of
 - [ ] Every privacy and security rule has an automated check or a named review step.
 - [ ] Every P0–P2 task is small and self-contained, with owned files, acceptance criteria, verification commands, and a risk level. The dependency graph has no cycles, tasks in the same wave share no files, and the task list is ready to load into the Firstmate backlog.
 - [ ] Every phase ends with a gate, a verification report, and a demo we can both try on our iPhones.
-- [ ] Research ran on `gpt-6.1-sol` or `gpt-6-luna`, and every execution role has a model choice.
+- [ ] Research ran on `github-copilot/gpt-6.1-sol` or a documented `github-copilot/gpt-6-luna` override, and every execution role has a recorded model choice with thinking of high or above.
+- [ ] The operating model specifies routing priority, evidence-backed escalation after two failed fix-and-test rounds, and passing independent Opus verification before any high-risk merge; model changes cannot reset the three-fix-round limit.
+- [ ] Phase 0 includes disposable-fixture verification of the review workspace and tool safeguards, with unresolved enforcement gaps recorded as blockers rather than described as read-only protection.
 - [ ] Nothing depends on paid services, an always-on server, or a cloud AI.
 - [ ] Nothing copies Flo's content or branding.
 - [ ] Someone with no domain knowledge (me) can follow the executive summary and glossary.
