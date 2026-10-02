@@ -1,0 +1,17 @@
+node_modules/
+.npmrc
+.npmrc.*
+dist/
+coverage/
+playwright-report/
+test-results/
+.toolchain-scratch/
+.wrangler/
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+!.env.example
+*.pem
+.DS_Store
+npm-debug.log*

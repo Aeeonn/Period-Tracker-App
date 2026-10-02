@@ -1,0 +1,212 @@
+{
+  "allowed": ["0BSD", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "MIT"],
+  "devOnlyExceptions": {
+    "@axe-core/playwright": {
+      "version": "4.13.0",
+      "license": "MPL-2.0",
+      "directDevOnly": true,
+      "requiredDependency": {
+        "name": "axe-core",
+        "version": "4.13.0"
+      },
+      "noticeFiles": ["LICENSE"],
+      "noticeMustContain": ["Mozilla Public License, version 2.0"],
+      "reason": "Captain-approved, unmodified, private accessibility test tooling only."
+    },
+    "axe-core": {
+      "version": "4.13.0",
+      "license": "MPL-2.0",
+      "requiredBy": ["@axe-core/playwright"],
+      "noticeFiles": ["LICENSE"],
+      "noticeMustContain": ["Mozilla Public License, version 2.0"],
+      "reason": "Required by the captain-approved, dev-only @axe-core/playwright test tool."
+    },
+    "@img/sharp-libvips-darwin-arm64": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-darwin-x64": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-linux-arm": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-linux-arm64": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-linux-ppc64": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-linux-riscv64": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-linux-s390x": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-linux-x64": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-linuxmusl-arm64": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-libvips-linuxmusl-x64": {
+      "version": "1.3.3",
+      "license": "LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["README.md"],
+      "noticeMustContain": [
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-wasm32": {
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later AND MIT",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["LICENSE", "README.md"],
+      "noticeMustContain": [
+        "Apache License",
+        "LGPLv3",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-win32-arm64": {
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["LICENSE", "README.md"],
+      "noticeMustContain": [
+        "Apache License",
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-win32-ia32": {
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["LICENSE", "README.md"],
+      "noticeMustContain": [
+        "Apache License",
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@img/sharp-win32-x64": {
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["LICENSE", "README.md"],
+      "noticeMustContain": [
+        "Apache License",
+        "LGPLv3",
+        "Mozilla Public License 2.0",
+        "Alliance for Open Media Patent License 1.0"
+      ],
+      "reason": "Exact platform bundle in Wrangler's private dev-only Miniflare toolchain."
+    },
+    "@speed-highlight/core": {
+      "version": "1.2.24",
+      "license": "CC0-1.0",
+      "requiredBy": ["wrangler"],
+      "noticeFiles": ["LICENSE"],
+      "noticeMustContain": ["CC0 1.0 Universal"],
+      "reason": "Exact private dev-only syntax-highlighting dependency of Wrangler's Miniflare diagnostics."
+    },
+    "minimatch": {
+      "version": "10.2.6",
+      "license": "BlueOak-1.0.0",
+      "requiredBy": ["eslint", "typescript-eslint"],
+      "noticeFiles": ["LICENSE.md"],
+      "noticeMustContain": ["Blue Oak Model License", "Version 1.0.0"],
+      "reason": "Exact private dev-only glob-matching dependency of approved lint tools."
+    }
+  }
+}
