@@ -1,6 +1,6 @@
 # ADR-0002: Local-first encrypted store on each phone
 
-- **Status:** Proposed (Stage C, 2026-10-02)
+- **Status:** Proposed (Stage C, 2026-10-02; reviewed in Stage D/E, unchanged)
 - **Context:** Health data must stay on storage we control and be encrypted at rest (constitution rules 2–3). The app must be fully usable offline. Home Screen storage can still be evicted or deleted (R4 §2).
 - **Decision:**
   - Each phone keeps its full working set in IndexedDB, as AES-GCM-sealed records with HMAC opaque ids.

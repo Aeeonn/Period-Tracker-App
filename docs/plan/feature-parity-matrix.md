@@ -1,6 +1,6 @@
 # Feature inventory and parity matrix (Step 2)
 
-**Status:** Stage C draft, 2026-10-02. Not yet critiqued (Stage D) or approved (Stage F).
+**Status:** Stage E revision, 2026-10-02. Critiqued in Stage D and corrected in Stage E ([stage-e-resolution.md](stage-e-resolution.md)); not yet approved (Stage F). No feature decision changed in Stage E.
 **Inputs:** [R1](research/R1-flo-feature-inventory.md), [R2](research/R2-flo-methods.md), [R6](research/R6-beyond-flo.md), corrected by the [Stage B cross-check](research/crosscheck-stage-b.md). All sources accessed 2026-10-02.
 
 ## How to read this matrix
@@ -106,7 +106,7 @@
 
 ## Matrix — Beyond-Flo candidates
 
-R6 scores (B01–B16) are **R6's ordinal, inferred scores** (V = value 1–5, E = effort 1–5, P = privacy risk 1–5; R6 §3). F-117 and F-118 are scored by this plan with the same rubric (Inferred, medium confidence). F-119 implements a constitution requirement and is listed for traceability.
+R6 scores (B01–B16) are **R6's ordinal, inferred scores** (V = value 1–5, E = effort 1–5, P = privacy risk 1–5; R6 §3). F-117, F-118, F-119 and F-120 are scored by this plan with the same rubric (Inferred, medium confidence). F-119 also implements a constitution requirement and is listed for traceability.
 
 | ID | R6 | Feature | V/E/P | What it does | Decision | Justification | MoSCoW | Phase |
 |---|---|---|---|---|---|---|---|---|

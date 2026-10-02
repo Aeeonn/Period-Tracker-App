@@ -1,6 +1,6 @@
 # UX and content specification (Step 7)
 
-**Status:** Stage C draft, 2026-10-02. Wireframes are text sketches only; no visual design has been made yet. The app's name is a placeholder until it is approved (AP-20). Its working name is **"Tide"**, an original name chosen to avoid Flo branding (constitution rule 5).
+**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)). Wireframes are text sketches only; no visual design has been made yet. The app's name is a placeholder until it is approved (AP-20). Its working name is **"Tide"**, chosen to avoid Flo branding (constitution rule 5); "Tide" is also a well-known third-party trademark, so the final name needs a name check (AP-20).
 
 ## 1. Principles
 
@@ -49,10 +49,12 @@ flowchart TB
    - goal (track my cycle / avoid pregnancy / trying to conceive);
    - birth year (optional; used for FIGO age bands and perimenopause gating).
 7. **(Her) Reminders:** "Remind me to log my period while I'm on it" (on), "Daily check-in" (time picker, off). Push needs a separate permission request, triggered by a tap later (R4 §3).
-8. **Pair now or later.** Pairing is never required. Sharing is off until she turns categories on.
+8. **Who runs the app's servers** (fixed text, both roles; PR-08, T-UX-05). Shown before pairing is offered and repeated in Sharing help:
+   > "This app's website and its encrypted mailbox run on a free Cloudflare account held by **<the AP-10 account holder>**. That person can't read your encrypted data. They can see when your phone connects and roughly where from, and they could change the app's code. The mailbox is set up to keep no logs, but its owner could turn logging back on. If you'd rather hold the account yourself, that can be arranged." (The last sentence is shown only when the account holder is not her.)
+   Then **Pair now or later.** Pairing is never required. Sharing is off until she turns categories on.
 9. **First Today:** the first-cycle state (§5).
 
-**His onboarding** is steps 1–5, then "Scan her pairing code", then the partner Today screen, which reads "Nothing shared yet — that's her choice."
+**His onboarding** is steps 1–5 and 8, then pairing in person (he scans her first code, shows his own for her to scan, scans her confirmation code, and both compare the 6-digit safety code), then the partner Today screen, which reads "Nothing shared yet — that's her choice."
 
 ### 3.2 Her Today
 
@@ -116,6 +118,7 @@ The sheet shows the trackers she pinned. The defaults are flow, symptoms, mood, 
   - RECENTLY_CHANGED.
 
   A coverage line always shows, e.g. "Patterns only reflect days you logged (21 of 84)".
+  A TENDENCY appears only after the A12 chance check, and every tendency card carries the line "Patterns can appear by chance, especially with only a few cycles." The "Why?" sheet says how many patterns were checked. NO_CLEAR_PATTERN is expected for the first several cycles and is worded as normal. Comfort carries "Comfort is only logged when you have sex, so this may not reflect the whole cycle."
 - **"When you've tended to feel like sex"** (F-118):
 
   ```text
@@ -125,7 +128,8 @@ The sheet shows the trackers she pinned. The defaults are flow, symptoms, mood, 
   │ This describes your past logs. It's  │
   │ not a prediction, and it never       │
   │ means yes. Mid-cycle is also when    │
-  │ pregnancy is more likely.            │
+  │ pregnancy is more likely. Patterns   │
+  │ can appear by chance.                │
   └──────────────────────────────────────┘
   ```
 - **Cycle history:** lengths chart, period lengths, variability, labelled ranges with sources, and her prediction track record (A18).
@@ -136,7 +140,7 @@ The sheet shows the trackers she pinned. The defaults are flow, symptoms, mood, 
 
 Settings → Life stage → choose a mode:
 - **Pregnancy:** dating source (LMP, clinician due date, IVF transfer, conception date) and number of babies.
-- **Leaving pregnancy:** the gentle exit flow asks "How did your pregnancy end?" with the options birth, loss, or prefer not to say → "ended". Copy for loss is reviewed for sensitivity. Nothing about a mode change is sent to the partner unless the `life_stage` category is on (CR-09).
+- **Leaving pregnancy:** the gentle exit flow asks "How did your pregnancy end?" with the options birth, loss, or prefer not to say → "ended". Copy for loss is reviewed for sensitivity. Nothing about a mode change is sent to the partner unless the `life_stage` category is on (CR-09). If any category is on when she enters pregnancy or postpartum mode, she sees: "He won't be told why, but he may notice that sharing paused." (P4.)
 
 ### 3.7 Reminders
 
@@ -168,6 +172,7 @@ Settings → Life stage → choose a mode:
 - **Pause** takes one tap and asks no question.
 - Each category screen has a "Stop sharing (revoke)" action that explains key rotation in plain words.
 - A **consent history** lists pair, unpair, on, off, pause and revoke events with dates (private to her).
+- **Sharing help** repeats the fixed "Who runs the app's servers" text from onboarding step 8 (T-UX-05), next to the "can't unsee" explanation.
 
 ### 3.9 Couple space (Us tab; both write)
 
@@ -238,7 +243,8 @@ Returning means unlocking. Nothing is deleted. The app does not pretend to be a 
 
 ## 6. Uncertainty and disclaimers without clutter
 
-- **One line on the screen, depth on request.** Predictions always show a range ("around Oct 8, Oct 4–10"). "Why?" opens a sheet with:
+- **One line on the screen, depth on request.** Predictions always show a range ("around Oct 8, Oct 4–10"). The range is a rule-of-thumb planning range, never called a probability or a guarantee. "Why?" opens a sheet with:
+  - how often the range was right for her, once at least 6 periods have been predicted ("Your last 8 periods: 6 started inside the range"), or "We'll show how often this range was right once you've logged 6 more periods";
   - the method (e.g. "your last 7 cycles, weighted toward recent ones");
   - what widened the window;
   - the version;
@@ -246,6 +252,8 @@ Returning means unlocking. Nothing is deleted. The app does not pretend to be a 
 - **The fertility "no safe days" line** is permanent on every fertility surface, in compact form: "No day is 'safe' without contraception." The full disclaimer sits behind ⓘ.
 - **One app-wide disclaimer** at onboarding and in About: informational only, not a diagnosis, not birth control. Medical cards carry their own one-line source attribution.
 - **Never** use numbers for pregnancy chance (A5), "safe" or "infertile", or "you have <condition>".
+- **When the chance can't be estimated**, the chance line shows the fixed text of the matching A5 category (pregnant, after birth, hormonal method, late, unusual cycle length, no data yet), never a blank. Outside pregnancy mode it always sits next to the permanent "No day is 'safe' without contraception" line, and none of the texts implies a safe day.
+- **Fertile estimates say what they miss.** The fertility "Why?" sheet includes: "Ovulation can happen outside these dates, especially if the time between ovulation and your period is short. The calendar can't tell." 
 
 ## 7. Tone, copy rules and accessibility
 

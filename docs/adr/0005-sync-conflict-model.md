@@ -1,6 +1,6 @@
 # ADR-0005: Single-writer records, HLC last-writer-wins and conflict copies
 
-- **Status:** Proposed (Stage C, 2026-10-02)
+- **Status:** Proposed (Stage C, 2026-10-02; reviewed in Stage D/E, unchanged)
 - **Context:** Both phones write, and sync must never silently lose edits (constitution rule 6). CRDTs would add complexity that this two-person app does not need.
 - **Decision:**
   - Every record has exactly one author device. Her flags on couple entries are separate records that she writes.

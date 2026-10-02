@@ -1,6 +1,6 @@
 # ADR-0001: Stack — strict TypeScript, Preact, Vite, IndexedDB, WebCrypto
 
-- **Status:** Proposed (Stage C, 2026-10-02)
+- **Status:** Proposed (Stage C, 2026-10-02; reviewed in Stage D/E, unchanged)
 - **Context:** The constitution requires a mainstream, typed, well-documented stack (rule 9), minimal dependencies (rule 3) and fast iPhone startup. The app is a Safari Home Screen PWA (R4).
 - **Decision:**
   - TypeScript in strict mode.

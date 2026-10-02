@@ -1,10 +1,11 @@
 # Plan — private cycle tracker for two (Flo-equivalent, iPhone web app)
 
-**Status:** Stage C draft, 2026-10-02.
+**Status:** Stage E revision, 2026-10-02. Ready for the Stage F presentation; **not approved**.
 
-- Made by the Stage C plan-synthesis worker (`github-copilot/claude-opus-5.5`, high thinking), from the preserved planning prompt (`~/firstmate/data/flo-planning/planning-prompt.md`, which supersedes the older committed `PLANNING_PROMPT.md`), the Stage C note, the six research reports and the cross-check.
-- **Not yet critiqued:** Stage D (independent plan critique) and Stage E (fixes) are later tasks.
-- **Not yet approved:** Stage F.
+- Stage C: drafted by the plan-synthesis worker (`github-copilot/claude-opus-5.5`, high thinking), from the preserved planning prompt (`~/firstmate/data/flo-planning/planning-prompt.md`, which supersedes the older committed `PLANNING_PROMPT.md`), the Stage C note, the six research reports and the cross-check.
+- Stage D: an independent Opus plan critique (`~/firstmate/data/flo-plan-critique/report.md`) found 3 critical blockers, 14 material corrections, 7 optional suggestions and 3 factual gaps.
+- Stage E: this revision fixes all critical and material findings and most optional ones. Each finding, the change, its check and what remains is listed in [stage-e-resolution.md](stage-e-resolution.md); the mechanical checks are re-run in [consistency-check.md](consistency-check.md).
+- **Not yet approved:** Stage F. Approving the plan does not approve any account, credential, install, deploy, payment or destructive action (§18 B).
 - **No application code exists.** None is written before approval.
 
 Supporting files:
@@ -13,7 +14,8 @@ Supporting files:
 |---|---|
 | Research | [R1](research/R1-flo-feature-inventory.md) · [R2](research/R2-flo-methods.md) · [R3](research/R3-clinical-methods.md) · [R4](research/R4-ios-pwa-capabilities.md) · [R5](research/R5-storage-sync-hosting.md) · [R6](research/R6-beyond-flo.md) · [Cross-check](research/crosscheck-stage-b.md) |
 | Design | [Feature matrix](feature-parity-matrix.md) · [Algorithms](algorithms-spec.md) · [Architecture](architecture.md) · [Storage/sync decision](storage-sync-decision.md) · [Security & privacy](security-privacy.md) · [UX & content](ux-spec.md) |
-| Delivery | [Tests & gates](test-strategy.md) · [Agent operating model](agent-operating-model.md) · [Roadmap](roadmap.md) · [Task briefs](task-briefs.md) · [Backlog import](backlog-import.md) · [Consistency check](consistency-check.md) · [ADRs](../adr/README.md) |
+| Delivery | [Tests & gates](test-strategy.md) · [Agent operating model](agent-operating-model.md) · [Roadmap](roadmap.md) · [Task briefs](task-briefs.md) · [Backlog import](backlog-import.md) · [Consistency check](consistency-check.md) · [Checker script](tools/check_plan.py) · [ADRs](../adr/README.md) |
+| Review | [Stage E resolution record](stage-e-resolution.md) (Stage D findings → changes → checks → residual gaps) |
 
 ## 1. Executive summary
 
@@ -30,8 +32,9 @@ We will build a private app for two people. It is installed from Safari onto bot
 - Add couple entries, such as dates, notes and affectionate notes, which both can see.
 
 **How the protection works:**
-- Her choices are enforced by **encryption**. His phone is never given the keys to anything she has not shared.
+- Her choices are enforced by **encryption**. His phone is never given the keys to anything she has not shared, and his backups never keep copies of what she shared.
 - Revoking stops future sharing. It cannot make him "unsee" what he already saw, and the app says so plainly.
+- **One honest limit.** Someone has to own the free cloud account that serves the app and runs the mailbox. Whoever owns it can see *when* the phones connect and roughly from where, and could change the app's code. If that person is him, he would have that view of her. So the plan asks who should own the account (her, both of you, or him with this explained to her inside the app), and keeps the mailbox from recording anything it doesn't need. Encryption cannot remove this limit; choosing the owner decides who holds it.
 
 **Where the data lives:**
 - On each phone, encrypted.
@@ -45,7 +48,12 @@ We will build a private app for two people. It is installed from Safari onto bot
 
 **What we can and cannot promise about Flo:**
 - Flo does not publish its formulas. We copy its *documented* rules and use evidence-based methods for the rest. Each one is labelled.
-- We cannot measure Flo's accuracy. Instead the app shows her its own track record.
+- We cannot measure Flo's accuracy, so we never claim to match it. Instead the app shows her its own track record, for example "your last 8 periods: 6 started inside the range".
+- "Her patterns" (when she has tended to feel more energy or desire) only appear once they pass a check against chance, so for the first several cycles the honest answer will often be "no clear pattern yet".
+
+**When real use starts.** Until Phase 6, every copy on the internet is a *preview* with made-up data, used for demos on both phones. Her real day-to-day use starts only after the production launch in Phase 6, which needs its own yes from the captain.
+
+**What is still unproven.** Nothing has been built or tested. Phone behaviour (storage, notifications, camera, Face ID), the free-tier terms, the security design and the medical rules all have named checks or independent reviews before anything relies on them.
 
 **Order of work:**
 1. P0 foundation and phone checks.
@@ -57,7 +65,7 @@ We will build a private app for two people. It is installed from Safari onto bot
 7. P6 hardening.
 8. P7 stretch goals.
 
-Each phase ends with a demo on both phones and the captain's "continue".
+Each phase ends with a demo on both phones and the captain's "continue". While merge approval (`yolo`) stays off, the captain also approves each finished piece of work before it is added to the main code (§13).
 
 ## 2. Glossary
 
@@ -65,10 +73,10 @@ Each phase ends with a demo on both phones and the captain's "continue".
 |---|---|
 | Cycle | From the first day of one period to the day before the next. Day 1 is the first day of real bleeding (not spotting) |
 | Period / spotting | A period is real flow. Spotting is light bleeding that doesn't start a period |
-| Ovulation | The release of an egg, usually about 12–16 days before the next period. It can't be seen directly at home |
+| Ovulation | The release of an egg, roughly two weeks before the next period. The gap varies between people and cycles (in one large study it averaged about 12 days and ranged from about 7 to 17). It can't be seen directly at home |
 | Fertile window | The few days when sex can lead to pregnancy: roughly the 5 days before ovulation plus the day of ovulation. It moves from cycle to cycle |
 | LH test | A urine "ovulation test". A positive result usually means ovulation within about 2 days |
-| BBT | Basal body temperature. It rises slightly *after* ovulation, so it confirms ovulation afterwards rather than predicting it |
+| BBT | Basal body temperature. A sustained small rise is evidence that ovulation has *probably* already happened; it does not prove it and cannot predict it |
 | Cervical mucus | Vaginal discharge that becomes clear and stretchy near ovulation |
 | PMS / PMDD | Symptoms before a period; PMDD is a severe form. Only a clinician diagnoses these |
 | PCOS / endometriosis / fibroids | Conditions that can cause irregular, painful or heavy periods. The app can only suggest "worth discussing" |
@@ -82,14 +90,18 @@ Each phase ends with a demo on both phones and the captain's "continue".
 | Projection | The small summary her phone makes for a shared category, for example "cycle day 12, period expected Oct 4–10". It is never her raw logs |
 | Relay / mailbox | The free cloud program that stores and forwards encrypted data. It cannot read it |
 | HLC | Hybrid logical clock. It orders edits from two phones so that sync is predictable |
-| Tendency | A pattern in her own past logs, with how many cycles and days support it. It is not a prediction, and never consent |
+| Tendency | A pattern in her own past logs that passed a check against chance, with how many cycles and days support it. It is not a prediction, and never consent |
+| Planning range | The "between Oct 4 and 10" range around a predicted period. A rule of thumb, not a guarantee; the app shows how often it was right for her |
+| Safety code | Six digits both phones show during pairing; if they match, nobody swapped the codes in between |
+| Preview | A copy of the app on the internet with made-up data, for demos only. Real use starts with the production launch (P6) |
+| Landing | Adding a finished, checked piece of work to the main code. The first mate does it with Firstmate's guarded tool after approval |
 | MoSCoW | Must / Should / Could / Won't priority |
 | ADR | Architecture decision record |
 
 ## 3. Users, roles and consent model
 
 **Her (owner).**
-- Owns and logs all of her health data on her phone. Her phone is the only one that can read it.
+- Owns and logs all of her health data on her phone. Her phone is the only one that can read it, as long as the app code it runs is genuine (see the operator note below).
 - Chooses sharing **category by category**, with everything **off by default**, and can preview exactly what he sees.
 - Can pause (one tap, no reason asked), revoke (keys rotate) or unpair.
 
@@ -105,7 +117,9 @@ Each phase ends with a demo on both phones and the captain's "continue".
 
 **Desire is not consent.** Logs of desire describe her past and never imply willingness or permission. The cycle owner's earlier answers name the categories she would like to share (cycle, and when she has tended to feel like sex). These answers are **not** consent: actual sharing stays off until she turns categories on in the app.
 
-The full rules are in [security-privacy.md §2](security-privacy.md#2-consent-and-privacy-rules-testable) (CR-01 to CR-21), and each rule has a test.
+**Who runs the infrastructure (disclosed to her).** One person holds the Cloudflare account that serves the app and runs the encrypted mailbox. That person cannot read her encrypted data, but can see when and roughly where the phones connect, and could change the app's code. The account holder is a choice in AP-10 (her, joint, or him with this disclosure). Whatever is chosen, onboarding and Sharing help say so in plain words (PR-08), and the mailbox keeps no logs (PR-07). Threat T13 in [security-privacy.md](security-privacy.md#1-threat-model) states the remaining risk.
+
+The full rules are in [security-privacy.md §2](security-privacy.md#2-consent-and-privacy-rules-testable) (CR-01 to CR-21, plus privacy rules PR-01 to PR-08), and each rule has a test.
 
 ## 4. Assumptions and decisions
 
@@ -119,8 +133,9 @@ The full rules are in [security-privacy.md §2](security-privacy.md#2-consent-an
 | 6 | Affectionate notes are a narrow couple-space feature, not a messaging framework | Stage C note |
 | 7 | Free/Premium tiers mostly can't be independently verified; parity targets the *function* | Cross-check §1 |
 | 8 | Flo's formulas are undisclosed; we use documented Flo rules plus labelled evidence-based substitutes | R2; algorithms-spec.md |
-| 9 | Cloudflare Free (Workers + D1 + Pages) is the relay and host, **pending Phase 0 checks FB-01/02/09** | storage-sync-decision.md |
-| 10 | Everything else in the plan was decided by the planner and is logged in ADRs 0001–0009 | docs/adr |
+| 9 | Cloudflare Free (Workers + D1 + Pages) is the relay and host, **pending Phase 0 checks FB-01/02/09** and the account-custody choice (AP-10) | storage-sync-decision.md |
+| 10 | The project is registered **local-only** (no remote). This is settled; landings use Firstmate's guarded local fast-forward with the configured merge authority (`yolo` currently off) | Approval note; AP-17 |
+| 11 | Everything else in the plan was decided by the planner and is logged in ADRs 0001–0009 | docs/adr |
 
 The constitution (prompt §4) applies to every task. [test-strategy.md §3](test-strategy.md#3-constitution-enforcement-matrix-every-section-3-and-4-rule) maps each rule to how it is enforced and how it is checked.
 
@@ -154,7 +169,7 @@ Unverified tiers and Flo's own contradictions are carried in the matrix's final 
 | F-103 | Relationship check-in | 5/3/3 | Add (P5) |
 | F-104, F-107, F-108, F-112, F-116, F-120 | Intimacy-preference prompts; lifestyle correlations; Shortcuts; PBAC; log Q&A; .ics | — | Backlog |
 
-V = value, E = effort, P = privacy risk, each 1–5. Scores come from R6 (ordinal, inferred); F-117, F-118 and F-119 are scored by this plan.
+V = value, E = effort, P = privacy risk, each 1–5. Scores come from R6 (ordinal, inferred); F-117, F-118, F-119 and F-120 are scored by this plan with the same rubric.
 
 ## 7. How everything ties together
 
@@ -180,14 +195,14 @@ Full specification: [algorithms-spec.md](algorithms-spec.md). Every algorithm ha
 |---|---|---|
 | A0 | Local calendar dates (no UTC/DST errors) | Design |
 | A1 / A3 | Period vs spotting episodes; period length | Evidence + design; Flo auto-end (shown as "assumed") |
-| A2 | Next period: Flo's documented history rules (last 12 cycles, exclude >90 days and >1 year old) + recency-weighted median + MAD window. One unusual cycle widens the window; three repeats move the predicted day | Flo-documented + evidence/design |
-| A4 / A5 | Calendar ovulation (luteal 12–16), Flo 7-day core window + wider band; chance Lower/Medium/Higher, **never zero, no %** | Flo-documented + Wilcox/ASRM; Adapt |
-| A6–A9 | BBT shift (independently written; no AGPL code), LH next-day rule, mucus peak, marker priority | Flo-documented + WHO/JHU, ASRM |
+| A2 | Next period: Flo's documented history rules (last 12 cycles, exclude >90 days and >1 year old) + recency-weighted median + MAD **planning range** (not a calibrated interval; her real hit rate is shown after 6 periods). One unusual cycle widens the range; 3–4 repeats move the predicted day | Flo-documented + evidence/design |
+| A4 / A5 | Calendar ovulation (luteal 12–16 is a DESIGN default; the short-luteal tail it misses is stated), Flo 7-day core window + wider band; chance Lower/Medium/Higher, **never zero, no %**; every suppressed state (pregnant, postpartum, hormonal, late, unusual cycle length, no data) has a named category and fixed text | Flo-documented + Wilcox/ASRM; Adapt |
+| A6–A9 | BBT shift (independently written; no AGPL code), LH next-day rule, mucus peak, marker priority, symptothermal "wait for the later sign" cross-check (never an infertile-day label), personal luteal evidence that only widens the band | Flo-documented + WHO/JHU, ASRM |
 | A10 | Pregnancy dating: LMP+280, IVF transfer+(266−embryo age), clinician overrides | ACOG CO700 (Adapt from Flo's 41-week text) |
 | A11 | Warning cards W-01–W-11, each tied to its source (ACOG, NHS, NICE, FIGO, PCOS 2023, ESHRE) | Evidence; trigger counts are design choices, flagged for audit |
-| A12 | Personal tendencies: minimum 3 cycles; ≥6 logged days from ≥3 cycles per phase; missing ≠ none; coverage shown; "no clear pattern" and "recently changed" states; separate from fertility and consent | Design (motivated by Roney 2013, Romans 2012, Doornweerd 2025) |
+| A12 | Personal tendencies on a short list of metrics (desire, energy, comfort, two mood groups, up to 3 watched symptoms); minimum 3 cycles; ≥6 logged days from ≥3 cycles per phase; a rotation-based **chance check** (target ≤5% false patterns per metric); missing ≠ none; coverage and "patterns can appear by chance" shown; comfort's selection bias stated; "no clear pattern" and "recently changed" states; separate from fertility and consent | Design (motivated by Roney 2013, Romans 2012, Doornweerd 2025); thresholds not clinically validated |
 | A13–A16 | Analytics with source-labelled ranges; perimenopause signals (age-gated; unvalidated impact summary); checker patterns; contraception/postpartum/loss modifiers | Evidence + design |
-| A17 / A18 | Card selection; backtesting vs 28-day and plain-average baselines (MAE, ±1/±2, coverage) on synthetic data; on-device track record | Design |
+| A17 / A18 | Card selection; backtesting vs 28-day and plain-average baselines with **per-scenario** targets on **frozen**, source-labelled synthetic scenarios (no real-world or Flo-parity claim); on-device track record | Design |
 
 ## 9. Architecture, and the storage and sync decision
 
@@ -197,11 +212,13 @@ Full specification: [algorithms-spec.md](algorithms-spec.md). Every algorithm ha
 
 **Two-person model:**
 - Device keys, with no accounts.
-- In-person two-way QR pairing plus a 6-digit safety code.
+- In-person QR pairing (commit, then reveal) plus a 6-digit safety code over the whole exchange; AirDropped files if a camera can't scan.
 - Three data areas: private (key PDK), shared projections (per-category keys) and couple (key CPK).
 - Single-writer records, HLC last-writer-wins and conflict copies, so no edit is silently lost.
 
 **Storage, sync and backup decision.** The weighted matrix covers all six options. Recommended: **local-first + Cloudflare Workers/D1 ciphertext mailbox + encrypted backup files**, scoring 415/500. Manual exchange scores 410, so it is kept as a first-class fallback. Hosting is Cloudflare Pages with strict headers. Reminders are a generic daily Web Push, with details shown after unlock.
+
+**Preview versus production.** Preview copies (synthetic data, separate secrets) are produced by backlog items for every phase demo. Production is a separate environment deployed only in P6 after the captain's concrete approval (AP-29) ([storage-sync-decision.md §8](storage-sync-decision.md#8-static-hosting-comparison)).
 
 **Key documents:**
 - [architecture.md](architecture.md);
@@ -227,12 +244,13 @@ Full specification: [algorithms-spec.md](algorithms-spec.md). Every algorithm ha
 
 Full design: [security-privacy.md](security-privacy.md).
 
-- **Threat model** covers T1–T12. Remaining risks are stated honestly, for example that a malicious app build could leak data from an unlocked app, and that metadata reaches providers.
+- **Threat model** covers T1–T14. Remaining risks are stated honestly, for example that a malicious app build could leak data from an unlocked app, that metadata reaches providers, and (T13) that whoever holds the infrastructure account, possibly her partner, can see connection metadata and could change the code. Turning logs off reduces what is kept; it does not make the infrastructure invisible to its owner.
 - **Keys:**
   - passphrase (PBKDF2-SHA-256, 600k iterations), recovery code or optional passkey PRF → local master key;
   - per-category keys wrapped to his device with ECDH P-256;
   - rotation on revoke or unpair.
-- **Strict CSP and headers;** no third-party origins.
+- **Strict CSP and headers;** the app's own first-party origin only, no third-party asset, SDK or CDN origins; deployed bytes are compared with the build to catch injected scripts.
+- **Relay metadata minimisation:** no logs, no IP or location reads, opaque ids, sequence-number cursors (PR-07).
 - **Network allowlist test;** crypto-erasure for "delete all".
 - **Dependency policy:** exact pins, licence allowlist with no GPL/AGPL in the bundle, and audit at every gate.
 - **No PIN** is offered in v1 (AP-07).
@@ -277,9 +295,13 @@ Full model: [agent-operating-model.md](agent-operating-model.md) and [ADR-0009](
 
 **Fix rounds.** After 2 documented failed rounds, the next attempt goes to Opus. After 3 rounds, stop and block; changing the model never resets the count.
 
-**Limits.** At most 3 workers. Foundation tasks run one at a time. Integration follows each wave.
+**Limits.** At most 3 workers. Foundation tasks run one at a time. Every task lands on its own after its checks and verify pass, so `main` is integrated continuously; one integration task per phase wires screens and runs the end-to-end journeys (a justified deviation from "after each wave", listed in AP-17).
 
-**Verifier sandbox.** The proposed setup is Pi `--tools` plus a bubblewrap sandbox extension. It is **not yet proven**, and is recorded as FB-08 if it cannot be enforced.
+**Landing.** The project is `local-only`. Crewmates never merge. The first mate lands each ready, verified branch with Firstmate's guarded fast-forward (`bin/fm-merge-local.sh`). With `yolo` off (the current setting) the captain approves every landing; dependents start only from landed work.
+
+**Tests.** Only crewmates run project code and tests. The first mate never does, because the candidate's npm scripts would run in its own unsandboxed session.
+
+**Verifier sandbox.** The proposed setup is Pi `--tools read,bash` plus a bubblewrap sandbox around `bash`, with exact allowances for Firstmate's status, inbox and report paths. It is **not yet proven**; the `read` tool stays outside a bash-only sandbox, and any unenforceable check is recorded as FB-08 rather than claimed.
 
 **Board.** The Firstmate backlog is the board. A GitHub Projects board is optional and shows phases and gates only; it is unused while the repo is local-only.
 
@@ -298,19 +320,19 @@ Full roadmap: [roadmap.md](roadmap.md).
 | P6 | Security review, performance and a11y, production deploy, user guide | gate-phase-6 |
 | P7 | Health-export import, optional on-device model | — |
 
-Every gate needs a verification report, a demo on both phones and the captain's "continue".
+Every gate needs a verification report, a demo on both phones from the phase's preview deploy, and the captain's "continue". Gates are held for the captain only when they become actionable, not all at import.
 
 ## 15. Task list (summary)
 
-[backlog-import.md](backlog-import.md) has **91 items** for P0–P2: 47 ship tasks, 39 scout (verify or feasibility) tasks and 5 gates. Detailed briefs are in [task-briefs.md](task-briefs.md).
+[backlog-import.md](backlog-import.md) has **98 items** for P0–P2: 53 ship tasks (6 of them synthetic preview deploys), 40 scout (verify or feasibility) tasks and 5 gates. Detailed briefs are in [task-briefs.md](task-briefs.md).
 
 | Phase | Implementation | Verify | Gates | First waves |
 |---|---|---|---|---|
-| P0 | Agents/skills, toolchain, sandbox proof, relay spike, probe, contracts, design tokens, localdate, crypto, shell, SW, DB store, CSP/network, synthetic data, lock, integration | One for each high-risk task + wave review + phase verify | p0-approvals, p0-device-feasibility, gate-phase-0 | W1: approvals gate, dispatch-validate, agents-skills · W2: sandbox-proof, toolchain, relay-spike |
-| P1 | Log repo, episodes, onboarding, quick log, cycle engine, log forms, calendar, today, warnings, backtest, export/import, delete-all, reminders, settings, core content, integration | Per high-risk task + wave review + phase verify | gate-phase-1 | W1: log-repo (foundation) |
-| P2 | Identity, share keys, sync core, relay, projection, transport, pairing, share controls, partner view, couple space, backup, unpair/delete, push, quick-hide, passkey, integration | Per task + UX review + phase verify | gate-phase-2 | W1: identity (foundation) |
+| P0 | Agents/skills, toolchain, sandbox proof, relay spike with live push-test endpoint, probe and its preview deploy, contracts, design tokens, localdate, crypto, shell, SW, DB store, CSP/network, synthetic data (frozen scenarios), lock, integration, demo deploy | One for each high-risk task + low-risk review + phase verify | p0-approvals, p0-device-feasibility, gate-phase-0 | W1: approvals gate, dispatch-validate, agents-skills · W2: sandbox-proof, toolchain · W4: relay-spike, feasibility-probe |
+| P1 | Log repo, episodes, onboarding, quick log, cycle engine, log forms, calendar, today, core content, warnings, backtest, export/import, delete-all, reminders, settings, integration, demo deploy | Per high-risk task + low-risk review + phase verify | gate-phase-1 | W1: log-repo (foundation) |
+| P2 | Identity, share keys, sync core, relay, projection, transport, pairing, share controls, partner view, couple space, backup, unpair/delete, push, preview relay deploy, quick-hide, passkey, integration, demo deploy | Per task + UX review + phase verify | gate-phase-2 | W1: identity (foundation) |
 
-The dependency graph is acyclic, and no wave has two tasks owning the same file; both are checked in [consistency-check.md](consistency-check.md). **Nothing is imported until Stage F approval.**
+The dependency graph is acyclic; no wave has two tasks owning the same file and no two tasks without a dependency path between them own the same file; every file named in a task's acceptance criteria is owned by the task or a predecessor; every catalogue test is assigned. All of this is checked by [tools/check_plan.py](tools/check_plan.py) and recorded in [consistency-check.md](consistency-check.md). **Nothing is imported until Stage F approval.**
 
 ## 16. Risks and mitigations
 
@@ -322,10 +344,13 @@ The dependency graph is acyclic, and no wave has two tasks owning the same file;
 | Passkey PRF bugs (R4 T1–T3) | Optional only; passphrase plus recovery code |
 | Forgotten passphrase and recovery code | Stated plainly at setup; recovery code confirmation; passkey option |
 | A partner pressures her to share | Off by default, no-reason pause, no share requests or receipts, preview, consent history |
+| Her partner operates the infrastructure (T13) | Custody choice (AP-10), plain disclosure in the app, no relay logs, scoped deploy credential, deploys only from verified commits. Residual: the account holder can still see connection metadata and could ship modified code |
+| Chance "patterns" mislead her | Short metric list, chance check with a ≤5% target, "can appear by chance" text, coverage shown |
 | Medical harm from wrong guidance | Source-tied rules, never "safe days", Opus medical audit and fact-check before merge, informational framing |
 | Algorithms underperform for her | Wide honest windows, an on-device track record, versioned upgrades in shadow mode |
 | Supply-chain compromise | 5 runtime dependencies, pins, audits, CSP, network test |
-| Verifier sandbox can't be enforced (FB-08) | Recorded as a blocker; interim policy decided by the captain (AP-16); no false read-only claims |
+| Verifier sandbox can't be enforced (FB-08) | Recorded as a blocker; high-risk landings wait until the captain picks an AP-16 option, none of which has the first mate run project code; no false read-only claims |
+| Many landing approvals while `yolo` is off | The first mate batches a wave's ready branches into one request; turning `yolo` on is the captain's choice (AP-17), and security-sensitive landings escalate either way |
 | Licensing gaps: MRS, PBAC, datasets, drip/sympto | Not used without approval; original substitutes; no GPL/AGPL code |
 | Scope size (74 + 20 features) | Phased with gates; P3–P7 detailed later; Must items first |
 | Model credit cost | Luna for bounded work, Opus only where required; measure usage at each gate |
@@ -339,29 +364,35 @@ These are non-blocking. Sharing stays off until she chooses in the app.
 3. Should his affectionate notes appear on your Today screen, or in a collection you open when you like, or be off?
 4. Would you use Face ID unlock if your phone supports it, or is the passphrase fine? Where will you keep your recovery code?
 5. Would you realistically do a weekly backup to Files/iCloud, or prefer the optional automatic encrypted copy on the mailbox?
-6. Which country's clinical services and crisis lines should the app point to?
-7. Is there anything about the quick-hide or pause buttons you'd like to work differently?
+
+(Her country for crisis resources is approval item AP-27, not repeated here. Quick-hide and pause stay as designed, since she gave no preference.)
 
 ## 18. Open questions and items needing approval
 
-The captain's answers are recorded in `flo-plan-approval` at Stage F.
+This is the full approval list for Stage F. All answers are recorded in the existing `flo-plan-approval` hold; there is no other hold for plan choices.
 
-**A. Product choices and clarifications**
+- **Section A** (product and process choices) is answered at Stage F. "Proposed default" is the planner's proposal, not an answer given on anyone's behalf.
+- **Section B** (accounts, credentials, installs, deploys, money, destructive actions) needs an **explicit answer per item**, either at Stage F or at the `p0-approvals` hold. **Approving the plan approves none of them.** Nothing is created, installed or deployed by default, and no account or credential authority is implied.
+- AP-01 stays open exactly as before: the app's own encrypted backup and restore is kept unless the captain clarifies otherwise.
+
+**A. Product and process choices and clarifications**
 
 | ID | Item | Proposed default |
 |---|---|---|
 | AP-01 | **Keep this app's own encrypted backup/restore** (constitution rule 8)? "No need to establish backup" may have meant only *no Flo backup* | **Keep** (F-119) until answered |
-| AP-04 | Pregnancy chance shown as qualitative **Lower / Medium / Higher, never zero, no percentages**: an adaptation of the "never shows zero" requirement, cited to R3 §3 | Approve |
+| AP-04 | Pregnancy chance shown as qualitative **Lower / Medium / Higher, never zero, no percentages**, with a named fixed-text category for every state where it can't be estimated (pregnant, postpartum, hormonal method, late, unusual cycle length, no data): an adaptation of the "never shows zero" requirement, cited to R3 §3 | Approve |
 | AP-05 | Pregnancy dating follows **ACOG LMP+280**, not Flo's "LMP + 41 weeks" help text | Approve |
-| AP-06 | Fertile window shows Flo's 7-day core **plus** a wider "possible" band (honest uncertainty) | Approve |
+| AP-06 | Fertile window shows Flo's 7-day core **plus** a wider "possible" band (honest uncertainty). The calendar band uses a 12–16-day luteal default and says plainly that a short luteal phase can fall outside it | Approve |
 | AP-07 | **No 6-digit PIN** in v1 (offline-guessable); passphrase plus optional Face ID | Approve (or accept a weaker PIN knowingly) |
-| AP-08 | On unpair, each phone keeps the couple entries its owner wrote and deletes the other's; either can export first | Approve |
-| AP-09 | Life-stage changes are **never** told to the partner unless she shares `life_stage` (Flo discloses automatically) | Approve |
+| AP-08 | On unpair, each phone keeps the couple entries its owner wrote and deletes the other's; either can export first. His backups never contain her shared data (T-BAK-04) | Approve |
+| AP-09 | Life-stage changes are **never** told to the partner unless she shares `life_stage` (Flo discloses automatically); she is told he may still notice a pause | Approve |
+| AP-11 | Accept the storage trade-off: relay + backups (415) over manual-only (410); manual exchange stays a first-class fallback. A planner decision listed for visibility, not an account item | Approve |
 | AP-13 | Optional encrypted relay backup (her full encrypted backup stored on Cloudflare) | Offer as opt-in |
 | AP-14 | Event push to him when she sends a support card (reveals timing) | Off unless she enables it |
 | AP-15 | Affectionate notes limited to the couple space: Today note or collection, no scheduled push, no read receipts | Approve narrow scope |
+| AP-17 | **Landing and merge authority** (informational plus one choice). The `local-only` registration is **settled**; no remote or GitHub repository is proposed (one would need a future account approval). Each verified task branch is landed by the first mate with `bin/fm-merge-local.sh`. **Choice:** (a) keep `yolo` off, so the captain approves every landing (batched per wave); or (b) turn `yolo` on for this project, so the first mate lands green, verified, in-scope work itself, while destructive, irreversible and security-sensitive landings still come to the captain (most P0–P2 work is security-sensitive). **Deviation to approve:** integration and the low-risk review run once per phase, with continuous landing, instead of after every wave ([agent-operating-model.md §8](agent-operating-model.md#8-parallelism-and-waves)); the alternative is a per-wave integration item | (a) Keep `yolo` off; approve the per-phase cadence |
 | AP-19 | Original **text-only** lessons, no video/audio courses | Approve |
-| AP-20 | App name and icon ("Tide" placeholder, original icon) | Captain to choose |
+| AP-20 | App name and icon. "Tide" is only a placeholder; it is also a well-known third-party trademark, so a name check is needed even for private use. Original icon | Captain to choose |
 | AP-22 | Perimenopause "impact summary" is original and **unvalidated**; MRS only after licence review | Approve |
 | AP-23 | Symptoms never move period predictions in v1 (Flo's undisclosed ML does) | Approve |
 | AP-24 | Partner calendar shows data only from her chosen start date onward | Approve |
@@ -369,19 +400,17 @@ The captain's answers are recorded in `flo-plan-approval` at Stage F.
 | AP-26 | Doctor report defaults to 6 cycles incl. current, with a 6-month option | Approve |
 | AP-27 | Her country, for crisis resources and local care schedules | Answer needed before P1 content |
 
-**B. Accounts, money, infrastructure and destructive actions (Section 3 checkpoints; collected in `p0-approvals`)**
+**B. Accounts, credentials, installs, deploys and destructive actions (Section 3 checkpoints; each needs its own explicit answer; collected in `p0-approvals`)**
 
-| ID | Item |
-|---|---|
-| AP-10 | Create **one Cloudflare account** (Free, no payment method) for Pages + Workers + D1; create the relay enrollment secret and VAPID keys as Worker secrets; use a `pages.dev` domain (a custom domain costs money) |
-| AP-11 | Accept the storage trade-off: relay + backups (415) over manual-only (410) |
-| AP-12 | Fallback if Cloudflare fails: manual exchange only, or a GitHub data-repo transport (needs a GitHub account per person; tokens on phones) |
-| AP-16 | Install the verifier-sandbox prerequisites (bubblewrap system package; Pi sandbox extension npm dependency). If FB-08 stands, choose an interim policy: proposed review-only verifiers without bash, with the first mate running tests |
-| AP-17 | Repository mode: stay **local-only** (current registration) or move to a private GitHub repo with PRs |
-| AP-18 | Public Cloudflare preview deployments with synthetic data only |
-| AP-21 | Use public cycle datasets for backtesting (licences unclear) — proposed **no**; synthetic only |
-| AP-28 | Install the pinned npm dependency set listed in architecture.md §2 during P0 |
-| AP-29 | Production deploy at P6 (a later checkpoint; listed for completeness) |
+| ID | Item | Options and what is proposed |
+|---|---|---|
+| AP-10 | **One Cloudflare account** (Free plan, no payment method) for Pages + Workers + D1, on a free `pages.dev` domain (a custom domain costs money). **Custody** (threat T13): (a) her-owned: she holds the login, and agents get a scoped token only with her consent; (b) joint: an account email she controls, set up together, with her second factor; (c) captain-owned, with the disclosure shown to her in onboarding and Sharing help. **Deploy credential:** a Cloudflare API token scoped to this one account with only the Workers scripts, D1 and Pages edit permissions (no billing, membership or DNS; exact permission names checked when created), held by the account holder, stored outside the repository in a user-only file (proposed `~/.config/flo-deploy/cloudflare.env`, mode 600), never logged, revoked at P6 or on suspicion; the broader `wrangler login` session is not used. **Secrets:** separate enrollment secrets and VAPID key pairs for preview and production, set as Worker secrets | Planner recommends (a) or (b), because they remove the partner's sole control of the operator role; (c) is acceptable only with the disclosure. No account is created until answered |
+| AP-12 | Fallback if Cloudflare fails: manual exchange only, or a GitHub data-repo transport (needs a GitHub account per person; tokens on phones) | Manual exchange only, unless the captain asks for the GitHub transport |
+| AP-16 | Install the verifier-sandbox prerequisites (bubblewrap system package; Pi sandbox extension npm dependency). **If FB-08 stands** (safeguards not enforceable), high-risk landings wait by default until the captain picks: (a) an unenforced test-running verifier in its own disposable worktree, with its report labelled "isolation not enforced" and the residual risk accepted; or (b) read-only review with the test commands run by a ship crewmate. **No option has the first mate run project code or tests** | Install prerequisites; interim option chosen only if FB-08 stands |
+| AP-18 | **Synthetic-only preview deployments**, public URLs: a Pages preview project; a preview relay Worker + D1 with preview-only secrets; a push-test endpoint kept live from P0 (FB-06) until P2 replaces it with the verified relay; each deploy produced by a named backlog item with a record in `docs/deploy/`. **Who runs deploy commands:** (i) deploy crewmates using the AP-10 token (residual: other processes running as the same user could read the token file); or (ii) the captain runs the exact command each deploy item prepares | Captain to choose (i) or (ii); no preview is deployed until answered |
+| AP-21 | Use public cycle datasets for backtesting (licences unclear) | **No**; synthetic only |
+| AP-28 | Install the pinned npm dependency set listed in architecture.md §2 during P0 (including `wrangler`, `tsx` and the test tools) | Approve at `p0-approvals` |
+| AP-29 | **Production deploy at P6**: a separate Pages project, relay Worker, D1 database and secrets; preview environments never hold real data. Her real day-to-day use starts only after this deploy. Listed now for completeness; it needs its own concrete approval at P6 | Answered at P6, not now |
 
 **C. Every feature that is not a straight replication (AP-02)**
 

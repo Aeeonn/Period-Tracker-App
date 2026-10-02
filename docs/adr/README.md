@@ -1,6 +1,6 @@
 # Architecture decision records
 
-All ADRs below are **Proposed**, recorded during Stage C planning on 2026-10-02. They become Accepted only when the captain approves the plan at Stage F (`flo-plan-approval`). New ADRs are numbered in order; once a wave of work starts, integration tasks write them ([agent-operating-model.md §10](../plan/agent-operating-model.md#10-state-and-traceability)).
+All ADRs below are **Proposed**, recorded during Stage C planning on 2026-10-02 and revised in Stage E after the Stage D critique (0003, 0004, 0006, 0007 and 0009 changed; see [stage-e-resolution.md](../plan/stage-e-resolution.md)). They become Accepted only when the captain approves the plan at Stage F (`flo-plan-approval`). New ADRs are numbered in order; once a wave of work starts, the phase integration tasks write them ([agent-operating-model.md §10](../plan/agent-operating-model.md#10-state-and-traceability)).
 
 | ADR | Title | Status |
 |---|---|---|

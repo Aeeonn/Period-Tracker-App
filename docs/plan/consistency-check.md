@@ -1,32 +1,41 @@
 # Consistency check (Step 11 part 2 — mechanical checks only)
 
-**Status:** Stage C, 2026-10-02.
+**Status:** re-run in Stage E, 2026-10-02, on the corrected plan (Stage C draft plus the Stage E fixes for the Stage D critique).
 
-This file records the **mechanical** checks run on the draft plan: their commands and their results. These checks are **not** the Step 11 part 1 plan critique.
+This file records the **mechanical** checks run on the plan: their commands and their results. These checks are **not** the Step 11 part 1 plan critique.
 
-- The **Stage D** plan critique (an independent Opus scout) and the **Stage E** fixes are later tasks.
-- This document does **not** claim either of them has happened.
-- After Stage E edits, re-run the checks and update this file.
+- The **Stage D** plan critique (an independent Opus scout) is at `~/firstmate/data/flo-plan-critique/report.md`.
+- The **Stage E** fixes for its findings, with the check for each one and what remains, are in [stage-e-resolution.md](stage-e-resolution.md).
+- Passing these checks shows the documents agree with each other. It is not a security, medical or device proof, and it is not plan approval.
 
 ## How the task files were produced
 
-[task-briefs.md](task-briefs.md) and [backlog-import.md](backlog-import.md) were generated from a single task table by a drafting script, so that IDs, dependencies, waves and owned files stay identical in both files. The script is not committed. **The committed Markdown is now the source of truth**: later edits change the Markdown directly and re-run the checker below.
+[task-briefs.md](task-briefs.md) and [backlog-import.md](backlog-import.md) were first generated in Stage C from one task table, so that IDs, dependencies, waves and owned files stay identical in both files. In Stage E a one-off transform script (scratch only, not committed) applied the structural fixes to both files at once: the new deploy and verify items, changed dependencies and owned paths, recomputed waves and the regenerated import script. **The committed Markdown is the source of truth**; later edits change it directly and re-run the checker.
 
-Waves were assigned greedily in topological order under these rules:
+Waves are assigned greedily in topological order under these rules:
 - at most 3 crewmates per wave;
 - foundation tasks run with no other ship task;
 - no two tasks in a wave own overlapping paths;
 - no task shares a wave with any of its dependencies.
 
+## The checker
+
+The checker is committed as [tools/check_plan.py](tools/check_plan.py) (Stage D suggestion D-O03). It reads the Markdown planning documents only: it runs no project code, needs only the Python 3 standard library, makes no network calls and writes nothing.
+
+```text
+python3 docs/plan/tools/check_plan.py <repo-root>
+```
+
 ## Checks and results
 
-| # | Check | Command | Result (2026-10-02) |
+| # | Check | Command | Result (Stage E, 2026-10-02) |
 |---|---|---|---|
-| 1 | Research copies are verbatim (body after the 2-line provenance note) | `tail -n +3 docs/plan/research/<file> \| cmp - ~/firstmate/data/<task>/report.md` for all 7 | **identical** ×7 |
-| 2 | Only planning docs changed: no application code, prompt, AGENTS.md or dispatch edits | `git status --porcelain` | Only `docs/plan/**` and `docs/adr/**` added; `PLANNING_PROMPT.md` and `crew-dispatch.json` untouched |
-| 3 | Test-vector arithmetic (TV-D, TV-P, TV-G, TV-W3, DST) | Python `datetime` re-computation while drafting (`date.fromisoformat`, `timedelta`) | All hand-computed dates and day counts matched (e.g. epochDay 2026-10-02 = 20728; TV-P3 window 10-04..10-10; TV-P4 Lc 24; EDD 2026-10-17) |
-| 4 | Plan structure, matrix, approval coverage, backlog fields, dependency graph, waves, briefs, feature→task/test coverage, test catalogue, consent rules, the Section 3/4 enforcement matrix, links/anchors, unqualified "safe day" wording | `python3 check_plan.py <repo-root>` (source below) | **ALL CHECKS PASSED (0 failures)** — output below |
-| 5 | No health-data rows or dataset files in any artefact | `git status --porcelain \| grep -v '\.md$'` | No non-Markdown files; the documents contain only synthetic test vectors |
+| 1 | Research copies are verbatim (body after the 2-line provenance note) | `tail -n +3 docs/plan/research/<file> \| cmp - ~/firstmate/data/<task>/report.md` for all 7 | **identical** ×7; `git diff 894a6f7 -- docs/plan/research` is empty |
+| 2 | Only planning docs changed: no application code, prompt, AGENTS.md or dispatch edits | `git status --porcelain`; `git diff --stat 894a6f7` | Only `docs/plan/**` and `docs/adr/**` changed; the one non-Markdown file is the checker `docs/plan/tools/check_plan.py`. `PLANNING_PROMPT.md`, `AGENTS.md`/`CLAUDE.md` and `crew-dispatch.json` untouched |
+| 3 | Test-vector arithmetic, old and new | Python `datetime` and `fractions` re-computation in a scratch directory (not committed), implementing A2 exactly as specified | 23/23 pass: TV-D2, TV-D3, TV-P1–P6, TV-F1, TV-F3, TV-X3, TV-Q3, TV-W3, TV-W3b, TV-G1, TV-G3, TV-G4, TV-K1, TV-PM1, TV-A1, TV-A2 (v1 errors [4,4,4,4,0,0], BAVG [4,4,3,3,3,2], MAE 16/6 and 19/6). TV-T1 and TV-T2 descriptive values re-derived; their chance-check p-values were computed by exact enumeration of 21,952 rotation combinations (432/21,952 and 7,427/21,952). Unchanged vectors (TV-P7, TV-P8, A5, TV-B, TV-H, TV-M, TV-X1/X2, TV-T3–T6, TV-G2, TV-K2) were also re-computed by Stage D |
+| 4 | All structural and cross-document checks (list below) | `python3 docs/plan/tools/check_plan.py .` | **ALL CHECKS PASSED (0 failures)**, output below |
+| 5 | No health-data rows or dataset files in any artefact | `git status --porcelain \| grep -v '\.md$'` | Only `docs/plan/tools/check_plan.py`; the documents contain only synthetic test vectors |
+| 6 | Negative control: the extended checker detects the Stage D findings in the uncorrected draft | `git archive 894a6f7 docs \| tar -x -C <tmp>`; `python3 docs/plan/tools/check_plan.py <tmp>` | **33 failures**, covering D-C02 (X6), D-C01/D-M01/D-M02/D-M04/D-M07/D-C03 wording (X7), D-M06 (X11), D-M11 (X12), D-M12 (X1, X3, X4), D-M13 (X5) and the missing resolution record (X9); so the passing result above is not vacuous |
 
 ### Checker output
 
@@ -34,311 +43,63 @@ Waves were assigned greedily in topological order under these rules:
 NOTES
  - matrix: 74 Flo groups, 20 Beyond-Flo; Flo decisions {'Replicate': 25, 'Adapt': 34, 'Replace': 8, 'Not applicable': 5, 'Not feasible on iOS web': 2}
  - plan.md sections: 18
- - backlog items: 91 (Counter({'ship': 47, 'scout': 39, 'gate': 5}))
- - waves: 44; max workers per wave 3
+ - backlog items: 98 ({'gate': 5, 'scout': 40, 'ship': 53})
+ - waves: 46; max workers per wave 3
  - features with P0–P2 implementing tasks: 43
  - enforcement rows: 27; consent rules: 21
- - relative links checked: 297
+ - relative links checked: 352
+ - X1 acceptance paths checked: 22
+ - X3 catalogue tests: 64; later-phase only: ['T-ENG-02', 'T-ENG-05']
+ - X4 roadmap phases with feature lists: P0=1, P1=26, P2=18, P3=14, P4=18, P5=14, P6=0, P7=1
+ - X8 approval rows: 27 (+AP-02/AP-03 grouped tables)
+ - X12 P1 warning rules ['W-01', 'W-02', 'W-03', 'W-04', 'W-05', 'W-06', 'W-07', 'W-11']; vectors cover ['W-01', 'W-02', 'W-03', 'W-04', 'W-05', 'W-06', 'W-07', 'W-11']
 ALL CHECKS PASSED 0
 ```
 
-What the checker verifies, in plain words:
+What the checker verifies, in plain words. **C1–C13** are the Stage C checks, kept unchanged in substance; **X1–X12** were added in Stage E for the Stage D findings.
 
-1. **Feature matrix.** Each row has an ID, a tier, inputs and outputs, a decision from the allowed sets, a justification, a MoSCoW priority and a phase. The 2026 perimenopause leads (Checker, Score, Timeline, Relief Options) are present.
-2. **Approval list.** [plan.md §18](plan.md#18-open-questions-and-items-needing-approval) contains every non-Replicate Flo feature and every Beyond-Flo Add. The AP-02 rows match the matrix decisions exactly, and the §5 counts match the matrix.
-3. **plan.md structure.** It has exactly the 18 required sections, in order.
-4. **Backlog fields.** Every backlog item has all of these fields: title, kind, type, phase, wave, risk, features, blocked-by, owns, tests, route, labels and brief.
-   - Ship tasks own files; scouts and gates own none.
-   - Every high-risk ship task has a `-verify` item.
-5. **Dependency graph.**
-   - It is **acyclic**, and the import order is topological.
-   - Every P0 item depends (transitively) on `flo-plan-approval`.
-   - Every item is upstream of its phase gate, and every P1/P2 item depends on the previous gate.
-   - No task consumes a high-risk ship task's output before its independent verify passes.
-6. **Waves.** At most 3 workers per wave, no owned-file overlap within a wave, and no same-wave or out-of-order dependencies.
-7. **Briefs.** There is one per backlog item, each with Given/When/Then, a route, and commands for ship tasks.
-8. **Feature coverage.** Every P0–P2 feature maps to at least one implementing ship task and at least one task with tests. Later features carry a phase.
-9. **Test catalogue.** Every test ID in the backlog exists in the [test-strategy.md](test-strategy.md) catalogue.
-10. **Consent rules.** All 21 consent rules have an enforcement mechanism and a test, and each test is assigned to a P0–P2 task.
-11. **Enforcement matrix.** Every Section 3 and Section 4 rule (S3-01…S3-09, S4-1…S4-10 with sub-rules) has an enforcement mechanism and a check.
-12. **Links.** Every relative Markdown link and anchor resolves.
-13. **Wording.** No unqualified "safe day" appears in the plan text (the research copies are excluded).
+1. **C1 Feature matrix.** Each row has an ID, a tier, inputs and outputs, an allowed decision, a justification, a MoSCoW priority and a phase. The 2026 perimenopause leads are present.
+2. **C2 Approval list.** [plan.md §18](plan.md#18-open-questions-and-items-needing-approval) contains every non-Replicate Flo feature and every Beyond-Flo Add; the AP-02 rows match the matrix exactly; the §5 counts match.
+3. **C3 plan.md structure.** Exactly the 18 required sections, in order.
+4. **C4 Backlog fields.** All 13 fields on every item; ship tasks own files, scouts and gates own none; every high-risk ship task has a `-verify` item; no task consumes a high-risk ship task before its verify.
+5. **C5 Dependency graph.** Acyclic; import order topological; every P0 item depends on `flo-plan-approval`; every item is upstream of its phase gate; every P1/P2 item depends on the previous gate.
+6. **C6 Waves.** At most 3 workers per wave, no owned-file overlap within a wave, no same-wave or out-of-order dependencies, and the waves table matches the item fields.
+7. **C7 Briefs.** One brief per item, each with Given/When/Then and a route, commands for every ship task, and a header wave, "Depends on" and "Owns" identical to the backlog.
+8. **C8 Feature coverage.** Every P0–P2 feature maps to an implementing ship task and a task with tests.
+9. **C9 Test catalogue.** Every test ID in the backlog exists in [test-strategy.md §2](test-strategy.md#2-test-catalogue-ids-referenced-by-the-plan).
+10. **C10 Consent rules.** All 21 consent rules have enforcement and an assigned test.
+11. **C11 Enforcement matrix.** Every Section 3 and Section 4 rule has an enforcement mechanism and a check.
+12. **C12 Links.** Every relative Markdown link and anchor resolves.
+13. **C13 Wording.** No unqualified "safe day" outside the research copies.
+14. **X1 Acceptance-file ownership and ancestry.** Every repository path named in a brief's acceptance criteria is owned by that task or one of its transitive dependencies (D-M12).
+15. **X2 Ownership across unordered tasks.** No two ship tasks without a dependency path between them own overlapping paths, which is stronger than the per-wave rule (D-M12).
+16. **X3 Test assignment.** Every catalogue test is assigned to a P0–P2 item, except T-ENG-02 and T-ENG-05, whose catalogue rows name their later phase (D-M12, T-SEC-06).
+17. **X4 Feature/phase coverage.** Every matrix phase of a feature appears in that phase's roadmap feature list (D-M12: F-003, F-061).
+18. **X5 Hold timing.** The import script holds only `p0-approvals`; every other gate has a "hold when actionable" command in the import procedure, and the roadmap states the timing (D-M13).
+19. **X6 Deploy traceability.** Each `gate-phase-N` has an ancestor deploy item producing `docs/deploy/pN-demo.md`; `p0-device-feasibility` has the probe deploy and the live push-test spike upstream; no brief deletes the spike before the probe (D-C02).
+20. **X7 Forbidden or re-opened wording.** No first-mate test execution, no re-opened repository mode, no wording that presents BBT as proof of ovulation, no "None" residual for T1, no first-mate-written verifier reports, no typed pairing-code fallback (the exact patterns are in the checker source) (D-C01, D-M01, D-M02, D-M04, D-C03, D-M07).
+21. **X8 Approval list integrity.** AP-01…AP-29 each appear exactly once (AP-02/AP-03 as grouped tables), with no references to unknown approval IDs.
+22. **X9 Resolution record.** [stage-e-resolution.md](stage-e-resolution.md) has a complete row for each of D-C01…D-C03 and D-M01…D-M14.
+23. **X10 Counts.** plan.md §15 and the backlog-import header match the parsed backlog.
+24. **X11 Chance categories.** Every named A4 suppression reason has an A5 category row, none of which is zero, none or safe (D-M06).
+25. **X12 Warning vectors.** Every W-rule implemented in P1 has at least one TV-W vector (D-M11).
 
-## Prompt §8 quality checklist — status after Stage C
+## Prompt §8 quality checklist — status after Stage E
 
 | Checklist item | Status | Evidence |
 |---|---|---|
-| Every Flo feature in the matrix with a decision; deviations justified and listed for approval | Mechanically checked | Checks 1–2 |
-| Beyond-Flo candidates scored and marked Add/Backlog/Reject | Mechanically checked | Matrix Beyond table (V/E/P present) |
-| Every computation states Flo-documented vs substitute, with citations, edge cases and test vectors | Drafted; **needs Stage D critique and the later Opus algorithm/medical audits** | algorithms-spec.md A0–A18, edge-case map |
-| Every consent rule enforced by encryption/separation and has a test | Mechanically checked (rule → enforcement → test mapping); **tests not yet written or run** | Check 10 |
-| No screen, insight or notification implies safe days or birth control | Design rule plus copy lint and T-UX-04 planned; wording scan of plan text passed | Check 13; ux-spec §6–7 |
-| Storage/sync decision has scored options, a plain-language recommendation and a tested plan for pairing, backup, restore and recovery | Drafted; tests are planned, **not executed** | storage-sync-decision.md, test-strategy T-PAIR/T-BAK |
-| Every privacy and security rule has an automated check or a named review step | Mechanically checked | Check 11; security-privacy §2 |
-| P0–P2 tasks small and self-contained, with owned files, criteria, commands and risk; graph acyclic; waves disjoint; ready to load | Mechanically checked; "small enough" is a judgement for Stage D | Checks 4–7 |
-| Every phase ends with a gate, a verification report and a demo | Mechanically checked for P0–P2 (`pN-phase-verify` → `gate-phase-N`); P3–P7 in roadmap.md | Check 5, roadmap.md |
+| Every Flo feature in the matrix with a decision; deviations justified and listed for approval | Mechanically checked | C1–C2 |
+| Beyond-Flo candidates scored and marked Add/Backlog/Reject | Mechanically checked; plan-scored rows now named consistently (D-O06) | Matrix Beyond table |
+| Every computation states Flo-documented vs substitute, with citations, edge cases and test vectors | Stage D gaps fixed: luteal default relabelled DESIGN with its excluded tail, named suppression categories, symptothermal cross-check, P1 warning vectors, A12 chance check, per-scenario backtest targets (D-M05, D-M06, D-M09, D-M10, D-M11). **Still needs the Opus algorithm and medical audits in each phase** | algorithms-spec.md; X11, X12; check 3 |
+| Every consent rule enforced by encryption/separation and has a test | Mechanically checked; his backups now excluded from holding her data (D-M08). The infrastructure-operator channel (T13) **cannot** be enforced by encryption; it is disclosed and minimised, with a custody choice (AP-10). **Tests not yet written or run** | C10; security-privacy T13, PR-07, PR-08 |
+| No screen, insight or notification implies safe days or birth control | Design rule, copy lint and T-UX-04 planned; every suppression state now has fixed text (D-M06); wording scan passed | C13, X11; ux-spec §6–7 |
+| Storage/sync decision has scored options, a plain-language recommendation and a tested plan for pairing, backup, restore and recovery | Pairing redesigned as commit-then-reveal with attacker-aware tests (D-M07); preview/production split and deploy items added (D-C02). Tests planned, **not executed** | storage-sync-decision.md, architecture.md §4.2, T-PAIR-02, T-BAK-04 |
+| Every privacy and security rule has an automated check or a named review step | Mechanically checked; T-SEC-06 now assigned; PR-07/PR-08 and T-SEC-08 added (D-M12, D-M14, D-C03) | C11, X3 |
+| P0–P2 tasks small and self-contained, with owned files, criteria, commands and risk; graph acyclic; waves disjoint; ready to load | Mechanically checked, including acceptance-file ancestry and unordered-overlap (X1, X2). Splitting the largest tasks (D-O02) was not done; see the resolution record | C4–C7, X1, X2 |
+| Every phase ends with a gate, a verification report and a demo | Mechanically checked for P0–P2, now including a deploy item that produces each demo URL (X6); P3–P7 in roadmap.md | C5, X6, roadmap.md |
 | Research ran on Sol or a documented Luna override; every execution role has a recorded model with high or above | Research: all scout reports record `gpt-6.1-sol` high. Roles: every item has a route | R1–R6 and cross-check method sections; backlog `route` |
-| Operating model covers routing priority, escalation after 2 failed rounds, Opus verify before high-risk merge, and that model changes don't reset the 3-round limit | Drafted | agent-operating-model.md §2–5 |
-| Phase 0 includes disposable-fixture verification of verifier safeguards, with gaps recorded as blockers | Planned (`p0-verifier-sandbox-proof` + verify); **not run**; FB-08 defined | agent-operating-model.md §6 |
+| Operating model covers routing priority, escalation after 2 failed rounds, Opus verify before high-risk merge, and that model changes don't reset the 3-round limit | Drafted; landing now through Firstmate's guarded local path with per-landing merge authority (D-M03) | agent-operating-model.md §2–5 |
+| Phase 0 includes disposable-fixture verification of verifier safeguards, with gaps recorded as blockers | Planned with the exact Firstmate supervision paths (D-M01); interim options never use the first mate to run tests (D-C01); **not run**; FB-08 defined | agent-operating-model.md §6 |
 | Nothing depends on paid services, an always-on server or a cloud AI | Drafted; the hard-$0 claim is **pending FB-01/FB-09** | storage-sync-decision.md §3 |
-| Nothing copies Flo's content or branding | Planned (original content, placeholder name, fact-check plus originality review); not mechanically checkable | ux-spec.md §8 |
-| A non-expert can follow the executive summary and glossary | Drafted; judgement for Stage D | plan.md §1–2 |
-
-## Checker source (`check_plan.py`)
-
-```python
-#!/usr/bin/env python3
-"""Mechanical consistency checks for docs/plan (Stage C). Usage: check_plan.py <repo-root>"""
-import re, sys, os, glob, fnmatch, collections
-
-root = sys.argv[1]
-P = os.path.join(root, "docs/plan")
-fails, notes = [], []
-def fail(m): fails.append(m)
-def read(p): return open(p, encoding="utf-8").read()
-
-# ---------- 1. feature matrix
-mx = read(os.path.join(P, "feature-parity-matrix.md"))
-feat = {}
-for line in mx.splitlines():
-    m = re.match(r"\| (F-\d{3}) \|", line)
-    if not m: continue
-    cells = [c.strip() for c in line.strip().strip("|").split("|")]
-    fid = cells[0]
-    if fid in feat: fail(f"duplicate feature row {fid}")
-    if fid < "F-100":   # Flo table: ID Src Feature Tier What Inputs Decision Justification MoSCoW Phase
-        if len(cells) != 10: fail(f"{fid}: expected 10 cells, got {len(cells)}"); continue
-        dec, just, mos, ph = cells[6], cells[7], cells[8], cells[9]
-        if not cells[3]: fail(f"{fid}: missing tier")
-        if not cells[5]: fail(f"{fid}: missing inputs/outputs")
-    else:               # Beyond: ID R6 Feature VEP What Decision Justification MoSCoW Phase
-        if len(cells) != 9: fail(f"{fid}: expected 9 cells, got {len(cells)}"); continue
-        dec, just, mos, ph = cells[5], cells[6], cells[7], cells[8]
-        if not re.match(r"\d/\d/\d", cells[3]): fail(f"{fid}: missing V/E/P score")
-    d = re.sub(r"\*|\(.*?\)", "", dec).strip()
-    if not just: fail(f"{fid}: missing justification")
-    feat[fid] = dict(dec=d, mos=mos, phase=ph, raw=dec)
-flo_ids = [f for f in feat if f < "F-100"]
-by_dec = collections.Counter(feat[f]["dec"] for f in flo_ids)
-notes.append(f"matrix: {len(flo_ids)} Flo groups, {len(feat)-len(flo_ids)} Beyond-Flo; Flo decisions {dict(by_dec)}")
-allowed = {"Replicate", "Adapt", "Replace", "Not applicable", "Not feasible on iOS web"}
-for f in flo_ids:
-    if feat[f]["dec"] not in allowed: fail(f"{f}: decision '{feat[f]['dec']}' not allowed")
-for f in feat:
-    if f >= "F-100" and feat[f]["dec"] not in {"Add", "Backlog", "Reject"}: fail(f"{f}: Beyond decision '{feat[f]['dec']}'")
-for line in mx.splitlines():
-    pass
-for need in ["Checker", "Score", "Timeline", "Relief Options"]:
-    if not re.search(rf"\|[^|]*{need}[^|]*\| Premium-U", mx) and need not in mx: fail(f"perimenopause lead '{need}' missing")
-
-# ---------- 2. approval list covers all deviations and Adds
-plan = read(os.path.join(P, "plan.md"))
-sec18 = plan.split("## 18.")[1]
-for f in flo_ids:
-    if feat[f]["dec"] != "Replicate" and f not in sec18: fail(f"approval list missing deviation {f} ({feat[f]['dec']})")
-for f in feat:
-    if f >= "F-100" and feat[f]["dec"] == "Add" and f not in sec18: fail(f"approval list missing Add {f}")
-# check AP-02 table rows match matrix decisions exactly
-for dec in ["Adapt", "Replace", "Not applicable", "Not feasible on iOS web"]:
-    m = re.search(rf"^\| {re.escape(dec)} \| (.*?) \|\s*$", sec18, re.M)
-    if not m: fail(f"AP-02 row for {dec} missing"); continue
-    listed = set(re.findall(r"F-\d{3}", m.group(1)))
-    expect = {f for f in flo_ids if feat[f]["dec"] == dec}
-    if listed != expect: fail(f"AP-02 {dec} mismatch: missing {sorted(expect-listed)} extra {sorted(listed-expect)}")
-# summary counts in plan §5
-s5 = plan.split("## 5.")[1].split("## 6.")[0]
-for dec in ["Replicate", "Adapt", "Replace", "Not applicable"]:
-    m = re.search(rf"^\| {dec} \| (\d+)", s5, re.M)
-    if not m or int(m.group(1)) != by_dec[dec]: fail(f"plan §5 count for {dec} wrong (matrix {by_dec[dec]})")
-m = re.search(r"^\| Not feasible on iOS web \| (\d+)", s5, re.M)
-if not m or int(m.group(1)) != by_dec["Not feasible on iOS web"]: fail("plan §5 count for Not feasible wrong")
-
-# ---------- 3. plan.md has 18 sections in order
-heads = re.findall(r"^## (\d+)\. (.+)$", plan, re.M)
-if [int(h[0]) for h in heads] != list(range(1, 19)): fail(f"plan.md sections not 1..18: {[h[0] for h in heads]}")
-notes.append(f"plan.md sections: {len(heads)}")
-
-# ---------- 4. backlog parse
-bl = read(os.path.join(P, "backlog-import.md"))
-items = {}
-order = []
-for blk in re.split(r"^### ", bl, flags=re.M)[1:]:
-    if not re.match(r"^[a-z0-9-]+\n", blk): continue
-    iid = blk.split("\n", 1)[0].strip()
-    fields = dict(re.findall(r"^- ([a-z-]+): (.*)$", blk, re.M))
-    items[iid] = fields; order.append(iid)
-req = ["title", "kind", "type", "phase", "wave", "risk", "features", "blocked-by", "owns", "tests", "route", "labels", "brief"]
-for i, f in items.items():
-    for r in req:
-        if r not in f or not f[r].strip(): fail(f"{i}: missing field {r}")
-    if f["kind"] == "ship" and f["owns"] == "—": fail(f"{i}: ship task without owned files")
-    if f["kind"] != "ship" and f["owns"] != "—": fail(f"{i}: non-ship item owns repo files")
-    if f["kind"] == "ship" and f["risk"] == "high" and f"{i}-verify" not in items: fail(f"{i}: high-risk ship task lacks {i}-verify")
-notes.append(f"backlog items: {len(items)} ({collections.Counter(v['kind'] for v in items.values())})")
-deps = {i: [] if f["blocked-by"] == "—" else [d.strip() for d in f["blocked-by"].split(",")] for i, f in items.items()}
-external = {"flo-plan-approval"}
-for i, ds in deps.items():
-    for d in ds:
-        if d not in items and d not in external: fail(f"{i}: unknown dependency {d}")
-        if d in items and order.index(d) > order.index(i): fail(f"{i}: dependency {d} appears later (import order not topological)")
-# high-risk ship outputs may only be consumed after their independent verify (except by that verify)
-for i, ds in deps.items():
-    for d in ds:
-        if d in items and items[d]["kind"] == "ship" and items[d]["risk"] == "high" and i != f"{d}-verify":
-            fail(f"{i} depends on high-risk {d} directly instead of {d}-verify")
-# cycle detection
-color = {}
-def dfs(n, stack):
-    color[n] = 1
-    for d in deps.get(n, []):
-        if d not in items: continue
-        if color.get(d) == 1: fail(f"cycle: {' -> '.join(stack+[d])}")
-        elif not color.get(d): dfs(d, stack + [d])
-    color[n] = 2
-for n in items:
-    if not color.get(n): dfs(n, [n])
-# every high-risk ship task's verify must gate the phase (transitively)
-def ancestors(n, seen=None):
-    seen = set() if seen is None else seen
-    for d in deps.get(n, []):
-        if d not in seen:
-            seen.add(d)
-            if d in items: ancestors(d, seen)
-    return seen
-for ph in ["P0", "P1", "P2"]:
-    gate = f"gate-phase-{ph[1]}"
-    anc = ancestors(gate)
-    for i, f in items.items():
-        if f["phase"] == ph and i != gate and i not in anc: fail(f"{i} not upstream of {gate}")
-    if ph != "P0":
-        prev = f"gate-phase-{int(ph[1])-1}"
-        for i, f in items.items():
-            if f["phase"] == ph and prev not in ancestors(i): fail(f"{i} does not depend on {prev}")
-first = [i for i, f in items.items() if f["phase"] == "P0"]
-for i in first:
-    if "flo-plan-approval" not in ancestors(i): fail(f"{i} does not depend on flo-plan-approval")
-
-# ---------- 5. wave rules
-def globs(s):
-    return [] if s == "—" else [g.strip().strip("`") for g in s.split(",")]
-def overlap(a, b):
-    for x in a:
-        for y in b:
-            if x == y or fnmatch.fnmatch(x, y) or fnmatch.fnmatch(y, x): return True
-            xs, ys = x.rstrip("*").rstrip("/"), y.rstrip("*").rstrip("/")
-            if x.endswith("**") and (y.startswith(xs + "/") or ys == xs): return True
-            if y.endswith("**") and (x.startswith(ys + "/") or xs == ys): return True
-    return False
-waves = collections.defaultdict(list)
-for i, f in items.items(): waves[f["wave"]].append(i)
-wave_index = {}
-for w in waves:
-    ph, n = w.split("-W"); wave_index[w] = (ph, int(n))
-for w, ms in waves.items():
-    workers = [m for m in ms if items[m]["kind"] != "gate"]
-    if len(workers) > 3: fail(f"{w}: {len(workers)} workers > 3")
-    for a in range(len(workers)):
-        for b in range(a + 1, len(workers)):
-            if overlap(globs(items[workers[a]]["owns"]), globs(items[workers[b]]["owns"])): fail(f"{w}: file overlap {workers[a]} / {workers[b]}")
-    for m in ms:
-        for d in deps[m]:
-            if d in items and items[d]["wave"] == w: fail(f"{w}: {m} depends on same-wave {d}")
-            if d in items and wave_index[items[d]["wave"]][0] == wave_index[w][0] and wave_index[items[d]["wave"]][1] > wave_index[w][1]: fail(f"{m} scheduled before its dependency {d}")
-notes.append(f"waves: {len(waves)}; max workers per wave {max(len([m for m in ms if items[m]['kind']!='gate']) for ms in waves.values())}")
-
-# ---------- 6. briefs
-br = read(os.path.join(P, "task-briefs.md"))
-bids = re.findall(r"^### ([a-z0-9-]+)$", br, re.M)
-if set(bids) != set(items): fail(f"brief/backlog id mismatch: {set(bids) ^ set(items)}")
-for blk in re.split(r"^### ", br, flags=re.M)[1:]:
-    i = blk.split("\n", 1)[0].strip()
-    if i not in items: continue
-    if "Given " not in blk or " When " not in blk or " Then " not in blk: fail(f"brief {i}: no Given/When/Then")
-    if items[i]["kind"] == "ship" and "**Commands:**" not in blk: fail(f"brief {i}: no commands")
-    if "**Route:**" not in blk: fail(f"brief {i}: no route")
-
-# ---------- 7. feature coverage
-impl_feats = collections.defaultdict(set); test_feats = collections.defaultdict(set)
-for i, f in items.items():
-    fs = [] if f["features"] == "—" else [x.strip() for x in f["features"].split(",")]
-    for x in fs:
-        if x not in feat: fail(f"{i}: unknown feature {x}")
-        if f["kind"] == "ship": impl_feats[x].add(i)
-        if f["tests"] != "—": test_feats[x].add(i)
-for fid, v in feat.items():
-    ph = v["phase"]
-    if v["dec"] in {"Not applicable", "Backlog", "Reject"} or v["mos"].startswith("Won't") or v["dec"] == "Not feasible on iOS web" and ph in ("—", ""):
-        continue
-    phases = re.findall(r"P\d", ph)
-    if not phases: fail(f"{fid}: no phase"); continue
-    if any(p in ("P0", "P1", "P2") for p in phases):
-        if not impl_feats[fid]: fail(f"{fid} ({ph}) has no implementing task")
-        if not test_feats[fid]: fail(f"{fid} ({ph}) has no task with tests")
-cov = sum(1 for fid in feat if impl_feats[fid])
-notes.append(f"features with P0–P2 implementing tasks: {cov}")
-
-# ---------- 8. test IDs referenced exist in catalogue
-ts = read(os.path.join(P, "test-strategy.md"))
-cat = set(re.findall(r"^\| (T-[A-Z0-9]+-\d+(?:…\d+)?)", ts, re.M))
-known = set()
-for c in cat:
-    m = re.match(r"(T-[A-Z]+-)(\d+)…(\d+)", c)
-    if m:
-        for k in range(int(m.group(2)), int(m.group(3)) + 1): known.add(f"{m.group(1)}{k:02d}")
-    else: known.add(c)
-for i, f in items.items():
-    for t in ([] if f["tests"] == "—" else [x.strip() for x in f["tests"].split(",")]):
-        if t not in known: fail(f"{i}: test id {t} not in catalogue")
-
-# ---------- 9. consent rules each have enforcement + test, and tests exist
-sp = read(os.path.join(P, "security-privacy.md"))
-crs = re.findall(r"^\| (CR-\d+) \| (.*?) \| (.*?) \| (T-CON-\d+)[^|]*\|", sp, re.M)
-if len(crs) != 21: fail(f"expected 21 consent rules, parsed {len(crs)}")
-for cr, rule, enf, t in crs:
-    if not enf.strip(): fail(f"{cr}: no enforcement")
-    if t not in known: fail(f"{cr}: test {t} not in catalogue")
-    if not any(t in (f["tests"]) for f in items.values()): fail(f"{cr}: {t} not assigned to any P0–P2 task")
-# ---------- 10. Section 3/4 enforcement matrix complete
-em = re.findall(r"^\| (S[34]-[0-9a-z]+) \| (.*?) \| (.*?) \| (.*?) \|", ts, re.M)
-ids = [e[0] for e in em]
-need = [f"S3-0{k}" for k in range(1, 10)] + ["S4-1", "S4-2", "S4-3", "S4-4a", "S4-4b", "S4-4c", "S4-4d", "S4-4e", "S4-5", "S4-6a", "S4-6b", "S4-6c", "S4-7a", "S4-7b", "S4-7c", "S4-8", "S4-9", "S4-10"]
-for n in need:
-    if n not in ids: fail(f"enforcement matrix missing {n}")
-for e in em:
-    if not e[2].strip() or not e[3].strip(): fail(f"{e[0]}: missing enforcement or check")
-notes.append(f"enforcement rows: {len(em)}; consent rules: {len(crs)}")
-
-# ---------- 11. links and anchors
-def anchor(h):
-    h = h.strip().lower()
-    h = re.sub(r"[^\w\- ]", "", h)
-    return h.replace(" ", "-")
-anchors = {}
-mdfiles = glob.glob(os.path.join(root, "docs/plan/**/*.md"), recursive=True) + glob.glob(os.path.join(root, "docs/adr/*.md"))
-for p in mdfiles:
-    txt = read(p)
-    txt_nocode = re.sub(r"```.*?```", "", txt, flags=re.S)
-    anchors[os.path.abspath(p)] = {anchor(re.sub(r"`", "", h)) for h in re.findall(r"^#+ (.+)$", txt_nocode, re.M)}
-nlinks = 0
-for p in mdfiles:
-    txt = re.sub(r"```.*?```", "", read(p), flags=re.S)
-    for tgt in re.findall(r"\]\(([^)\s]+)\)", txt):
-        if tgt.startswith("http"): continue
-        nlinks += 1
-        path, _, frag = tgt.partition("#")
-        dest = os.path.abspath(os.path.join(os.path.dirname(p), path)) if path else os.path.abspath(p)
-        if not os.path.exists(dest): fail(f"{os.path.relpath(p, root)}: broken link {tgt}"); continue
-        if frag and dest.endswith(".md") and frag not in anchors.get(dest, set()): fail(f"{os.path.relpath(p, root)}: missing anchor {tgt}")
-notes.append(f"relative links checked: {nlinks}")
-
-# ---------- 12. forbidden wording outside quoted/negated contexts (spot check)
-for p in mdfiles:
-    if "/research/" in p: continue
-    for ln, line in enumerate(read(p).splitlines(), 1):
-        if re.search(r"\bsafe days?\b", line, re.I) and not re.search(r"no|never|not|\"|'|ban|lint|reject|“|”|label", line, re.I):
-            fail(f"{os.path.relpath(p, root)}:{ln}: unqualified 'safe day'")
-
-print("NOTES"); [print(" -", n) for n in notes]
-print("FAILURES" if fails else "ALL CHECKS PASSED", len(fails)); [print(" -", f) for f in fails]
-sys.exit(1 if fails else 0)
-```
+| Nothing copies Flo's content or branding | Planned (original content, placeholder name with a trademark note, fact-check plus originality review); not mechanically checkable | ux-spec.md §8, AP-20 |
+| A non-expert can follow the executive summary and glossary | Executive summary and glossary rewritten for the Stage D points (operator disclosure, preview vs real use, chance patterns, BBT and ovulation wording); still a judgement | plan.md §1–2 |

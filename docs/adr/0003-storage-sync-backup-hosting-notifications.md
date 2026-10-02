@@ -1,6 +1,6 @@
 # ADR-0003: Storage, sync, backup, hosting and notifications
 
-- **Status:** Proposed (Stage C, 2026-10-02). Depends on Phase 0 feasibility blockers FB-01, FB-02, FB-06 and FB-09.
+- **Status:** Proposed (Stage C, 2026-10-02; revised in Stage E after the Stage D critique). Depends on Phase 0 feasibility blockers FB-01, FB-02, FB-06 and FB-09.
 - **Context:** Step 5 constraints: $0, no always-on server, no user accounts, ciphertext only off the phones, easy to move away. Evidence: R5 and R4, as checked by the cross-check.
 - **Decision** (weighted matrix in [storage-sync-decision.md §2](../plan/storage-sync-decision.md#2-weighted-decision-matrix); recommended combination 1 + 3, scoring 415/500):
   - Local-first storage on each phone.
@@ -9,6 +9,9 @@
   - Manual `.flosync` exchange as a first-class fallback.
   - App hosted as static files on Cloudflare Pages with `_headers`.
   - Generic daily Web Push from a cron job, with details shown only after unlock.
+  - **Operator and custody.** One Cloudflare account is needed; who holds it is the captain's choice (AP-10: her-owned, joint, or captain-owned with an in-app disclosure), because the holder can see connection metadata and could change the served code (threat T13). The relay keeps no logs, reads no IP or location data, and uses opaque ids and sequence cursors (PR-07); this minimises but does not remove what the owner can see.
+  - **Preview versus production.** Every deployment before P6 is a synthetic-only preview with its own Pages project, relay Worker, D1 database and secrets, produced by named backlog items (`p0-relay-spike`, `p0-probe-deploy`, `pN-demo-deploy`, `p2-preview-relay-deploy`). Production is a separate environment, deployed only after the captain's concrete approval at P6 (AP-29); real use starts there.
+  - **His backups** never contain her shared projections or any category key (T-BAK-04).
 - **Rejected:**
   - Supabase/Firebase: anonymous auth creates accounts, the free tiers pause or require Blaze, and terms eligibility is unclear.
   - Peer-to-peer: no asynchronous delivery.

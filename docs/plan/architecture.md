@@ -1,6 +1,6 @@
 # Architecture (Step 4)
 
-**Status:** Stage C draft, 2026-10-02. This is a design, not a tested system. All device and provider capabilities marked **untested** need a Phase 0 feasibility check ([roadmap.md](roadmap.md#p0--foundation)). The storage, sync, hosting and notification choice is in [storage-sync-decision.md](storage-sync-decision.md). The key hierarchy and threat model are in [security-privacy.md](security-privacy.md). ADRs: [docs/adr/](../adr/README.md).
+**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)). This is a design, not a tested system. All device and provider capabilities marked **untested** need a Phase 0 feasibility check ([roadmap.md](roadmap.md#p0--foundation)). The storage, sync, hosting and notification choice is in [storage-sync-decision.md](storage-sync-decision.md). The key hierarchy and threat model are in [security-privacy.md](security-privacy.md). ADRs: [docs/adr/](../adr/README.md).
 
 ## 1. How everything ties together
 
@@ -70,7 +70,7 @@ All choices are recorded in [ADR-0001](../adr/0001-stack-typescript-preact-vite.
 | Build | Vite | Mainstream; fast; static output for any host |
 | Local DB | IndexedDB through `idb` (small promise wrapper, ISC licence, to verify) | IndexedDB is shipped and documented (R4 §2). OPFS is kept for backup staging only, if needed |
 | Crypto | **WebCrypto only** (AES-GCM, HKDF, PBKDF2, ECDH P-256, ECDSA P-256) | No crypto dependency. P-256 rather than X25519 for broad support. MDN documents X25519 in `deriveKey` (https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey, accessed 2026-10-02; Documented, high), but Safari support is **untested** here |
-| QR | Display: a small QR encoder (e.g. `qrcode-generator`, MIT). Scan: camera through `getUserMedia` plus `jsQR` (Apache-2.0) | Native `BarcodeDetector` support in Safari is **untested**. Fallback: a typed or AirDropped pairing code |
+| QR | Display: a small QR encoder (e.g. `qrcode-generator`, MIT). Scan: camera through `getUserMedia` plus `jsQR` (Apache-2.0) | Native `BarcodeDetector` support in Safari is **untested**. Fallback: each pairing payload sent as a `.flopair` file by AirDrop (§4.2) |
 | Service worker | Hand-written TypeScript SW with a build-generated precache manifest | Full control over update safety (§7). Avoids Workbox's added complexity |
 | PDF report | Print-optimized HTML route, then iOS "Print → Save PDF" or the share sheet | No PDF library |
 | Relay (P2) | Cloudflare Worker (TypeScript) + D1, no framework | See [storage-sync-decision.md](storage-sync-decision.md) |
@@ -101,7 +101,7 @@ All interfaces live in `src/contracts/` (task `p0-contracts`). They are versione
 | `app` | Routing, composition, state wiring | — | everything (integration-only files) |
 | `relay/` | Worker: signed requests, snapshots, couple log, cron push | HTTP API spec in [storage-sync-decision.md §5](storage-sync-decision.md#5-relay-protocol-summary) | — |
 
-**Ownership rule for parallel waves.** Only `app` integration tasks may edit `src/app/**`. Screen tasks own only their own screen folders.
+**Ownership rule for parallel waves.** Only `app` integration tasks may edit `src/app/**`. Screen tasks own only their own screen folders. Two shared entry points pass explicitly from one owner to a later, dependency-ordered owner: `src/engine/index.ts` (`p1-cycle-engine`, then `p1-warnings-v1` adds warnings to `EngineOutput`) and the service-worker entry `src/sw/entry.ts` (`p0-service-worker`, then `p2-push` registers the push handler). The consistency checker (X2) proves no two dependency-unordered tasks own the same path.
 
 ## 4. Two-person model
 
@@ -122,28 +122,33 @@ sequenceDiagram
   participant H as Her phone
   participant P as His phone
   participant R as Relay
-  H->>H: create pairing session: secret s (32B), expires 10 min
-  H-->>P: QR-A {spaceId, relayUrl, H.signPub, H.agreePub, s}
-  P->>P: verify format; create couple-key share
-  P-->>H: QR-B {P.signPub, P.agreePub, MAC_s(all fields)}
-  H->>H: verify MAC with s (proves P scanned QR-A)
-  H->>P: both screens show 6-digit safety code = trunc(SHA-256(H.pubs‖P.pubs‖s))
-  Note over H,P: Both confirm the codes match (stops a swapped-QR attack)
-  H->>R: owner-signed add-device(P.signPub)
-  H->>H: create couple key CPK₁; wrap to P.agreePub (ECDH-ES+HKDF)
+  H->>H: new session: id, nonce Nh (32B), expires 10 min, single use
+  H->>H: C = SHA-256("pair/v1/commit" ‖ sessionId ‖ H.signPub ‖ H.agreePub ‖ Nh)
+  H-->>P: QR-A {v, sessionId, spaceId, relayUrl, H.signPub, H.agreePub, C, expires}  (no secret)
+  P->>P: record QR-A; new nonce Np (32B)
+  P-->>H: QR-B {sessionId, P.signPub, P.agreePub, Np}
+  H->>H: record QR-B (only now may Nh be revealed)
+  H-->>P: QR-C {sessionId, Nh}
+  P->>P: check SHA-256("pair/v1/commit" ‖ sessionId ‖ H.pubs ‖ Nh) == C, else abort
+  Note over H,P: both compute T = SHA-256("pair/v1/sas" ‖ QR-A fields ‖ QR-B fields ‖ Nh ‖ Np)<br/>and show code = (first 32 bits of T as an unsigned integer) mod 10^6, as 6 digits
+  Note over H,P: both people compare the codes and each taps "Codes match"; any mismatch aborts and is logged
+  H->>R: owner-signed add-device(P.signPub from the transcript)
+  H->>H: create couple key CPK₁; wrap to P.agreePub (ECDH-ES+HKDF), signed by H.signPub
   H->>R: publish wrapped CPK₁ (no category keys: sharing is off by default)
-  P->>R: fetch, unwrap CPK₁ → couple space works; partner view says "Nothing shared yet"
+  P->>R: fetch; accept only a wrap signed by H.signPub from the transcript → couple space works; partner view says "Nothing shared yet"
 ```
 
-- **Fallbacks.** If his camera cannot scan inside the Home Screen app (**untested**, FB-05), each QR payload is also offered as a short text code. The code can be AirDropped or typed, and the same safety-code check applies.
-- **Re-pairing** always needs a fresh session. A code cannot be reused, matching Flo's documented behaviour (R1 §2.2).
+- **Why this order (commit, then reveal).** Her nonce Nh is fixed by the commitment C in QR-A before his nonce Np exists, and Nh is revealed only after her phone has recorded QR-B. Someone who sees QR-A and wants to substitute their own keys in QR-B must choose those keys and Np before Nh is known, so they cannot search for keys that produce a matching 6-digit code; their chance of a match is about one in a million per attempt, and each session allows one attempt. QR-A carries no secret, so seeing it gives an attacker nothing to forge with. This is the standard short-authentication-string pattern (hash commitment before reveal, as used for example in ZRTP, RFC 6189; cited as a design reference, Inferred, medium confidence, not re-retrieved in Stage E). It is a **planner design, not a formally analysed protocol**: the `p2-pairing` brief routes it to Opus, and `p2-pairing-verify` must audit the transcript encoding, ordering and abort paths (T-PAIR-02 a–e). Threat T14 in [security-privacy.md](security-privacy.md#1-threat-model) records the residual risk.
+- **Fallbacks.** If a camera cannot scan inside the Home Screen app (**untested**, FB-05), each of QR-A, QR-B and QR-C is offered instead as a small `.flopair` file sent by AirDrop while both people are together. The same order, commitment check and safety-code comparison apply. Typing a code by hand is not offered: QR-A and QR-B carry two P-256 public keys each, which is far too long to type reliably.
+- **Re-pairing** always needs a fresh session. A session cannot be reused, matching Flo's documented behaviour (R1 §2.2).
+- **Restoring his phone** from a backup gives it new device keys and no category keys (T-BAK-04), so it pairs again in person and then fetches only what she currently shares.
 
 ### 4.3 Three data areas
 
 | Area | Contents | Key | Who can decrypt | Where stored |
 |---|---|---|---|---|
 | **Private** (hers) | All her raw logs, notes, settings, tendencies, warnings | PDK (private data key) under LMK | Her devices only | Her IndexedDB; her encrypted backups |
-| **Shared** (her chosen subset) | *Projections* per enabled category, e.g. cycle-phase summary or predicted window. **Never raw private records** | CK_{c,e} per category c and epoch e | Her devices, plus his device for currently enabled categories | Her IndexedDB, the relay, his IndexedDB (as ciphertext at rest under his LMK) |
+| **Shared** (her chosen subset) | *Projections* per enabled category, e.g. cycle-phase summary or predicted window. **Never raw private records** | CK_{c,e} per category c and epoch e | Her devices, plus his device for currently enabled categories | Her IndexedDB, the relay, his IndexedDB (as ciphertext at rest under his LMK). **Never in his backups or exports** (T-BAK-04) |
 | **Couple** | Entries both write: dates, sex events, notes, love notes, support cards, check-ins | CPK_e (couple key) | Both devices | Both IndexedDBs and the relay |
 
 **Share categories** (all **off by default**; [consent rules](security-privacy.md#2-consent-and-privacy-rules-testable)):

@@ -1,6 +1,6 @@
 # Algorithm and domain specification (Step 3)
 
-**Status:** Stage C draft, 2026-10-02. This has **not** been independently audited. Every algorithm here needs an Opus algorithm audit and, where it carries medical content, a medical-safety review before the code that implements it is merged ([agent-operating-model.md](agent-operating-model.md)). The audit is a required gate, not optional.
+**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)). This has **not** been independently audited. Every algorithm here needs an Opus algorithm audit and, where it carries medical content, a medical-safety review before the code that implements it is merged ([agent-operating-model.md](agent-operating-model.md)). The audit is a required gate, not optional.
 
 **Sources:**
 - Flo-specific rules come from [R2](research/R2-flo-methods.md).
@@ -23,11 +23,13 @@ Labels used for every claim and choice:
 - It has no measured Flo accuracy to compare against. Flo's "90% accurate" figure comes from a user survey, not a day-error benchmark (R2 §1).
 - It does not prove clinical safety.
 - It does not give a calibrated personal probability of conception.
+- It does not claim that any minimum-data threshold below (for example the A2 small-sample margins, the A12 evidence counts or the A14/A15 trigger counts) is clinically validated. They are DESIGN choices, flagged for the Opus audits.
+- It does not claim real-world or Flo-equivalent accuracy. Backtests run on synthetic data only (A18).
 
 ## Plain-language primer
 
 - A **cycle** runs from the first day of one period to the day before the next period starts. Cycle **day 1** is the first day of real bleeding.
-- **Ovulation** is when an egg is released, usually about 12–16 days before the next period. It cannot be seen directly at home. Calendars, temperature, ovulation (LH) tests and cervical mucus each give a different, imperfect clue (R3 §2).
+- **Ovulation** is when an egg is released, roughly two weeks before the next period. The gap varies between people and between cycles: in one large study of app users (Bull 2019, a selected group with ovulatory cycles) the phase after ovulation averaged 12.4 days and spanned about 7 to 17 days across cycles. It cannot be seen directly at home. Calendars, temperature, ovulation (LH) tests and cervical mucus each give a different, imperfect clue (R3 §2).
 - The **fertile window** is the few days when sex can lead to pregnancy: roughly the five days before ovulation plus the day of ovulation. Its timing varies, even in regular cycles (Wilcox 2000, R3 §3).
 - **Pregnancy can happen on days the app labels as lower chance.** The app never labels any day as "safe".
 
@@ -67,7 +69,7 @@ function runEngine(input: EngineInput, params: EngineParams = PARAMS_V1): Engine
 | E6 | `engineVersion` and `paramsHash` appear in every saved prediction, so two versions can be compared on the same data. |
 | E7 | All date arithmetic goes through A0. No `Date` object is created from a `LocalDate`. |
 
-**Version upgrades.** A new version runs in shadow on the user's own device for at least one cycle. Its on-device track record (A18) is shown next to the old version's. It replaces the old version only when it is no worse on the synthetic suite *and* on her local track record. The change is recorded in an ADR.
+**Version upgrades.** A new version must first meet the T-ENG-04 targets on the frozen synthetic suite (A18); the change is recorded in an ADR. On her device it then runs in shadow next to the old version, and its on-device track record (A18) is shown beside the old one. It replaces the old version on her device only after **at least 6 of its shadow predictions have resolved** (about six cycles) and its personal mean absolute error is not worse than the old version's by more than 1 day. Six predictions are a minimum for a sanity check, not statistical proof; until they exist, the old version stays and the "Why?" sheet says the new one has not yet been compared on her data.
 
 ## Parameters v1 (`PARAMS_V1`)
 
@@ -77,13 +79,14 @@ function runEngine(input: EngineInput, params: EngineParams = PARAMS_V1): Engine
 | `maxCycleLen` | 90 | FLO-DOC: cycles longer than 90 days are excluded (R2:2) |
 | `maxCycleAgeDays` | 365 | FLO-DOC: cycles more than a year old are excluded (R2:2) |
 | `minCycleLen` | 15 | DESIGN: shorter intervals are probably logging artefacts. They are shown and flagged, never silently used |
-| `recencyDecay` | 0.85 | DESIGN: a recent change moves the predicted day after about 3 repeats (see TV-P3/P4) |
+| `recencyDecay` | 0.85 | DESIGN: a recent change moves the predicted day after 3 repeats when up to 9 cycles are in the history, and after 4 repeats with 10–12 cycles (TV-P4, TV-A2) |
 | `defaultCycleLen` | 28 | DESIGN, informed by EVID (Bull 2019 mean 29.3; Fehring 2006 mean 28.9; R3 §1) and the ACOG CO700 convention |
 | `defaultPeriodLen` | 5 | DESIGN: placeholder until she logs; within ACOG ≤7 and FIGO ≤8 (R3 §6) |
 | `halfWidthNoHistory` | 7, or 5 if she gave a typical length | DESIGN, informed by EVID: 95% of cycles fell between 22 and 36 days in Fehring 2006 |
 | `smallSamplePenalty` | n=1→3, n=2→2, n=3–5→1, n≥6→0 | DESIGN |
 | `halfWidthClamp` | [2, 10] | DESIGN |
-| `lutealRange` | 12–16, convention 14 | EVID: ASRM uses cycle length − 14 (R3 §2); Bull 2019 mean luteal phase 12.4 |
+| `lutealRange` | 12–16, convention 14 | **DESIGN**, informed by EVID: ASRM's convention is cycle length − 14 (R3 §2); Bull 2019 reports a mean luteal phase of 12.4 days in a selected cohort of app users with ovulatory cycles, with cycles spanning about 7–17 days (the abstract labels this spread "95% CI"; it describes variation across that cohort's cycles, not the uncertainty of one person's next cycle; R3 [3]). **Excluded tail:** cycles whose luteal phase is shorter than 12 or longer than 16 days ovulate outside the calendar band, so the calendar estimate can label a real ovulation day "Lower" (TV-F3). The "Why?" sheet says so. Personal marker evidence can widen the band (A9); the default is not replaced by a new universal bound |
+| `lutealPlausible` | 7–17 | DESIGN plausibility filter, taken from the Bull 2019 cohort spread: personal luteal estimates from markers outside it are treated as marker or logging errors (A9). Not a forecast band |
 | `coreWindow` | ovulation − 5 … ovulation + 1 (7 days) | FLO-DOC envelope: 4–5 days before to 1–2 after, minimum 7 (R2:7); EVID: Wilcox 1995 six-day window ending on ovulation |
 | `missedLogRatio` | interval ≥ 1.6× and ≤ 2.4× the typical length | DESIGN, informed by EVID: Li 2022 models skipped tracking (R3 §1) |
 
@@ -180,6 +183,8 @@ variability label = "regular" if (max−min of recent ≤ 6 months) ≤ FIGO lim
 
 **Uncertainty shown to her:** "Most likely around Oct 8 (between Oct 4 and Oct 10)." This comes with a short explanation, such as "based on your last 7 cycles; your last one was shorter than usual".
 
+**What the range means.** The range is a rule-of-thumb *planning range* (median plus 1.5 × the typical deviation, plus a small-sample margin). It is **not** a calibrated probability interval, and the app never presents it as one. Its design target is that, on the frozen synthetic stable scenarios with 6 or more prior cycles, at least 70% of actual starts fall inside it (T-ENG-04; DESIGN target, synthetic only). On her phone, once at least 6 predictions have resolved, the "Why?" sheet shows the observed hit rate in plain words, for example "Your last 8 periods: 6 started inside the range". Before that it says: "We'll show how often this range was right once you've logged 6 more periods." 
+
 **Defaults for a new user:** see `n == 0` above. With no last period date at all, nothing is predicted and the screen says "Log your period to start predictions".
 
 **Edge cases:**
@@ -235,12 +240,17 @@ ovCenter     = center(A2) − 14
 ovRange      = [lo(A2) − 16, hi(A2) − 12]                       # luteal 12–16
 coreWindow   = [ovCenter − 5, ovCenter + 1]                      # "most likely fertile days" (7 days)
 possibleBand = [ovRange.lo − 5, ovRange.hi + 1]                  # "pregnancy possible — higher than other days"
-suppress fertility outputs (state "Suppressed{reason}") when:
-   hormonal method active (pill/patch/ring/implant/injection/hormonal IUD)       (FLO-DOC R2:24 behaviour)
-   lifeStage ∈ {pregnant, postpartum-before-first-period}
-   prediction state == "late" (fertility becomes "unknown — consider a test")
-   n ≥ 3 and (Lc < 21 or Lc > 45)                                   (DESIGN; Flo's 20/21/60 boundary is inconsistent, R2:23 — not copied)
+suppress fertility outputs when one of these holds; the first matching reason in this order wins:
+   1. lifeStage == pregnant                                          → Suppressed{reason = pregnant}
+   2. lifeStage == postpartum and no period since the birth          → Suppressed{reason = postpartum_before_first_period}
+   3. hormonal method active (pill/patch/ring/implant/injection/hormonal IUD)
+                                                                     → Suppressed{reason = hormonal}   (FLO-DOC R2:24 behaviour)
+   4. prediction state == "late"                                     → Suppressed{reason = late}       ("unknown — consider a test")
+   5. n ≥ 3 and (Lc < 21 or Lc > 45)                                 → Suppressed{reason = cycle_length}
+                                                                       (DESIGN; Flo's 20/21/60 boundary is inconsistent, R2:23 — not copied)
+   6. no period start logged at all (A2 has no prediction)           → Suppressed{reason = no_data}
 copper IUD: show estimate greyed with "your method doesn't change ovulation" (FLO-DOC R2:24)
+with personal luteal evidence Lp from A9 (P3): ovRange = [lo(A2) − max(16, Lp), hi(A2) − min(12, Lp)]   # widens only, never narrows
 ```
 
 The possible band can be wide. For TV-P1 (window 09-22..10-06), ovRange is 09-06..09-24 and the possible band is **09-01..09-25**: it starts on the period day for a brand-new user. This is deliberate: it is the honest result when her cycle length is unknown.
@@ -251,7 +261,8 @@ The possible band can be wide. For TV-P1 (window 09-22..10-06), ovRange is 09-06
   - core 08-26..09-01;
   - ovRange 08-27..09-04;
   - possible band 08-22..09-05.
-- **TV-F2**: a pill user. Fertility is Suppressed(reason = "hormonal method"), and `chanceByDay` = "depends on correct method use" for every day.
+- **TV-F2**: a pill user. Fertility is Suppressed{reason = hormonal}, and `chanceByDay` = DEPENDS_ON_METHOD for every covered day.
+- **TV-F3 (excluded tail, documents a limitation)**: TV-P2 history, and the next period actually starts 09-14 after an 8-day luteal phase, so ovulation was 09-06. The possible band ends 09-05, so A5 labels 09-06 **Lower** with the not-zero text. Expected: Lower (never zero), and the "Why?" sheet contains the fixed sentence "Ovulation can happen outside these dates, especially if the time between ovulation and your period is short. The calendar can't tell." 
 
 ## A5. Pregnancy-chance indicator (never zero)
 
@@ -264,10 +275,22 @@ The possible band can be wide. For TV-P1 (window 09-22..10-06), ovRange is 09-06
   - No source validates a calibrated personal daily curve (R3 §3, cross-check 14).
 - **Decision.** Show three qualitative categories, each with fixed explanatory text. No numbers appear on any screen, and no day is ever "safe" or "zero".
 
+**Coverage of `chanceByDay`.** It covers every day from the current cycle's start through the later of `hi(A2)` and today. With no period logged it covers today only.
+
+**Every suppression reason has a fixed, named category** (consistency check X11). None of them is zero, "none" or "safe", so invariant E4 holds in every state:
+
+| Reason | Category | Fixed text |
+|---|---|---|
+| `pregnant` | PREGNANT_NOT_SHOWN | "You're in pregnancy mode, so conception chance isn't shown." |
+| `postpartum_before_first_period` | POSSIBLE_BEFORE_FIRST_PERIOD | "Can't estimate yet after birth. Pregnancy is possible before your first period returns." |
+| `hormonal` | DEPENDS_ON_METHOD | "Depends on using your method correctly." |
+| `late` | UNKNOWN_TEST | "Unknown — your period is late; consider a test." |
+| `cycle_length` | NOT_ESTIMATED_CYCLE_LENGTH | "Can't estimate fertile days for cycles this short or long. Pregnancy is possible on any day you have sex without contraception." |
+| `no_data` | NO_DATA_YET | "Log your period to see estimates. Until then, pregnancy is possible on any day you have sex without contraception." |
+
 ```text
-if fertility Suppressed(hormonal): category = DEPENDS_ON_METHOD  ("Depends on using your method correctly")
-elif Suppressed(late):            category = UNKNOWN_TEST        ("Unknown — your period is late; consider a test")
-elif marker-confirmed ovulation O with marker window [wlo, whi] (A9):
+if fertility Suppressed{reason}: category = the row above for that reason (every covered day)
+elif marker-based ovulation estimate O with marker window [wlo, whi] (A9):
       Higher = [O−2, O]; Medium = ([O−5, O+1] ∪ [wlo−5, whi+1]) \ Higher; Lower = all other days (not-zero text)
 else: Higher = [ovCenter−2, ovCenter]                             (EVID: ASRM peak in the 2 days before ovulation;
                                                                    Wilcox 1995 peak on ovulation day)
@@ -282,11 +305,23 @@ else: Higher = [ovCenter−2, ovCenter]                             (EVID: ASRM 
 - 09-07 → Lower, with the not-zero text.
 - 09-14, the predicted period day → Lower, with the not-zero text.
 - The TV-F2 pill user on any day → DEPENDS_ON_METHOD.
-- Property: no output value equals 0, "none" or "safe".
+- TV-F3: 09-06 → Lower, with the not-zero text and the excluded-tail sentence.
+- Property: no output value equals 0, "none" or "safe", in any state (E4).
+
+**Suppression vectors** (all dates 2026):
+
+| TV | Input | Expected `chanceByDay` |
+|---|---|---|
+| TV-Q1 | Pregnancy mode, any history | PREGNANT_NOT_SHOWN on every covered day |
+| TV-Q2 | Postpartum mode, birth 2026-08-01, no period since, today 09-20 | POSSIBLE_BEFORE_FIRST_PERIOD |
+| TV-Q3 | Starts 01-01, 01-20, 02-08, 02-28, 03-19 (cycles 19, 19, 20, 19; n = 4; Lc = 19 < 21), no method | NOT_ESTIMATED_CYCLE_LENGTH on every covered day (W-04 also fires) |
+| TV-Q4 | No period ever logged, today 10-02 | NO_DATA_YET for 10-02 only |
+| TV-Q5 | TV-P2 history, no new start, today 09-17 (after hi 09-16) | UNKNOWN_TEST on every covered day |
+| TV-Q6 | TV-Q5 plus an active combined pill | DEPENDS_ON_METHOD (hormonal outranks late) |
 
 ## A6. BBT temperature-shift detection (P3)
 
-- **Purpose.** Confirm *after the fact* that ovulation probably happened. BBT never predicts ahead (R3 §2).
+- **Purpose.** Detect, after the fact, a sustained temperature rise that suggests ovulation has *probably* already happened. It is evidence, not proof, and it never predicts ahead (R3 §2).
 - **Labels.** EVID: the WHO/JHU handbook describes a sustained rise of about 0.2–0.5 °C. The "three over six" rule shape matches documented `sympto@3.0.2` behaviour (R3 §2). Our rule text is written independently from the published description.
   - We do **not** copy or port `sympto` code. It is AGPL-3.0-or-later (R3 §8).
   - We do **not** include its exception rules in v1.
@@ -335,12 +370,26 @@ manual "ovulated today" on day M → center M, window [M, M] (FLO-DOC R2:6)
 priority: manual > LH > BBT > mucus > calendar   (FLO-DOC: markers have priority over calendar, R2:2; order among markers DESIGN)
 center/window = highest-priority available marker
 if another marker's window does not overlap the chosen window → flag "markers disagree", use union of windows, Higher days from chosen marker only
-fertility for the *current* cycle uses markers from the current cycle only; past-cycle markers refine lutealRange estimate (P3: personal luteal length = median(next start − marker ovulation) over ≥3 cycles, clamped 10–16, EVID Bull luteal variation)
+symptothermal cross-check (EVID: the WHO/JHU handbook combines temperature and mucus and waits for the LATER of the two
+   marker endpoints, R3 §2; DESIGN operationalization, no sympto code or exception rules):
+   if both a BBT shift (A6) and a mucus peak (A8) are recorded in the current cycle:
+      combinedConfirmedOn = max(BBT confirmation day, mucus confirmation day)   # status "both signs seen" only from this day
+      window = intersection of the two windows if they overlap, else union with "markers disagree"
+   if only one of the two is confirmed: status "one sign so far; waiting for the second", estimate from that marker
+   the endpoint is used ONLY to time the ovulation estimate and the status text. It never declares an infertile or "safe"
+   phase: days after it remain "Lower — not zero" at best (A5), because this app is not contraception (constitution 4.4)
+fertility for the *current* cycle uses markers from the current cycle only
+personal luteal length (P3): Lp = median(next start − marker ovulation) over ≥3 completed marker cycles, ignoring values outside
+   lutealPlausible 7–17 (treated as marker/logging errors). Lp only WIDENS the A4 calendar band (A4 formula); it never narrows it
+   and never replaces the default 12–16 for anyone else
 ```
 
 **Test vectors:**
 - TV-X1: calendar ovCenter 08-31 plus LH run 08-28..08-29 → center 08-29, no disagreement flag (the windows overlap).
 - TV-X2: LH center 08-20 (window 08-19..08-22) plus BBT window 09-02..09-04 → disagreement flagged, union window, Higher days 08-18..08-20.
+- TV-X3 (personal luteal widening): TV-P2 window 09-12..09-16 and Lp = 10 from three marker cycles → ovRange [09-12 − 16, 09-16 − 10] = 08-27..09-06; possible band 08-22..09-07. The core window (08-26..09-01) and Higher days (08-29..08-31) are unchanged. With Lp = 13 the TV-F1 band is unchanged; with Lp = 5 (outside 7–17) Lp is ignored.
+- TV-S1 (symptothermal, both signs): BBT as TV-B1 (shift confirmed on cycle day 16; window days 12–14) plus mucus as TV-M1 (peak day 14, confirmed day 17; window 12–16) → "both signs seen" from day 17; the windows overlap, so the window is days 12–14 and the center is the BBT estimate, day 13.
+- TV-S2 (one sign so far): TV-B1 plus TV-M2 (mucus peak not yet confirmed) → status "one sign so far; waiting for the second"; estimate from BBT (day 13); no combined confirmation day.
 
 ## A10. Pregnancy dating and milestones (P4)
 
@@ -384,29 +433,41 @@ pregnancy end: outcome ∈ {birth, loss, ended}; → lifeStage postpartum (birth
 - **Severities:** `EMERGENCY`, `SEEK_ADVICE_SOON`, `DISCUSS`, `INFO`.
 - **Dismissal and repeats.** A dismissed card stays hidden for the same episode or cycle. `EMERGENCY` cards cannot be dismissed while the condition still holds.
 
-| ID | Condition | Severity | Source |
-|---|---|---|---|
-| W-01 | On one day, "soaking ≥1 pad/tampon per hour for >2 hours" **and** any of chest pain, breathlessness, lightheadedness/dizziness | EMERGENCY | ACOG FAQ095 (R3 [18]) |
-| W-02 | Any of: product change every 1–2 h, clots >2.5 cm, flooding, "bleeding stops me doing normal things", logged during a period | SEEK_ADVICE_SOON (DISCUSS if only one item, once) | NHS heavy periods; NICE NG88 quality-of-life emphasis (R3 [17],[19]) |
-| W-03 | Period bleeding days >7: once → INFO; ≥2 of last 6 → DISCUSS (FIGO's ≤8 is shown as context) | INFO/DISCUSS | ACOG FAQ095; FIGO (R3 [16],[18]) |
-| W-04 | Cycle length outside 21–35: once → INFO; ≥2 of last 6 valid cycles → DISCUSS (FIGO 24–38 shown as context) | INFO/DISCUSS | ACOG FAQ095; FIGO |
-| W-05 | Shortest-to-longest variation over the last 6 months >9 (age 18–25 or unknown) or >7 (26–41) | INFO ("variable") | FIGO 2023 explanation (R3 [16]) |
-| W-06 | No period ≥90 days, not pregnant, not on a continuous hormonal method, not postpartum or breastfeeding | SEEK_ADVICE_SOON + pregnancy-test card | PCOS 2023 (>90 days); ACOG (3–6 months) |
-| W-07 | Bleeding after sex (any) → DISCUSS; bleeding between periods in ≥2 cycles → DISCUSS (once → INFO). Not shown in the first 3 months of a new hormonal method (INFO only) | DISCUSS | ACOG FAQ095 |
-| W-08 | Possible pregnancy (late, positive test, or early pregnancy mode) **and** one-sided pain, shoulder-tip pain or unusual bleeding → SEEK_ADVICE_SOON ("get advice today"); with sudden severe pain plus dizziness or fainting → EMERGENCY | SEEK/EMERGENCY | NHS ectopic pregnancy (R3 [19]; page review overdue — re-verify in content review) |
-| W-09 | Severe period pain that stops daily activities in ≥2 of last 3 periods, or pain during sex in ≥2 cycles | DISCUSS | ESHRE 2022 (R3 [21]) |
-| W-10 | The same symptom in the 5 days before the period in 3 consecutive cycles, absent in cycle days 4–12 | INFO ("you may want to track for PMS"; no PMDD rule) | ACOG FAQ057 (R3 [22]) |
-| W-11 | Mood option "thoughts of harming myself" logged | EMERGENCY-style support card with local crisis contacts | **Source gap:** the crisis resource and wording must be chosen and cited in the P1 content review for her country |
+Each rule names its source **and the population that source describes** (ADR-0007). Population descriptors summarise what R3 records; the medical audit confirms them against the source text. A source written for adults or for a selected cohort may not fit everyone, which is one more reason every card says "talk to a clinician" rather than diagnosing.
 
-**Test vectors:**
+| ID | Condition | Severity | Source | Source population / context |
+|---|---|---|---|---|
+| W-01 | On one day, "soaking ≥1 pad/tampon per hour for >2 hours" **and** any of chest pain, breathlessness, lightheadedness/dizziness | EMERGENCY | ACOG FAQ095 (R3 [18]) | US patient education for adults; not age-specific |
+| W-02 | Heavy-bleeding items logged on days of the current period episode: product change every 1–2 h, soaking hourly for >2 h (without the W-01 symptoms; Stage E addition, flagged for audit), clots >2.5 cm, flooding, "bleeding stops me doing normal things". Exactly **one** item on exactly **one** day → DISCUSS; any other non-empty case (two or more different items, or one item on two or more days) → SEEK_ADVICE_SOON | DISCUSS / SEEK_ADVICE_SOON | NHS heavy periods; NICE NG88 quality-of-life emphasis (R3 [17],[19]) | UK guidance for people with heavy menstrual bleeding |
+| W-03 | Period bleeding days >7: once → INFO; ≥2 of last 6 → DISCUSS (FIGO's ≤8 is shown as context) | INFO/DISCUSS | ACOG FAQ095; FIGO (R3 [16],[18]) | ACOG adult patient education; FIGO System 1 normal limits for non-pregnant people of reproductive age |
+| W-04 | Cycle length outside 21–35: once → INFO; ≥2 of last 6 valid cycles → DISCUSS (FIGO 24–38 shown as context) | INFO/DISCUSS | ACOG FAQ095; FIGO | As W-03 |
+| W-05 | Shortest-to-longest variation over the last 6 months >9 (age 18–25 or unknown) or >7 (26–41) | INFO ("variable") | FIGO 2023 explanation (R3 [16]) | FIGO age bands 18–25, 26–41, 42–45 |
+| W-06 | No period for **more than 90 days** (today − last start ≥ 91), not pregnant, not on a continuous hormonal method, not postpartum or breastfeeding | SEEK_ADVICE_SOON + pregnancy-test card | PCOS 2023 (">90 days"); ACOG (3–6 months) | PCOS guideline: any cycle >90 days more than one year after menarche; adult and adolescent criteria differ |
+| W-07 | (a) Bleeding after sex (a sex entry with `bleeding_after = yes`) → DISCUSS. (b) Intermenstrual bleeding: a day with any flow that is neither part of a period episode nor attached to one as spotting (A1); in 1 cycle → INFO, in ≥2 cycles → DISCUSS. During the first 3 months of a new hormonal method, (b) is INFO only | INFO/DISCUSS | ACOG FAQ095 | US adult patient education |
+| W-08 | Possible pregnancy (late, positive test, or early pregnancy mode) **and** one-sided pain, shoulder-tip pain or unusual bleeding → SEEK_ADVICE_SOON ("get advice today"); with sudden severe pain plus dizziness or fainting → EMERGENCY | SEEK/EMERGENCY | NHS ectopic pregnancy (R3 [19]; page review overdue — re-verify in content review) | UK general public guidance |
+| W-09 | Severe period pain that stops daily activities in ≥2 of last 3 periods, or pain during sex in ≥2 cycles | DISCUSS | ESHRE 2022 (R3 [21]) | Clinical guideline for people with suspected endometriosis |
+| W-10 | The same symptom in the 5 days before the period in 3 consecutive cycles, absent in cycle days 4–12 | INFO ("you may want to track for PMS"; no PMDD rule) | ACOG FAQ057 (R3 [22]) | US adult patient education |
+| W-11 | Mood option "thoughts of harming myself" logged on today's or yesterday's entry | EMERGENCY-style support card with local crisis contacts; cannot be dismissed on those days | **Source gap:** the crisis resource and wording must be chosen and cited in the P1 content review for her country (AP-27) | Depends on her country |
+
+**Test vectors** (hand-computed; dates 2026):
 
 | TV | Input | Expected |
 |---|---|---|
 | TV-W1 | One period of 9 bleeding days; previous periods ≤6 | W-03 INFO only |
 | TV-W2 | Last 6 cycles [28, 40, 27, 38, 29, 30] | W-04 DISCUSS (40 and 38); W-05 INFO (13 > 9) |
-| TV-W3 | Last start 2026-06-01, today 2026-08-31, no pregnancy or method | 91 days → W-06 |
+| TV-W3 | Last start 2026-06-01, today 2026-08-31, no pregnancy or method | 91 days > 90 → W-06 |
+| TV-W3b | Last start 2026-06-02, today 2026-08-31 | 90 days, not more than 90 → no W-06 |
 | TV-W4 | Hourly soaking for 3 h plus dizziness | W-01 EMERGENCY |
 | TV-W5 | TV-W3 while in pregnancy mode | No W-06 |
+| TV-W6 | One period day logs only "clots >2.5 cm" | W-02 DISCUSS |
+| TV-W7 | Period days 2 and 3 each log "change every 1–2 h" | W-02 SEEK_ADVICE_SOON (one item on two days) |
+| TV-W8 | One sex entry with `bleeding_after = yes`; no hormonal method | W-07 DISCUSS |
+| TV-W9 | Spotting on cycle day 14 of one cycle, not adjacent to any period episode | W-07 INFO |
+| TV-W10 | Such intermenstrual spotting in two different cycles | W-07 DISCUSS |
+| TV-W11 | TV-W10, with a combined pill started 40 days before the second spotting day | W-07 INFO only (new-method window) |
+| TV-W12 | "Thoughts of harming myself" logged on 10-02; today 10-02 | W-11 crisis card shown, not dismissible on 10-02 or 10-03 |
+
+**Vectors owed by later phases** (written in each phase's tasks at the gate before it, from this spec): W-08, W-09 and W-10 (P3/P4); A14 S2 and S3 (P4); A15 endometriosis, fibroids/HMB and PMS checkers (P5); A12 binary metrics and the consistency-failure path (P3).
 
 ## A12. Personal tendencies: desire, mood, energy, comfort, symptoms (P3; logging from P1)
 
@@ -422,10 +483,15 @@ pregnancy end: outcome ∈ {birth, loss, ended}; → lifeStage postpartum (birth
 2. No copy may say or imply willingness, obligation, permission or consent.
 3. Tendencies are private by default. They can be shared only through the separate category `intimacy_tendencies`, which is off by default.
 
-**Metrics.**
-- Ordinal, 0–3: desire (none, low, medium, high), energy, comfort during sex (pain=0 … comfortable=3), satisfaction, stress.
-- Binary: each mood or symptom option, present or absent on a day when that tracker was logged.
+**Metrics (restricted, to limit chance findings).** Every extra metric checked is another chance for a pattern to appear by luck, so A12 analyses a short fixed list:
+- Ordinal, 0–3: **desire** (none, low, medium, high), **energy**, **comfort during sex** (pain=0 … comfortable=3).
+- Binary mood **groups** (present on a logged mood day): **low mood** (low, sad, tearful, numb, self_critical) and **tense mood** (irritable, angry, anxious, stressed, overwhelmed, mood_swings).
+- Up to **3 symptoms she chooses to watch** (default none), each binary.
+
+That is at most 8 metrics (5 by default). Satisfaction, stress and individual mood or symptom options are not analysed in v1.
+
 - A **logged day** for a tracker is a day with an explicit entry, including "none" or "no symptoms". **Missing days are never treated as "none".**
+- **Comfort has a selection bias.** It is only recorded on days with sex, so bins where she rarely has sex contribute few or no comfort values, and comfort also depends on things the app does not see (the partner, the setting, health). Comfort is therefore used only as a "not lower" filter for F-118 and is always shown with the sentence "Comfort is only logged when you have sex, so this may not reflect the whole cycle." 
 
 **Phase bins.** Bins are defined for *completed* cycles only, so the next start is known. They are relative to the start S and the next start N:
 
@@ -433,7 +499,7 @@ pregnancy end: outcome ∈ {birth, loss, ended}; → lifeStage postpartum (birth
 |---|---|---|
 | B1 period | Bleeding days of the episode | Precedence 1 |
 | B4 pre-period | N−5 … N−1 | Precedence 2 (ACOG's 5-day premenstrual window) |
-| B3 mid-cycle | N−19 … N−11 | Calendar ovulation ±. If a marker-confirmed ovulation O exists, use O−5 … O+3 instead. Precedence 3 |
+| B3 mid-cycle | N−19 … N−11 | Calendar ovulation ±. If a marker-based ovulation estimate O exists, use O−5 … O+3 instead. Precedence 3 |
 | B5 after mid-cycle | N−10 … N−6 | — |
 | B2 after period | The remaining days between B1 and B3 | — |
 
@@ -451,18 +517,35 @@ for metric m with ≥3 cycles in W having ≥1 logged day of m:
      evidence ok  ⇔ n_b ≥ 6 and c_b ≥ 3
      diff_b = mean_b − overall;  threshold = 0.5 (ordinal) | 0.25 (binary)
      consistency_b = share of contributing cycles whose per-cycle bin mean is on the same side of that cycle's own mean
-     tendency(b) = higher/lower ⇔ evidence ok and |diff_b| ≥ threshold and consistency_b ≥ 2/3
+     candidate(b) = higher/lower ⇔ evidence ok and |diff_b| ≥ threshold and consistency_b ≥ 2/3
+  chance check (controls false patterns across the 5 bins of one metric):
+     S_obs = max over candidate bins of |diff_b| · sqrt(n_b)        (0 if there is no candidate)
+     null: rotate each cycle's day-to-value assignment by an offset r_i ∈ [0, L_i) independently (L_i = that cycle's length),
+           keeping the bins fixed; recompute the candidates and S for each rotation combination
+     p = share of rotation combinations with S ≥ S_obs (exact enumeration when ∏ L_i ≤ 2,000,000; otherwise
+         p = (1 + #{S ≥ S_obs}) / (1 + 999) over 999 combinations drawn from a xorshift32 generator seeded with
+         FNV-1a-32(paramsHash ‖ metricId ‖ the window's cycle start dates), so the engine stays pure and deterministic, E1)
+     tendency(b) = candidate(b) for every candidate bin ⇔ p ≤ 0.05 (DESIGN α, per metric)
   status: no metric data in ≥3 cycles → INSUFFICIENT (show progress "2 of 3 cycles")
-          no bin with tendency → NO_CLEAR_PATTERN (a normal, valid result)
-          else TENDENCY(list of bins)
-  change detection (needs 6 cycles): split W into older O (cycles 4–6 back) and recent R (last 3); evaluate each alone with the same rules;
-          if some bin is a tendency in both with opposite signs → RECENTLY_CHANGED (show R's result as "recently")
+          change detection fires (below) → RECENTLY_CHANGED, and no TENDENCY is shown for that metric
+          no candidate, or p > 0.05 → NO_CLEAR_PATTERN (a normal, valid result; it is expected for several cycles)
+          else TENDENCY(list of candidate bins, with n_b, c_b and p)
+  change detection (needs 6 cycles; descriptive only, it never asserts a pattern): split W into older O (cycles 4–6 back) and
+          recent R (last 3); evaluate each alone with the candidate rules (no chance check); if some bin is a candidate in both
+          with opposite signs → RECENTLY_CHANGED ("your recent cycles look different from earlier ones, so no pattern is shown")
 coverage = logged days of m / days in W; if coverage < 40% add "Patterns only reflect days you logged (you logged X of Y days)"
 "When you've tended to feel like sex" (F-118): bins where desire = higher and comfort ≠ lower (or comfort INSUFFICIENT) → listed with
           evidence counts + fixed text: "This describes past logs, not a prediction — and it never means yes."
           If any listed bin overlaps B3 → also show "Mid-cycle is also when pregnancy is more likely" (A5 link)
 comparisons use exact rationals or a 1e-9 epsilon; thresholds inclusive
+every TENDENCY and F-118 card also shows: "Patterns can appear by chance, especially with only a few cycles."
 ```
+
+**False-pattern control and its honest limits.**
+- Stage D's illustrative simulation of the unguarded rules (phase-independent random data) found a spurious TENDENCY for 2–25% of metrics depending on logging rate and cycle count, about 76% of users seeing at least one across five metrics at the 3-cycle minimum. A Stage E planning simulation (scratch only, not committed: independent uniform values, fixed 28-day cycles, 300 null histories per cell, 99 rotations) found 2.5–35% without the chance check and 0.7–6.3% with it, at the cost of power: planted mid-cycle effects were detected in only about 13–53% of histories, lowest with 3 cycles and sparse logging. These numbers are illustrative only.
+- **Required target (T-ENG-05, P3):** at most 5% of phase-independent synthetic histories show a TENDENCY for a given metric. The P3 task reports the measured rate and the power at 3, 4 and 6 cycles; if the target fails, α or the statistic is changed through an ADR, never the generator.
+- **Several metrics.** With 5 default metrics checked at 5% each, up to about 1 user in 5 with no real patterns could still see one chance pattern somewhere (1 − 0.95⁵ ≈ 23%, worst case). The "Why?" sheet states how many patterns were checked and that about 1 check in 20 can show a pattern by chance.
+- **Minimum data is a design choice.** The 3-cycle, 6-day and 3-cycle-per-bin minimums are DESIGN thresholds, not clinically validated ones. In practice the chance check means patterns usually need several cycles of regular logging before they show.
 
 **Test vectors.** Each cycle is 28 days with a 5-day period, so B1 = days 1–5, B2 = 6–9, B3 = 10–18, B5 = 19–23, B4 = 24–28.
 
@@ -478,20 +561,22 @@ comparisons use exact rationals or a 1e-9 epsilon; thresholds inclusive
   - B4: mean 1.0 → **lower pre-period**.
   - B2 and B5: n 0 → not enough logs.
   - Coverage 21/84 = 25%, so the coverage note shows.
-  - F-118 lists mid-cycle, with the pregnancy note.
+  - Chance check: S_obs = B3's 20/21 × √9 = 20/7 ≈ 2.857 (B1 and B4 give 5/7 × √6 ≈ 1.750). Exact enumeration over 28³ = 21,952 rotation combinations gives p = 432/21,952 ≈ 0.0197 ≤ 0.05 → **TENDENCY** (B3 higher; B1 and B4 lower). The p value was machine-computed in Stage E (scratch enumeration); the algorithm auditor must recompute it independently.
+  - F-118 lists mid-cycle, with the pregnancy note and the chance sentence.
 - **TV-T2 (no clear pattern).** As TV-T1, but cycle 3 has B3 values 1, 1, 1 and B1 values 3, 3.
   - B3 mean 19/9 = 2.111.
   - Overall 35/21 = 1.667.
   - diff 0.444 < 0.5 → no tendency.
   - B1 mean (1+1+1+1+3+3)/6 = 1.667, diff 0 → no tendency.
   - B4 mean 1.0, diff −0.667. Every cycle's B4 value (1) is below that cycle's own mean (1.714, 1.714, 11/7 = 1.571), so consistency is 3/3 → **lower pre-period** is still reported.
-  - Expected status: TENDENCY(B4 lower) only. This deliberately shows that one changed cycle removes the mid-cycle claim.
+  - B4 is the only candidate: S_obs = 2/3 × √6 ≈ 1.633; exact p = 7,427/21,952 ≈ 0.338 > 0.05.
+  - Expected status: **NO_CLEAR_PATTERN**. This deliberately shows that one changed cycle removes the mid-cycle claim, and that the remaining pre-period difference does not pass the chance check.
 - **TV-T3 (insufficient).** Only 2 completed cycles → INSUFFICIENT, "1 more cycle needed".
 - **TV-T4 (recently changed).** Cycles 1–3 as in TV-T1. Cycles 4–6 with B1 = 3, 3; B3 = 1, 1, 1; B4 = 1, 1.
   - O: B3 +0.952 → higher.
   - R: overall 11/7 = 1.571; B3 mean 1.0, diff −0.571 → lower, 3/3.
-  - Expected: **RECENTLY_CHANGED** for B3, and for B1 as well (O lower −0.714; R mean 3.0, diff +1.429 → higher).
-- **TV-T5 (missing ≠ none).** As TV-T1 with no other days logged. Expected: the B2 and B5 means are undefined, not 0, and the overall mean stays 1.714.
+  - Expected: **RECENTLY_CHANGED** for B3, and for B1 as well (O lower −0.714; R mean 3.0, diff +1.429 → higher). No TENDENCY is shown for desire.
+- **TV-T5 (missing ≠ none).** As TV-T1 with no other days logged. Expected: the B2 and B5 means are undefined, not 0, and the overall mean stays 1.714 (the chance check is as TV-T1).
 - **TV-T6 (uncertain phase).** Current cycle at day 12, with desire 3 logged on day 12. Expected: excluded from bins and counted as "waiting for this cycle to finish".
 
 ## A13. Cycle analytics and normal-range labels (P3)
@@ -550,21 +635,22 @@ Flo's checker uses cumulative symptom totals against unpublished thresholds (R2 
 
 ## A16. Modifiers: contraception, post-pill, postpartum, breastfeeding, pregnancy loss
 
-| State | Period prediction | Fertility | Labels |
-|---|---|---|---|
-| Combined pill/patch/ring with a break | Predict the withdrawal bleed at pack start + active days; Lc = pack length | Suppressed | FLO-DOC: pack length sets cycle length (R2:24) |
-| Continuous / skipped break | No bleed predicted; "bleeding can still happen" | Suppressed | FLO-DOC: continuing the pack does not count as a delay |
-| Hormonal IUD, implant, injection, progestogen-only pill | Prediction only with ≥3 cycles on the method (h ≥ 4); otherwise "bleeding patterns on this method vary" | Suppressed | DESIGN |
-| Copper IUD, condoms, none | Normal | Normal (greyed note for copper IUD) | FLO-DOC copper-IUD exception |
-| Stopped a hormonal method <90 days ago | Only cycles since stopping count; settling +2 | Normal, with a "may take time to settle" note | DESIGN |
-| Postpartum before the first period | Suppressed ("unpredictable after birth") | Suppressed, with a note that pregnancy is possible before the first period | I-H; content review must cite |
-| Breastfeeding | Wider windows (settling +2) once periods return | Normal, with a note | DESIGN |
-| Pregnancy loss | The affected cycle is excluded; settling +2 for 2 cycles; gentle copy | Normal | DESIGN |
-| Perimenopause age band | Normal A2 (MAD widens h) | Normal | — |
+| State | Period prediction | Fertility | Labels | Phase |
+|---|---|---|---|---|
+| Any hormonal method (pill, patch, ring, hormonal IUD, implant, injection, progestogen-only pill), until pack-aware rules exist | Prediction only with ≥3 bleeding episodes on the method (h ≥ 4); otherwise "bleeding patterns on this method vary" | Suppressed{reason = hormonal} | DESIGN; suppression FLO-DOC (R2:24) | P1 (`p1-cycle-engine`, F-015) |
+| Combined pill/patch/ring with a break | Predict the withdrawal bleed at pack start + active days; Lc = pack length | Suppressed | FLO-DOC: pack length sets cycle length (R2:24) | P4 (F-016) |
+| Continuous / skipped break | No bleed predicted; "bleeding can still happen" | Suppressed | FLO-DOC: continuing the pack does not count as a delay | P4 (F-016) |
+| Copper IUD, condoms, none | Normal | Normal (greyed note for copper IUD) | FLO-DOC copper-IUD exception | P1 |
+| Stopped a hormonal method <90 days ago | Only cycles since stopping count; settling +2 | Normal, with a "may take time to settle" note | DESIGN | P1 |
+| Postpartum before the first period | Suppressed ("unpredictable after birth") | Suppressed{reason = postpartum_before_first_period}; "pregnancy possible before the first period" | I-H; content review must cite | P4 (mode), category defined in P1 |
+| Breastfeeding | Wider windows (settling +2) once periods return | Normal, with a note | DESIGN | P4 |
+| Pregnancy loss | The affected cycle is excluded; settling +2 for 2 cycles; gentle copy | Normal | DESIGN | P4 |
+| Perimenopause age band | Normal A2 (MAD widens h) | Normal | — | P1 (A2), P4 (A14) |
 
 **Test vectors:**
-- TV-K1: 21 active pills and a 28-pill pack started 2026-09-01 → withdrawal bleed predicted around 09-22 (09-01 + 21). Fertility is Suppressed.
-- TV-K2: stopped the pill 2026-07-01, then one natural cycle of 33 days → n=1: h = 3 + 2 = 5.
+- TV-K3 (P1): combined pill started 2026-06-01, one bleeding episode since → no period prediction, text "bleeding patterns on this method vary"; fertility Suppressed{reason = hormonal}, chance DEPENDS_ON_METHOD.
+- TV-K2 (P1): stopped the pill 2026-07-01, then one natural cycle of 33 days → n=1: h = 3 + 2 = 5.
+- TV-K1 (**P4**, F-016; not part of P1): 21 active pills and a 28-pill pack started 2026-09-01 → withdrawal bleed predicted around 09-22 (09-01 + 21). Fertility is Suppressed.
 
 ## A17. Insight-card selection (P1 core cards; P3 personalized)
 
@@ -594,25 +680,50 @@ Results are stratified by prior-cycle count (0, 1, 2, 3–5, 6+) and by regulari
 
 **Baselines:**
 - `B28`: start + 28.
-- `BAVG`: start + round(mean of all prior valid cycles), or 28 when there are none.
+- `BAVG`: start + round-half-up(mean of all prior cycles of 15–90 days), or 28 when there are none.
 
-`cycle-stats-v1` must beat or tie both baselines on MAE in the regular strata, and its coverage must be at least 75% for 6+ cycles. Both thresholds are DESIGN acceptance targets for the *synthetic* suite only.
+**Acceptance targets (T-ENG-04; DESIGN, synthetic suite only).** They are set per scenario because a robust median is not expected to beat a plain average on perfectly stable data; its purpose is to resist outliers and follow repeated changes:
 
-**Data.** A seeded synthetic generator produces the test data. Its scenarios cover:
-- stable cycles, with per-person means drawn from 24–35;
-- drift (for example 28 → 24);
-- outliers;
-- skipped logs, following the Li 2022 skip concept;
-- an irregular profile, with spread over 9;
-- post-pill settling.
+| Scenario | Target |
+|---|---|
+| Stable | MAE(v1) ≤ min(MAE(B28), MAE(BAVG)) + 0.25 day, in every prior-cycle stratum; window coverage ≥ 70% with 6+ prior cycles for within-person SD ≤ 3 days (wider-spread profiles are reported, not gated) |
+| Outliers | MAE(v1) ≤ min(MAE(B28), MAE(BAVG)) + 0.25 day |
+| Drift | MAE(v1) < MAE(BAVG) over the predictions after the change (hand vector TV-A2) |
+| Skipped logs, irregular, post-pill | Reported only, with no pass/fail: no target was justified in advance |
 
-**Synthetic results cannot show real-world accuracy** (R3 §8, cross-check 16).
+Stage D's illustrative simulation (stable Gaussian cycles) found v1's MAE 0.05–0.12 day above BAVG's and coverage 0.72–0.98 depending on spread, which these targets accommodate without tuning. If a target fails, the result is recorded and the method or target changes only through an ADR with the evidence. **The generator is never tuned to make an engine pass.**
+
+**Data: frozen synthetic scenarios.** `p0-synthetic-data` commits these parameters in `tools/synthetic/scenarios.json` (generator version 1) **before** any engine code exists; `p1-backtest` checks the file is unchanged. Labels: EVID means the value is taken from a cited population source; DESIGN means it is a planner choice informed by that source (factual gap D-G02). None of the sources gives per-person distributions, so every within-person parameter is DESIGN.
+
+| Scenario | Parameters | Label and source |
+|---|---|---|
+| Stable | Per-person mean drawn uniformly from 24–35 days; within-person SD drawn from {1, 2, 3, 4} days; Gaussian lengths rounded to whole days; 12 cycles | DESIGN, informed by Fehring 2006 (95% of cycles 22–36 days) and Bull 2019 (mean 29.3), both population summaries (R3 §1) |
+| Drift | 8 cycles at one mean, then a step of −4 days (for example 28 → 24) for 6 cycles; SD 1 | DESIGN (models "adaptive periods", Stage C note) |
+| Outliers | Stable profile plus a 5% chance per cycle of +8 to +14 days | DESIGN |
+| Skipped logs | Stable profile; each true start is unlogged with probability 0.1 or 0.2, merging two cycles | DESIGN, concept from Li 2022 (tracking skips; R3 §1); rates not taken from that paper |
+| Irregular | Per-person SD drawn from 5–9 days | DESIGN; FIGO uses >9 days of variation (age 18–25) as "irregular" context (R3 §6) |
+| Post-pill | First 2 cycles after stopping: mean +5 days, SD 5; then the stable profile | DESIGN; no retrieved source quantifies this |
+
+**Synthetic results cannot show real-world accuracy, and nothing here shows parity with Flo's accuracy**, which is unpublished and unmeasured (R2 §1, R3 §8, cross-check 16). The on-device track record below is the only real-world evidence the app will have, and only for her.
 
 **Metric test vector TV-A1.** Prediction errors (predicted − actual, in days) [0, +1, −2, +3], with windows containing the actual start in 3 of 4 cases. Expected:
 - MAE = (0+1+2+3)/4 = **1.5**;
 - within ±1 = 2/4 = **50%**;
 - within ±2 = 3/4 = **75%**;
 - coverage = **75%**.
+
+**Drift test vector TV-A2** (hand-computed; walk-forward predictions of the six 24-day cycles after 8 cycles of 28, using A2 exactly):
+
+| Prediction for 24-day cycle no. | Prior 24s in history | v1 Lc (24s' weight vs half-total) | v1 error | BAVG prediction | BAVG error | B28 error |
+|---|---|---|---|---|---|---|
+| 1 | 0 | 28 | +4 | 28 | +4 | +4 |
+| 2 | 1 | 28 (1.00 < 2.5613) | +4 | 28 (27.56) | +4 | +4 |
+| 3 | 2 | 28 (1.85 < 2.6771) | +4 | 27 (27.20) | +3 | +4 |
+| 4 | 3 | 28 (2.5725 < 2.7755) | +4 | 27 (26.91) | +3 | +4 |
+| 5 | 4 | **24** (3.1866 ≥ 2.8592) | 0 | 27 (26.67) | +3 | +4 |
+| 6 | 5 | 24 | 0 | 26 (26.46) | +2 | +4 |
+
+MAE: v1 16/6 ≈ **2.667**; BAVG 19/6 ≈ **3.167**; B28 **4.0**. The drift target holds (v1 < BAVG). v1's window contains the actual start in 5 of 6 predictions (the first window is 26–30). With 10–12 cycles of history, 4 repeats are needed before the predicted day moves (compare TV-P4, where 9 cycles need 3).
 
 **Public datasets** are not used without explicit approval (AP-21):
 - the Marquette dataset has participant reuse consent but no explicit licence;

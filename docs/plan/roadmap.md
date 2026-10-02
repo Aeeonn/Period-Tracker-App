@@ -1,10 +1,11 @@
 # Roadmap, phases and gates (Step 10)
 
-**Status:** Stage C draft, 2026-10-02.
+**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)).
 
 - Detailed tasks exist for **P0–P2** only: see [task-briefs.md](task-briefs.md) and [backlog-import.md](backlog-import.md).
 - P3–P7 list their feature IDs, exit criteria and demo contents. Their tasks are written at the gate before each of those phases, using what was learned by then.
 - Every phase ends with a phase verification report (`pN-phase-verify`), a demo package, the real-iPhone smoke checklist and a captain-held `gate-phase-N`.
+- Every demo runs on a **synthetic-data preview** produced by a backlog item (`p0-probe-deploy`, `pN-demo-deploy`, `p2-preview-relay-deploy`) after the AP-10/AP-18 approvals. Real day-to-day use begins only after the production deploy in P6, which needs its own concrete approval (AP-29).
 - Nothing starts before Stage F approval (`flo-plan-approval`).
 
 ```mermaid
@@ -28,15 +29,17 @@ flowchart LR
   - the encrypted data layer and the lock;
   - the design system;
   - feasibility answers on real phones;
-  - all account and credential approvals collected in one place.
+  - all account, credential, install and preview-deploy approvals collected in one place (`p0-approvals`);
+  - the live synthetic preview relay with a push-test endpoint, and the probe preview URL.
 - **Features.** F-024 (passphrase lock). Constitution infrastructure: rules 2, 3, 6, 9 and 10.
 - **Feasibility blockers resolved or recorded:** FB-01 to FB-10 ([storage-sync-decision.md §10](storage-sync-decision.md#10-named-phase-0-feasibility-blockers)).
 - **Exit criteria:**
   - `npm run check` and `npm run e2e` pass on `main`;
   - crypto, data, lock, SW and CSP verify reports PASS;
-  - the verifier-sandbox proof is recorded, or FB-08 is recorded as a blocker with the captain's interim decision;
+  - the verifier-sandbox proof is recorded, or FB-08 is recorded as a blocker with the captain's choice among the AP-16 interim options (none of which has the first mate run project code);
   - the device feasibility results from both phones are recorded;
   - `p0-approvals` is resolved;
+  - the P0 preview deploy record (docs/deploy/p0-demo.md) shows the served bytes, headers and network checks passing;
   - no health features yet.
 - **Demo.** Install on both iPhones. Set a passphrase and recovery code. Lock and unlock. Show that it works offline. Run the probe page results. Show the update flow with a dummy change.
 
@@ -47,7 +50,7 @@ flowchart LR
 - **Exit criteria:**
   - three-tap logging passes;
   - the engine v1 golden vectors and properties pass;
-  - the backtest beats or ties the baselines on synthetic data;
+  - the backtest reports each per-scenario T-ENG-04 target on the frozen synthetic scenarios; any miss is recorded with an ADR, never hidden by tuning the generator;
   - warnings v1 pass the medical-safety verify;
   - export, import and delete-all are verified;
   - the core cards are fact-checked;
@@ -58,12 +61,12 @@ flowchart LR
 ## P2 — Couple features
 
 - **Goal.** Consent-centred sharing between the two phones, encrypted end to end, plus the couple space, backup and generic notifications.
-- **Features.** F-018, F-022 (relay part), F-024 (passkey, if FB-07 passed), F-025, F-055–F-060, F-101, F-102, F-113, F-114, F-115, F-117, F-119.
+- **Features.** F-018, F-022 (relay part), F-024 (passkey, if FB-07 passed), F-025, F-055–F-060, F-061 (support-card tips only), F-101, F-102, F-113, F-114, F-115, F-117, F-119.
 - **Exit criteria:**
   - every T-CON test passes;
   - two-device sync, conflict, pairing, revocation and unpair tests pass;
   - privacy/security verify reports PASS for pairing, share keys, sync, relay, projection, backup, push and passkey;
-  - the relay runs on the approved free plan with no payment method (FB-01);
+  - the verified relay runs on the **preview** relay environment on the approved free plan with no payment method (FB-01), with logging off (T-RELAY-02);
   - the encrypted backup → restore round trip works on both real phones;
   - generic push works on the real phones (FB-06), or in-app-only mode is accepted.
 - **Demo.**
@@ -76,10 +79,10 @@ flowchart LR
 
 ## P3 — Cycle intelligence (later detail)
 
-- **Features.** F-027–F-032, F-033 (full), F-034, F-035, F-073, F-105, F-106, F-118, and the prediction track record (A18).
+- **Features.** F-003 (irregular-cycle refinements), F-027–F-032, F-033 (full), F-034, F-035, F-073, F-105, F-106, F-118, and the prediction track record (A18).
 - **Exit criteria:**
   - A6–A9, A12 and A13 vectors pass, with an Opus algorithm audit;
-  - the tendencies engine shows the INSUFFICIENT, NO_CLEAR_PATTERN and RECENTLY_CHANGED states on synthetic data;
+  - the tendencies engine shows the INSUFFICIENT, NO_CLEAR_PATTERN and RECENTLY_CHANGED states on synthetic data, and the T-ENG-05 null calibration meets its ≤5% target (with power reported);
   - the doctor report prints to PDF on a real iPhone;
   - personalized cards are fact-checked;
   - the backlog decision on PBAC (F-112) is recorded.
@@ -93,7 +96,7 @@ flowchart LR
   - pregnancy dating matches ACOG vectors;
   - the pregnancy-loss flow passes a sensitivity review;
   - perimenopause is age-gated;
-  - mode changes are invisible to the partner unless shared (T-CON-09 re-run);
+  - mode changes are invisible to the partner unless shared (T-CON-09 re-run), and when she enters pregnancy or postpartum mode with any category on, she is told that he may still notice that sharing paused (CR-09);
   - the questionnaire licensing decision (MRS) is recorded.
 - **Demo.** Pill-pack predictions. The late-period check-in. A synthetic pregnancy with weekly content and dating. Perimenopause mode on a synthetic 47-year-old profile.
 
@@ -111,6 +114,7 @@ flowchart LR
 
 - **Scope.**
   - an independent end-to-end security review (Opus) and a dependency audit;
+  - production environments separate from preview (new Pages project, relay Worker, D1 and secrets), deployed only after the captain's concrete AP-29 approval;
   - a performance pass against the real-phone budgets and an accessibility pass;
   - production deploy (a captain approval);
   - a user guide for both of them;
@@ -129,8 +133,8 @@ flowchart LR
 
 ## Phase gate procedure (all phases)
 
-`pN-phase-verify` (Opus spec/acceptance verifier) runs the gate commands on the integrated `main` revision and writes the phase verification report. The first mate then:
-1. assembles the demo package;
+`pN-phase-verify` (Opus spec/acceptance verifier) runs the gate commands on the landed `main` revision, re-checks the phase's preview deploy record and writes the phase verification report. The gate is held only **when** it becomes actionable, never at import (only `p0-approvals` is held at import; [backlog-import.md](backlog-import.md#import-procedure-first-mate-after-approval)). The first mate then:
+1. assembles the demo package, with the preview URL from `docs/deploy/pN-demo.md`;
 2. sets `gate-phase-N` as a captain hold;
 3. waits for "continue";
 4. records the approval;
