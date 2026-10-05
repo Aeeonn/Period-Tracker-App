@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "id": "synthetic-write-001",
+  "provenance": "synthetic service-worker acceptance fixture",
+  "value": "pending app-side write"
+}

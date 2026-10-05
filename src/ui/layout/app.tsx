@@ -1,5 +1,11 @@
-import { useEffect, useState } from 'preact/hooks';
-import { Card } from '../components/base';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { Button, Card } from '../components/base';
+import {
+  createUpdateWriteGate,
+  registerServiceWorker,
+  type UpdateReadyNotice,
+  type UpdateWriteGate,
+} from '../../sw/client';
 
 type Role = 'owner' | 'partner';
 type TabId = 'today' | 'calendar' | 'log' | 'insights' | 'us';
@@ -9,6 +15,16 @@ interface Tab {
   id: TabId;
   label: string;
   icon: IconName;
+}
+
+interface AppUpdateApi {
+  beginWrite(): () => void;
+}
+
+declare global {
+  interface Window {
+    floAppUpdate?: AppUpdateApi;
+  }
 }
 
 const OWNER_TABS: readonly Tab[] = [
@@ -153,6 +169,44 @@ export function App() {
     return () => window.removeEventListener('hashchange', onLocationChange);
   }, [tabs]);
 
+  const [updateNotice, setUpdateNotice] = useState<UpdateReadyNotice | null>(null);
+  const [restartStatus, setRestartStatus] = useState<'ready' | 'saving' | 'restarting'>('ready');
+  const writeGate = useRef<UpdateWriteGate | null>(null);
+  if (writeGate.current === null) {
+    writeGate.current = createUpdateWriteGate({
+      onPreparing: () => setRestartStatus('saving'),
+      onLocked: () => setRestartStatus('restarting'),
+      onCancelled: () => setRestartStatus('ready'),
+    });
+  }
+
+  useEffect(() => {
+    const gate = writeGate.current;
+    if (!gate) return;
+
+    window.floAppUpdate = { beginWrite: gate.beginWrite };
+    void registerServiceWorker({
+      onUpdateReady: (notice) => {
+        setUpdateNotice(notice);
+        setRestartStatus('ready');
+      },
+      writeCoordinator: gate,
+    }).catch(() => undefined);
+
+    return () => {
+      if (window.floAppUpdate?.beginWrite === gate.beginWrite) {
+        delete window.floAppUpdate;
+      }
+    };
+  }, []);
+
+  const restartNow = () => {
+    if (!updateNotice || restartStatus !== 'ready') return;
+    void updateNotice.restartNow().then((restarted) => {
+      if (!restarted) writeGate.current?.cancelRestart();
+    });
+  };
+
   if (!selectedTab) return null;
 
   const roleLabel = role === 'owner' ? 'Cycle owner' : 'Partner';
@@ -184,6 +238,22 @@ export function App() {
           <span class="shell-preview-banner__dot" aria-hidden="true" />
           Static preview · synthetic placeholder content
         </div>
+        {updateNotice ? (
+          <div role="status" aria-live="polite">
+            <Card class="shell-update" heading="Update ready">
+              <p>
+                {restartStatus === 'saving'
+                  ? 'Saving your changes before restarting.'
+                  : restartStatus === 'restarting'
+                    ? 'Restarting the app.'
+                    : updateNotice.message}
+              </p>
+              <Button onClick={restartNow} disabled={restartStatus !== 'ready'}>
+                Restart now
+              </Button>
+            </Card>
+          </div>
+        ) : null}
         <PlaceholderScreen role={role} tab={selectedTab} />
       </main>
 

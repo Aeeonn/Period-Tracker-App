@@ -25,7 +25,8 @@
     "relay:test": "vitest run tests/relay --passWithNoTests",
     "backtest": "tsx tools/backtest/index.ts",
     "bench": "vitest bench --passWithNoTests tests/bench",
-    "e2e": "playwright test --pass-with-no-tests",
+    "build": "tsx tools/build-precache.ts",
+    "e2e": "npm run build && playwright test --pass-with-no-tests",
     "e2e:shots": "playwright test --pass-with-no-tests --grep @shots",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run check:deps && npm run check:secrets && npm run check:no-real-data && npm run check:copy && npm run test && npm run check:size"
   },
