@@ -1,0 +1,46 @@
+{
+  "synthetic": true,
+  "provenance": "Reference vectors transcribed from docs/plan/algorithms-spec.md §A0 TV-D1–TV-D6. Expected day counts and differences were independently derived from A0 before implementation; the clock instant is a synthetic timestamp for the documented Auckland example. No health or identifying data.",
+  "source": "docs/plan/algorithms-spec.md §A0",
+  "vectors": [
+    {
+      "id": "TV-D1",
+      "operation": "epochDay",
+      "input": { "date": "1970-01-01" },
+      "expected": 0
+    },
+    {
+      "id": "TV-D2",
+      "operation": "epochDay",
+      "input": { "date": "2026-01-01" },
+      "expected": 20454
+    },
+    {
+      "id": "TV-D3",
+      "operation": "epochDay",
+      "input": { "date": "2026-10-02" },
+      "expected": 20728
+    },
+    {
+      "id": "TV-D4",
+      "operation": "diffDays",
+      "timeZone": "America/New_York",
+      "input": { "a": "2026-03-07", "b": "2026-03-09" },
+      "expected": 2
+    },
+    {
+      "id": "TV-D5",
+      "operation": "diffDays",
+      "timeZone": "Europe/Berlin",
+      "input": { "a": "2026-10-24", "b": "2026-10-26" },
+      "expected": 2
+    },
+    {
+      "id": "TV-D6",
+      "operation": "todayLocal",
+      "timeZone": "Pacific/Auckland",
+      "input": { "nowMs": 1790854200000 },
+      "expected": "2026-10-02"
+    }
+  ]
+}
