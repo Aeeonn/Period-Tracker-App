@@ -236,13 +236,44 @@ async function requestSafeRestart(
   });
 }
 
+interface NativeTrustedTypes {
+  createPolicy(
+    name: string,
+    rules: { createScriptURL(value: string): string },
+  ): { createScriptURL(value: string): unknown };
+}
+
+const SERVICE_WORKER_SCRIPT_URL = '/sw.js';
+const SERVICE_WORKER_POLICY_NAME = 'flo-service-worker-script';
+let serviceWorkerScriptPolicy: ReturnType<NativeTrustedTypes['createPolicy']> | undefined;
+
+/** Accept only the existing root-scoped service-worker script. */
+export function validateServiceWorkerScriptURL(value: string): string {
+  if (value !== SERVICE_WORKER_SCRIPT_URL) {
+    throw new TypeError('Only the same-origin /sw.js service-worker script is permitted.');
+  }
+  return value;
+}
+
+function serviceWorkerScriptURL(): string {
+  const trustedTypes = (globalThis as typeof globalThis & { trustedTypes?: NativeTrustedTypes })
+    .trustedTypes;
+  if (!trustedTypes) return SERVICE_WORKER_SCRIPT_URL;
+
+  serviceWorkerScriptPolicy ??= trustedTypes.createPolicy(SERVICE_WORKER_POLICY_NAME, {
+    createScriptURL: validateServiceWorkerScriptURL,
+  });
+  // TrustedScriptURL is absent from this project's DOM typings; the native value remains intact.
+  return serviceWorkerScriptPolicy.createScriptURL(SERVICE_WORKER_SCRIPT_URL) as string;
+}
+
 /** Register the shell worker and report an installed update without activating it. */
 export async function registerServiceWorker(
   options: ServiceWorkerClientOptions,
 ): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator)) return null;
 
-  const registration = await navigator.serviceWorker.register('/sw.js', {
+  const registration = await navigator.serviceWorker.register(serviceWorkerScriptURL(), {
     scope: '/',
     updateViaCache: 'none',
   });

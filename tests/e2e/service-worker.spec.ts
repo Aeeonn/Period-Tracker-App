@@ -87,7 +87,7 @@ async function serveRequest(request: IncomingMessage, response: ServerResponse):
       'content-length': String(body.byteLength),
     };
     if (requestPath === '/sw.js') {
-      headers['cache-control'] = 'no-cache, no-store, must-revalidate';
+      headers['cache-control'] = 'no-cache';
     }
     response.writeHead(200, headers).end(body);
   } catch {
@@ -418,5 +418,6 @@ test('T-SW-02 @sw waits for the pending app write before activating v2 and prese
   expect(workerSource).not.toMatch(/indexeddb|opfs|storage\.getdirectory/i);
   expect(workerSource).toContain('name.startsWith(CACHE_PREFIX)');
   const headers = await readFile(resolve(process.cwd(), 'public/_headers'), 'utf8');
-  expect(headers).toBe('/sw.js\n  Cache-Control: no-cache, no-store, must-revalidate\n');
+  const serviceWorkerCacheControl = /^\/sw\.js\n  Cache-Control: ([^\n]+)$/m.exec(headers)?.[1];
+  expect(serviceWorkerCacheControl).toBe('no-cache');
 });

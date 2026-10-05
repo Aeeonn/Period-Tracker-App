@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "origins": ["self"],
+  "relayOriginEnvironmentVariable": "RELAY_ORIGIN"
+}
