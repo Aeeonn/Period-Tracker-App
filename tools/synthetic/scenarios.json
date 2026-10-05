@@ -1,0 +1,62 @@
+{
+  "synthetic": true,
+  "generatorVersion": 1,
+  "scenarios": [
+    {
+      "id": "stable",
+      "parameters": {
+        "meanCycleLengthDays": { "distribution": "uniform", "min": 24, "max": 35 },
+        "withinPersonSdDays": { "distribution": "choice", "values": [1, 2, 3, 4] },
+        "cycleLengthDays": { "distribution": "gaussian", "rounding": "whole days" },
+        "cycles": 12
+      },
+      "label": "DESIGN, informed by Fehring 2006 (95% of cycles 22–36 days) and Bull 2019 (mean 29.3), both population summaries (R3 §1)"
+    },
+    {
+      "id": "drift",
+      "parameters": {
+        "cyclesAtInitialMean": 8,
+        "initialMeanCycleLengthDays": 28,
+        "stepChangeDays": -4,
+        "cyclesAfterStep": 6,
+        "withinPersonSdDays": 1
+      },
+      "label": "DESIGN (models \"adaptive periods\", Stage C note)"
+    },
+    {
+      "id": "outliers",
+      "parameters": {
+        "baseProfile": "stable",
+        "outlierChancePerCycle": 0.05,
+        "outlierIncreaseDays": { "min": 8, "max": 14 }
+      },
+      "label": "DESIGN"
+    },
+    {
+      "id": "skipped-logs",
+      "parameters": {
+        "baseProfile": "stable",
+        "unloggedTrueStartProbability": [0.1, 0.2]
+      },
+      "label": "DESIGN, concept from Li 2022 (tracking skips; R3 §1); rates not taken from that paper"
+    },
+    {
+      "id": "irregular",
+      "parameters": {
+        "baseProfile": "stable",
+        "withinPersonSdDays": { "distribution": "uniform", "min": 5, "max": 9 }
+      },
+      "label": "DESIGN; FIGO uses >9 days of variation (age 18–25) as \"irregular\" context (R3 §6)"
+    },
+    {
+      "id": "post-pill",
+      "parameters": {
+        "initialCyclesAfterStopping": 2,
+        "initialMeanIncreaseDays": 5,
+        "initialWithinPersonSdDays": 5,
+        "thenProfile": "stable"
+      },
+      "label": "DESIGN; no retrieved source quantifies this"
+    }
+  ]
+}
