@@ -20,4 +20,4 @@ export {
   type PersistenceStatus,
   type StoragePersistenceApi,
 } from './storage-persistence.ts';
-export { type RecordKeyMaterial, type RecordKeyProvider } from './codec.ts';
+export type { RecordKeyMaterial, RecordKeyProvider } from '../../contracts/store.ts';

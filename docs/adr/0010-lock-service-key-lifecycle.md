@@ -1,0 +1,76 @@
+# ADR-0010: Lock service key lifecycle, passphrase change and recovery-code confirmation
+
+- **Status:** Proposed (foundation task `p0-lock-contract`, 2026-10-28)
+- **Context:**
+  - `p0-lock` stopped with needs-decision: the `LockService` contract in `src/contracts/lock.ts` (`setup`, `unlock`, `lock`, `isUnlocked`, `onLock`) could not express three of its required behaviours ([task-briefs.md p0-lock](../plan/task-briefs.md#p0-lock)):
+    1. handing the unlocked keys to the encrypted `RecordStore` and provably dropping them on lock ("the key handle is null");
+    2. changing the passphrase by re-wrapping the LMK only, without re-encrypting records ([security-privacy.md §3](../plan/security-privacy.md#3-encryption-design), Recovery);
+    3. confirming 4 characters of the recovery code before setup continues (security-privacy.md §3; [ux-spec.md §3.1](../plan/ux-spec.md#31-onboarding-no-account)).
+  - [architecture.md §3](../plan/architecture.md#3-module-boundaries-and-contracts-contracts-first) requires an ADR and a foundation task for any contract change. The captain chose this foundation task and **service-enforced** confirmation: setup is not final until the 4 characters are confirmed.
+  - The store (`p0-db-store`) takes an `indexKey` and a `RecordKeyProvider`, but those types lived in `src/data/store/codec.ts`, so the lock contract could not name them.
+- **Decision:** an additive change to `src/contracts/lock.ts` and `src/contracts/store.ts`. `CONTRACTS_VERSION` stays 1.
+  - **Two-phase setup.**
+    - `setup(passphrase)` (phase 1) creates the LMK and the recovery code in memory only and returns `{ recoveryCode, confirmPositions }`. `confirmPositions` are four distinct, ascending, 1-based positions over the code's characters without group separators, chosen by the service and fixed for that pending setup. The service stays locked, and it persists nothing that a later start would treat as a completed setup.
+    - `confirmSetup([c1, c2, c3, c4])` (phase 2) compares the characters using the canonicalization that recovery-code unlock uses. On a match it commits the passphrase and recovery-code wraps of the LMK atomically and leaves the service unlocked.
+    - Errors: `wrong_confirmation` keeps the pending setup and its positions, and the caller may retry; `no_pending_setup` covers never started, cancelled, abandoned by `lock`, or already confirmed. A failed commit rejects and the setup stays pending.
+    - Abandon: `cancelSetup()`, calling `setup` again (a new code and new positions), `lock(reason)` for every reason, or a cold start (the pending state is memory-only). `setup` rejects once a setup has been confirmed. `setupState()` reports `not_configured`, `pending_confirmation` or `configured`.
+    - Auto-lock abandons a pending setup too (CR-21). If she leaves the app for longer than the background timeout while setup is pending (for example, to save the code in a password manager), `lock('timeout')` discards the pending LMK and its code. The code she saved is void, and the next `setup` shows a new code. The contract makes no other behaviour choice here. Onboarding copy that warns about this, and tells her to replace a saved code from an abandoned setup, is a `p0-lock` follow-up.
+    - Until confirmation, `isUnlocked()` is false, `storeKeys()` returns `locked`, and `unlock` returns `unsupported` because no method is configured yet.
+  - **`changePassphrase(authorization, newPassphrase)`.**
+    - It requires both an unlocked session and re-authentication with exactly one unlock secret of this device, passed as `authorization: UnlockSecret`: the current passphrase, the recovery code or the passkey PRF output. This is the captain's decision D1: "Require re-authentication: current passphrase, recovery code, or passkey".
+    - The authorization is valid only if the KEK derived from it unwraps this device's stored wrap for that method to the LMK the session holds. The derivation follows the existing parameters of [ADR-0004](0004-key-hierarchy-and-category-sharing.md) and security-privacy.md §3, so this adds no new KDF work beyond one existing-method derivation.
+    - Errors:
+      - `locked`: there is no unlocked session, or the service locked before the commit.
+      - `wrong_secret`: the authorization is wrong, malformed or of a method not configured here. It is one error for every secret kind, so the result reveals neither which kind failed nor which methods exist.
+      - In both cases nothing changes and the old passphrase still works. A wrong authorization does not end the session.
+    - **Why an unlocked session is still required:** the re-wrap uses the LMK the session already holds. A locked change would need a second path that brings the LMK into memory while the service reports locked, which would contradict `isUnlocked()`, `storeKeys()` and the lock invariants of CR-21. Change passphrase is also a Settings action inside the unlocked app ([ux-spec.md §3.11](../plan/ux-spec.md#311-settings-privacy-and-backup)).
+    - **Forgotten passphrase (security-privacy.md §3) is preserved:** she unlocks with the recovery code (or a passkey), then calls `changePassphrase({ kind: 'recovery_code', code }, newPassphrase)`. The recovery code she has in hand is the authorization. Whether the UI asks for it again or reuses the code just entered, within that flow and without storing it, is `p0-lock`'s UI choice.
+    - It re-wraps the in-memory LMK under a KEK derived from the new passphrase with a new 16-byte salt (PBKDF2-HMAC-SHA-256, 600,000 iterations, unchanged) and atomically replaces only the stored passphrase wrap.
+    - The LMK, the recovery-code and passkey wraps, every record and every key already handed out stay unchanged. No record is re-encrypted and the record store is not written.
+  - **Key hand-off and invalidation.**
+    - `storeKeys()` returns `{ ok: true, keys }` only while unlocked, otherwise `{ ok: false, error: 'locked' }`. `keys` (`UnlockedStoreKeys`) has exactly `indexKey` (IDX), `keyProvider` (a `RecordKeyProvider`) and `isValid()`. The LMK and raw key bytes are never returned.
+    - Every `CryptoKey` reachable from `keys` is non-extractable. Web Crypto allows this for the HMAC and AES-GCM keys involved, so there is no exception.
+    - The provider serves the record keys of ADR-0004 that the session holds (the PDK for her private records in P0). It never substitutes a key of another purpose. A record whose key it does not hold fails closed: `forWrite` throws and `forRead` returns no candidates, which the codec already treats as an authentication failure.
+    - `lock(reason)` first drops every key, invalidates every handle handed out and abandons a pending setup, for every reason including `timeout`. It then runs the `onLock` listeners synchronously, before it returns. After invalidation `isValid()` is false for good, and reading `indexKey` or `keyProvider.snapshotKey`, or calling `forWrite`/`forRead`, throws.
+    - The composition layer closes every store opened with these keys and drops its references in its `onLock` listener. A `CryptoKey` reference already copied elsewhere cannot be revoked in JavaScript, so this obligation is part of the contract.
+    - How IDX and the PDK are obtained from the LMK (HKDF-SHA-256 derivation or wrapped under the LMK, per security-privacy.md §3) remains `p0-lock`'s implementation choice. It must be stable across unlocks because stored records depend on it.
+  - **Type move.** `RecordKeyMaterial` and `RecordKeyProvider` now live in `src/contracts/store.ts`. `src/data/store/codec.ts` and `src/data/store/index.ts` re-export them as types, so the store's API and behaviour are unchanged.
+  - **Compile-time checks** in `src/contracts/type-assertions.ts`:
+    - `LockService` has exactly its ten members, and each has exactly one call signature (no overloads) with its exact parameter and result types, and is never optional or nullable. A required operation such as `confirmSetup` cannot be removed, and the locked branch of `storeKeys()` cannot be dropped.
+    - The types those signatures name have their exact shapes pinned: field sets, branches, kinds and literal unions. These are `UnlockSecret`, `UnlockResult`, `LockReason`, `LockSetupState`, `RecoveryConfirmPositions`, `RecoveryConfirmation`, `LockSetupResult`, `ConfirmSetupResult`, `ChangePassphraseResult`, `StoreKeysResult`, `UnlockedStoreKeys`, `RecordKeyProvider`, `RecordKeyMaterial` and `Unsubscribe`. Adding a field (for example an `lmk` of any type) or a branch or kind, or removing one, fails typecheck.
+    - The pre-existing members keep their signatures.
+    - `storeKeys()` returns `StoreKeysResult`. Only its `ok: true` branch carries keys, and the locked branch is exactly `{ ok: false, error: 'locked' }`.
+    - No `LockService` output, result field or handed-out key member is a byte buffer (`ArrayBufferLike` or `ArrayBufferView`).
+    - Confirmation is 4 characters for 4 positions.
+    - `changePassphrase` takes `[UnlockSecret, string]`. `UnlockSecret` has exactly its three kinds, and the errors are exactly `locked | wrong_secret`, with no extra fields.
+    - What the types cannot express:
+      - An LMK passed through a member that already has the `CryptoKey` type (`indexKey`, `snapshotKey` or `RecordKeyMaterial.key`) cannot be told apart from a purpose key. The same goes for every behavioural guarantee: non-extractability, fail-closed after `lock`, atomic commits and nothing persisted before confirmation.
+      - Those stay in this ADR and the contract documentation, and `p0-lock-verify` must test them.
+- **Alternatives considered:**
+  - _A UI-only confirmation gate._ Rejected by the captain: setup would be final before the code is confirmed, so the "confirm before it continues" rule would not be a service invariant.
+  - _Returning the LMK, or a raw-bytes handle, to the composition layer._ Rejected: it widens the key hierarchy and lets every holder derive every key. Only purpose keys leave the service.
+  - _Unlocked session as the only authorization for `changePassphrase`._ Rejected by captain decision D1. Under T3 ("left unlocked"), anyone holding the open app could set a passphrase of their choosing. That is a durable takeover: it reaches data written later and later sessions, it can stay hidden while she unlocks with a passkey, and it can lock her out if she has also lost the recovery code.
+  - _Requiring the current passphrase specifically._ Rejected: it breaks the forgotten-passphrase flow of security-privacy.md §3. Accepting any one unlock secret keeps that flow and still requires a fresh secret.
+  - _A new `LockService` version with a single `setup` returning a result union._ Rejected as a needless breaking change (`CONTRACTS_VERSION` 2). The additive form keeps every existing signature.
+  - _Handing out raw purpose keys so the composition layer builds its own provider._ Rejected: a key handed out bare cannot fail closed after lock, while a provider built by the service can. Key selection still happens outside the store, as the codec requires, because the store accepts any `RecordKeyProvider`.
+- **Consequences:**
+  - `p0-lock` can be implemented against contracts only. Its acceptance criteria map to `lock`/`onLock`/`storeKeys`/`isValid` (key handle null after lock), `unlock` with `recovery_code` plus `changePassphrase({ kind: 'recovery_code', code }, newPassphrase)` (re-wrap only), and `setup`/`confirmSetup` (confirmation).
+  - `CONTRACTS_VERSION` stays 1. Measured against `main`, every change is additive at the type level: new methods, new types and a new field on `LockSetupResult`. That includes `changePassphrase` with its two parameters, which this ADR introduces. No existing member was removed, renamed or narrowed. The refined semantics of `setup` (now phase 1) and `onLock` (synchronous) break no implementation or consumer, because nothing implements or consumes `LockService` on `main`, and `CONTRACTS_VERSION` appears in no persisted or wire format. After `p0-lock` lands, a change to these signatures will be breaking.
+  - Follow-ups for `p0-lock`:
+    - onboarding copy for a setup abandoned by auto-lock;
+    - the Settings prompt for the `changePassphrase` authorization;
+    - non-extractable import of handed-out keys, defining the result when `lock` lands during an atomic commit, and canonicalization (O2).
+  - The `LockService` row of architecture.md §3 lists only the original methods. Its update is left to a task that owns `docs/plan/**`.
+  - Category and couple keys (P2) are not served yet. They join the provider through their own ADR or foundation task.
+  - The store and migrations are unchanged; existing tests and the `@db` e2e suite cover them.
+- **Security notes:**
+  - The LMK never crosses the contract. Handed-out keys are non-extractable purpose keys, and they fail closed after lock. The service drops its own references, and the composition layer must close stores in `onLock` (CR-21, T-SEC-02).
+  - Before confirmation no unlock path exists and no final state is persisted, so an interrupted setup leaves the device not configured instead of half-configured.
+  - Confirmation compares 4 of the 24 recovery-code characters. It checks that she saved the code; it is not authentication, so retries are unlimited and give no access.
+  - **Passphrase change and T3.** Re-authentication closes the durable-takeover path that session-only authorization would open on an unattended, unlocked phone. Holding the open app is no longer enough to replace her passphrase. What remains:
+    - The T3 residual is unchanged: while the phone is unlocked and the app is open, someone holding it can see the data. Auto-lock covers only the background (60 s by default) and cold start. No foreground idle lock is specified, so an open foreground session is bounded only by quick-hide or a manual lock.
+    - Anyone who knows or holds one of her unlock secrets (a shoulder-surfed passphrase, a found recovery code, her passkey) can change the passphrase. They could already unlock with that secret, so this adds nothing new. A compromised recovery code still gives full access, as it always has.
+    - `wrong_secret` lets someone holding the open app guess secrets online, at one PBKDF2 or HKDF derivation per try. That is no more than the lock screen's `unlock` already offers, and it is weaker than offline guessing against a copied database (security-privacy.md §3, "No PIN in v1"). This contract sets no attempt limit; one would be new policy.
+    - Passkey authorization depends on PRF support, which is untested (FB-07). Without a passkey, the passphrase and the recovery code remain available.
+    - If she loses both her passphrase and her recovery code, and has no passkey, the data is unrecoverable by design (security-privacy.md §3). A passphrase change does not alter that.
+  - This ADR adds no algorithm, KDF parameter or key. PBKDF2-HMAC-SHA-256 with 600,000 iterations stays ([architecture.md §8](../plan/architecture.md#8-performance-budgets-verified-in-p0-on-real-phones-playwright-measures-cpu-throttled-proxies-in-ci)). Canonicalizing the passphrase and recovery code (recommendation O2 of `p0-crypto-core-verify`) remains for `p0-lock` to freeze before any wrapped LMK exists.

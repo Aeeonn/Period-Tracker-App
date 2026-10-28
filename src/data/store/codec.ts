@@ -1,25 +1,11 @@
 import type { CryptoApi, EnvelopeAad } from '../../contracts/crypto.ts';
 import type { LogicalId, Bytes } from '../../contracts/brand.ts';
 import type { EntityMap, EntityName } from '../../contracts/entities.ts';
-import type { LogicalRecord, StoredRecordRow } from '../../contracts/store.ts';
-import type { RecordType } from '../../contracts/enums.ts';
+import type { LogicalRecord, RecordKeyProvider, StoredRecordRow } from '../../contracts/store.ts';
 import { ENTITY_NAMES, ENTITY_RECORD_TYPE } from '../../contracts/store.ts';
 import { utf8 } from '../../crypto/primitives/encoding.ts';
 
-export interface RecordKeyMaterial {
-  readonly key: CryptoKey;
-  readonly epoch: number;
-}
-
-/** Key selection stays with the composition layer so PDK, CK and CPK policy is not duplicated here. */
-export interface RecordKeyProvider {
-  readonly snapshotKey: CryptoKey;
-  forWrite(record: LogicalRecord): RecordKeyMaterial | Promise<RecordKeyMaterial>;
-  forRead(
-    type: RecordType,
-    row: StoredRecordRow,
-  ): readonly RecordKeyMaterial[] | Promise<readonly RecordKeyMaterial[]>;
-}
+export type { RecordKeyMaterial, RecordKeyProvider } from '../../contracts/store.ts';
 
 export interface RecordCodecOptions {
   readonly crypto: CryptoApi;

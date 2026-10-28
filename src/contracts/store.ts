@@ -87,6 +87,22 @@ export interface StoredRecordRow {
   readonly ct: Base64Url;
 }
 
+/** A record key and the epoch bound into its AAD (moved from `data/store/codec.ts`, ADR-0010). */
+export interface RecordKeyMaterial {
+  readonly key: CryptoKey;
+  readonly epoch: number;
+}
+
+/** Key selection stays with the composition layer so PDK, CK and CPK policy is not duplicated here. */
+export interface RecordKeyProvider {
+  readonly snapshotKey: CryptoKey;
+  forWrite(record: LogicalRecord): RecordKeyMaterial | Promise<RecordKeyMaterial>;
+  forRead(
+    type: RecordType,
+    row: StoredRecordRow,
+  ): readonly RecordKeyMaterial[] | Promise<readonly RecordKeyMaterial[]>;
+}
+
 /** Operations available inside one atomic transaction. */
 export interface RecordTransaction {
   get<E extends EntityName>(entity: E, logicalId: LogicalId): Promise<LogicalRecord<E> | undefined>;
