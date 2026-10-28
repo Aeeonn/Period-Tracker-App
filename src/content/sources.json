@@ -1,0 +1,100 @@
+{
+  "sources": {
+    "NHS_IRREGULAR_PERIODS": {
+      "publisher": "National Health Service (NHS)",
+      "title": "Irregular periods (reviewed 26 June 2026)",
+      "url": "https://www.nhs.uk/symptoms/irregular-periods/",
+      "accessed": "2026-10-28"
+    },
+    "ASRM_FERTILITY": {
+      "publisher": "American Society for Reproductive Medicine (ASRM)",
+      "title": "Optimizing natural fertility: a committee opinion (2022)",
+      "url": "https://www.asrm.org/practice-guidance/practice-committee-documents/optimizing-natural-fertility-a-committee-opinion-2021/",
+      "accessed": "2026-10-28"
+    },
+    "ACOG_ABNORMAL_BLEEDING": {
+      "publisher": "American College of Obstetricians and Gynecologists (ACOG)",
+      "title": "Abnormal Uterine Bleeding (FAQ095; reviewed August 2025)",
+      "url": "https://www.acog.org/womens-health/faqs/abnormal-uterine-bleeding",
+      "accessed": "2026-10-28"
+    },
+    "WHO_EMERGENCY_CONTRACEPTION": {
+      "publisher": "World Health Organization (WHO)",
+      "title": "Emergency contraception",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/emergency-contraception",
+      "accessed": "2026-10-28"
+    },
+    "WHO_CONDOMS": {
+      "publisher": "World Health Organization (WHO)",
+      "title": "Condoms",
+      "url": "https://www.who.int/news-room/fact-sheets/detail/condoms",
+      "accessed": "2026-10-28"
+    },
+    "SOGC_HEAVY_PERIODS": {
+      "publisher": "Society of Obstetricians and Gynaecologists of Canada (SOGC)",
+      "title": "Heavy Menstrual Bleeding (HMB) Overview - Your Period",
+      "url": "https://www.yourperiod.ca/abnormal-pain-and-menstrual-bleeding/heavy-menstrual-bleeding/",
+      "accessed": "2026-10-28"
+    },
+    "NHS_PERIOD_PAIN": {
+      "publisher": "National Health Service (NHS)",
+      "title": "Period pain (reviewed 18 March 2026)",
+      "url": "https://www.nhs.uk/symptoms/period-pain/",
+      "accessed": "2026-10-28"
+    },
+    "CANADA_PREGNANCY_TEST": {
+      "publisher": "Society of Obstetricians and Gynaecologists of Canada (SOGC)",
+      "title": "Am I / Is My Partner Pregnant? - Sex & U (updated 10 October 2025)",
+      "url": "https://www.sexandu.ca/pregnancy/am-i-is-my-partner-pregnant/",
+      "accessed": "2026-10-28"
+    },
+    "CANADA_CONSENT": {
+      "publisher": "Department of Justice Canada",
+      "title": "Criminal Code, section 273.1: Meaning of consent",
+      "url": "https://laws-lois.justice.gc.ca/eng/acts/C-46/section-273.1.html",
+      "accessed": "2026-10-28"
+    },
+    "NHS_LIBIDO": {
+      "publisher": "National Health Service (NHS)",
+      "title": "Low sex drive (loss of libido; reviewed 26 May 2026)",
+      "url": "https://www.nhs.uk/symptoms/loss-of-libido/",
+      "accessed": "2026-10-28"
+    },
+    "OPC_MEANINGFUL_CONSENT": {
+      "publisher": "Office of the Privacy Commissioner of Canada",
+      "title": "Guidelines for obtaining meaningful consent",
+      "url": "https://www.priv.gc.ca/en/privacy-topics/privacy-for-businesses/appropriate-handling-of-personal-information/collecting-personal-information-and-consent/consent/gl_omc_201805/",
+      "accessed": "2026-10-28"
+    },
+    "CANADA_988": {
+      "publisher": "9-8-8: Suicide Crisis Helpline",
+      "title": "Get Help: 9-8-8 Suicide Crisis Helpline",
+      "url": "https://988.ca/",
+      "accessed": "2026-10-28"
+    },
+    "CANADA_988_ABOUT": {
+      "publisher": "9-8-8: Suicide Crisis Helpline; Centre for Addiction and Mental Health (CAMH)",
+      "title": "About us - 9-8-8 Suicide Crisis Helpline",
+      "url": "https://988.ca/about-us",
+      "accessed": "2026-10-28"
+    },
+    "CANADA_MENTAL_HEALTH": {
+      "publisher": "Government of Canada",
+      "title": "Mental health support: get help",
+      "url": "https://www.canada.ca/en/public-health/services/mental-health-services/mental-health-get-help.html",
+      "accessed": "2026-10-28"
+    }
+  },
+  "crisisResources": {
+    "W-11": {
+      "country": "Canada",
+      "name": "9-8-8: Suicide Crisis Helpline",
+      "number": "9-8-8",
+      "channels": ["call", "text"],
+      "availability": "24/7/365",
+      "publisher": "Led and coordinated by the Centre for Addiction and Mental Health (CAMH); funded by the Government of Canada.",
+      "immediateDanger": "If you are in immediate danger or need urgent medical support, call 9-1-1.",
+      "sourceIds": ["CANADA_988", "CANADA_988_ABOUT", "CANADA_MENTAL_HEALTH"]
+    }
+  }
+}
