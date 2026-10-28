@@ -24,15 +24,21 @@ This log records approved choices separately from completed evidence and pending
 - **2026-10-28 — `p0-crypto-core` — main `c9535f6`:** landed rebased from reviewed candidate `dc34523` with an identical patch. Verify: `/home/justi/firstmate/data/p0-crypto-core-verify/report.md` (PASS for the reviewed candidate).
 - **2026-10-28 — `p0-csp-network` — main `5f4ac35`:** landed rebased from reviewed candidate `768ecac` with an identical patch. Verify: `/home/justi/firstmate/data/p0-csp-network-verify/report.md` (round 1 PASS for the exact candidate; round-0 FAIL preserved at `/home/justi/firstmate/data/p0-csp-network-verify/report-round-0.md`).
 - **2026-10-28 — `vscode-agent-ops` — main `98f91fe`:** VS Code Copilot agents, Firstmate-style skills and the repository backlog ([ADR-0011](adr/0011-vscode-copilot-orchestration.md)). Verify: `/home/justi/firstmate/data/vscode-agent-ops-verify/report.md` (round 1 PASS for the exact candidate; round 0 at `report-round-0.md`).
+- **2026-10-28 — `p0-app-shell-a11y-fix` — main `efbb10e` and `p0-probe-contrast-fix` — main `d2bb096`:** the two blocking contrast findings of `p0-lowrisk-review`. Round-1 review: `/home/justi/firstmate/data/p0-lowrisk-review/report.md` (PASS for both).
+- **2026-10-28 — `p0-db-store` — main `a3e2f36`:** encrypted IndexedDB record store and migrations. Verify: `/home/justi/firstmate/data/p0-db-store-verify/report.md` (PASS for the exact candidate; round 0 at `report-round-0.md`).
+- **2026-10-28 — `p0-db-store-followups` — main `1ed3bc4`:** migration-lock and record-change tests. Review: `/home/justi/firstmate/data/p0-db-store-followups-verify/report.md`.
+- **2026-10-28 — `ops-worker-cap-10` — main `9ee271f`:** the live-subagent limit is now 10 in the dispatch skill, orchestrator agent, operating model, plan note and ADR-0009/0011. Review: `/home/justi/firstmate/data/ops-worker-cap-10-verify/report.md` (PASS for the exact candidate).
 
 ## Pending permissions and proof
 
-- The pinned local dependency installation above does not authorize hosting or deployment actions. The hosting account and scoped credential (AP-10), synthetic preview deployment and related actions (AP-18) remain pending.
-- **2026-10-28:** the concurrent-worker limit was raised from 3 to 6.
+- The pinned local dependency installation above does not authorize hosting or deployment actions.
+- **2026-10-28 — P0 approvals answered (`p0-approvals` closed):** AP-10: one Cloudflare Free-plan account held by the captain (custody option c); the in-app custody disclosure is not required. A scoped deploy token (this account only; Workers scripts, D1 and Pages edit) is approved, held by the captain and stored outside the repository. AP-18: synthetic-only preview deployments, run by deploy crewmates with that token. AP-12: the fallback is manual encrypted export/import only. Production deployment and real data remain separate approvals. The account and token are created by the captain; until then the deploy items wait.
+- **2026-10-28:** the captain approved starting `p1-episodes` and `p1-content-core` before the Phase 0 gate, as items independent of P0; no other P1 work starts before the gate.
+- **2026-10-28:** the concurrent-worker limit was raised from 3 to 6, then to 10.
 - **2026-10-28:** orchestration moved from Firstmate/Pi/Herdr to VS Code Copilot agents and skills, with the backlog in [`docs/plan/backlog.md`](plan/backlog.md) ([ADR-0011](adr/0011-vscode-copilot-orchestration.md)). Pi cannot sign in under the company's Conditional Access policy. Briefs and reports stay in `~/firstmate/data/<id>/`.
 - **2026-10-28:** `p0-verifier-sandbox-proof` and its verify task were closed as superseded. Ordinary independent review without the declined extra isolation feature is accepted; verifier isolation is not enforced and no sandbox proof or security PASS is claimed. The evidence branch is preserved, not landed.
 
 ## Phase and verification status
 
-- P0 integration, phase verification, demo, and `p0-lowrisk-review` remain pending. Phase demos and captain approval pauses remain as specified in [plan §14](plan/plan.md#14-roadmap-phases-and-gates) and [agent-operating-model §§8, 10–11](plan/agent-operating-model.md#8-parallelism-and-waves).
+- P0 integration, phase verification and demo remain pending; `p0-lowrisk-review` is done except its probe-deploy delta (`p0-lowrisk-review-probe-deploy`). Phase demos and captain approval pauses remain as specified in [plan §14](plan/plan.md#14-roadmap-phases-and-gates) and [agent-operating-model §§8, 10–11](plan/agent-operating-model.md#8-parallelism-and-waves).
 - No phone, medical, privacy, or security proof is claimed beyond the scope of the cited verify reports. WebKit emulation is not iPhone proof.
