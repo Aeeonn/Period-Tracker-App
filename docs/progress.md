@@ -23,6 +23,7 @@ This log records approved choices separately from completed evidence and pending
 - **2026-10-05 — `p0-synthetic-data` — main `c88a0a2`:** task evidence: `/home/justi/firstmate/data/p0-synthetic-data/report.md`; awaiting `p0-lowrisk-review`.
 - **2026-10-28 — `p0-crypto-core` — main `c9535f6`:** landed rebased from reviewed candidate `dc34523` with an identical patch. Verify: `/home/justi/firstmate/data/p0-crypto-core-verify/report.md` (PASS for the reviewed candidate).
 - **2026-10-28 — `p0-csp-network` — main `5f4ac35`:** landed rebased from reviewed candidate `768ecac` with an identical patch. Verify: `/home/justi/firstmate/data/p0-csp-network-verify/report.md` (round 1 PASS for the exact candidate; round-0 FAIL preserved at `/home/justi/firstmate/data/p0-csp-network-verify/report-round-0.md`).
+- **2026-10-28 — `vscode-agent-ops` — main `98f91fe`:** VS Code Copilot agents, Firstmate-style skills and the repository backlog ([ADR-0011](adr/0011-vscode-copilot-orchestration.md)). Verify: `/home/justi/firstmate/data/vscode-agent-ops-verify/report.md` (round 1 PASS for the exact candidate; round 0 at `report-round-0.md`).
 
 ## Pending permissions and proof
 
