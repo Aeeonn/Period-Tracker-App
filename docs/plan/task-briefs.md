@@ -1,22 +1,22 @@
 # Task briefs — P0–P2 (Step 9/10)
 
-**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)). These briefs are written for the work *after* approval. Each one is self-contained by reference: it points to plan files by path rather than pasting them. Firstmate wraps each brief with `bin/fm-brief.sh`, which adds the worktree-isolation assertion, the status protocol, the delivery mode and the Definition of Done.
+**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)); common sections updated 2026-10-28 for VS Code Copilot orchestration ([ADR-0011](../adr/0011-vscode-copilot-orchestration.md)). These briefs are written for the work *after* approval. Each one is self-contained by reference: it points to plan files by path rather than pasting them. The orchestrator turns each into a launch brief from the [`task-brief`](../../.agents/skills/task-brief/SKILL.md) templates, which add the worktree-isolation assertion, the status protocol and the Definition of Done. Task-specific text below that mentions Pi, `pi --list-models` or Firstmate scripts describes completed Phase 0 work and is kept as history.
 
 ## Common sections (apply to every brief below)
 
 - **Constitution.** [plan.md §4](plan.md#4-assumptions-and-decisions) and the Section 4 rules listed in each brief. **No real health data anywhere.** Only synthetic data, made with `tools/synthetic` (from P0 onward).
 - **Must not touch.** everything not listed under Owns — in particular `src/contracts/**` (P0 foundation only), `src/app/**` (integration tasks only), `docs/plan/**` (except where listed), `AGENTS.md`, other tasks' owned paths, and anything outside the worktree.
 - **Definition of Ready / Done.** [test-strategy.md §4–5](test-strategy.md#4-definition-of-ready-task). One Conventional Commit per task, rebased on the current `main`.
-- **Landing.** Crewmates never merge. A ship task ends with a clean ready branch; the first mate lands it with `bin/fm-merge-local.sh` after its required verify passes and the merge authority approves ([agent-operating-model.md §3](agent-operating-model.md#3-the-loop-for-every-task)). "Depends on" always means the predecessor has **landed** on `main`.
+- **Landing.** Subagents never merge. A ship task ends with a clean ready branch carrying one commit; the orchestrator lands it with [`land.sh`](../../.agents/skills/flo-land/scripts/land.sh) (guarded fast-forward of the exact reviewed SHA, then a main-only push) after its required review passes and the merge authority allows it ([agent-operating-model.md §3](agent-operating-model.md#3-the-loop-for-every-task)). "Depends on" always means the predecessor has **landed** on `main`.
 - **Approval preconditions.** A task that needs an account, credential, install, deploy or money waits for the matching explicit answer recorded in `p0-approvals` (plan.md §18 B). Plan approval alone authorizes none of them.
-- **Startup check.** Print `PI_PROVIDER`, `PI_MODEL` and `PI_REASONING_LEVEL`. If they do not match the route, report `blocked`; never substitute.
-- **Fix rounds.** Prior failed rounds are 0 at first dispatch. The first mate updates this count and the escalation evidence ([agent-operating-model.md §4](agent-operating-model.md#4-escalation-fix-rounds-and-blockers)).
+- **Route record.** The orchestrator records the agent, model, effort and round in the backlog item at dispatch ([agent-operating-model.md §2](agent-operating-model.md#2-model-and-credit-policy)). Workers do not print or block on `PI_*` variables; a worker that sees a route mismatch in its brief reports `blocked` rather than substituting.
+- **Fix rounds.** Prior failed rounds are 0 at first dispatch. The orchestrator updates this count and the escalation evidence ([agent-operating-model.md §4](agent-operating-model.md#4-escalation-fix-rounds-and-blockers)).
 - **Report format** (~15 lines): revision or commit; files changed (or revision reviewed); commands run with results; evidence; open issues.
-- **Verifier extras** (scout `*-verify` items):
-  - the first mate fills in the **exact candidate revision**;
+- **Verifier extras** (scout `*-verify` items, run by `flo-verifier`):
+  - the orchestrator fills in the **exact candidate revision** and a detached laboratory at it;
   - the report is written to `~/firstmate/data/<id>/report.md`, outside the reviewed source;
-  - every verify brief runs commands, so it uses the test-running verifier configuration of [agent-operating-model.md §6.2](agent-operating-model.md#62-proposed-verifier-launch-configuration-to-prove-in-p0-verifier-sandbox-proof), including the Firstmate status, inbox and report commands listed there; if FB-08 stands, the captain's AP-16 interim option applies and the report says "isolation not enforced". The first mate never runs these commands on a verifier's behalf;
-  - source writes are forbidden and must be prevented by those safeguards where they are proven;
+  - verifiers run the brief's commands themselves; no sandbox exists, so every report says "isolation not enforced" ([agent-operating-model.md §6](agent-operating-model.md#6-verifier-safeguards)). The orchestrator never runs these commands on a verifier's behalf;
+  - source writes, commits and branch moves are forbidden by the brief (not by enforcement);
   - **this review is a mandatory independent gate.** The implementation cannot merge without a PASS for this exact revision. Changed source needs a renewed review.
   - Algorithm auditors write down expected vector results from the spec *before* reading the code.
 

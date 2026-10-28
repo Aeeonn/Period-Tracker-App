@@ -8,6 +8,12 @@ This repository plans and builds a private cycle-tracking app. The approved proj
 - Start with [the approved plan](docs/plan/plan.md). Use its linked architecture, ADRs, roadmap, and task briefs as applicable. The [agent operating model](docs/plan/agent-operating-model.md#8-parallelism-and-waves) and its phase-gate sections define phase demos, approval pauses, and concurrency constraints.
 - Required task readiness and completion criteria are [Definition of Ready](docs/plan/test-strategy.md#4-definition-of-ready-task) and [Definition of Done](docs/plan/test-strategy.md#5-definition-of-done-task).
 
+## Agent orchestration
+
+- Work runs Firstmate-style on VS Code Copilot ([ADR-0011](docs/adr/0011-vscode-copilot-orchestration.md)). `flo-orchestrator` dispatches the `flo-builder`, `flo-verifier`, `flo-researcher`, `flo-critic` and `flo-planner` agents from [`.github/agents/`](.github/agents/). The backlog is [docs/plan/backlog.md](docs/plan/backlog.md).
+- Skills in [`.agents/skills/`](.agents/skills/): `flo-dispatch` (orchestrator loop and routing), `flo-backlog`, `flo-worktree`, `flo-commit`, `flo-land`, `task-brief`, `verification-protocol`, `cycle-math`.
+- Workers act only from a brief in `~/firstmate/data/<task-id>/`, in their own worktree (never the primary checkout), and report through that folder and `~/firstmate/state/<task-id>.status`. Only the orchestrator lands, and only `main` is pushed.
+
 ## Engineering standards
 
 - Use the planned mainstream stack: strict TypeScript, Preact, Vite, browser IndexedDB, and Web Crypto. Prefer small, typed modules and explicit contracts over implicit cross-module behavior.

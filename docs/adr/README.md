@@ -12,4 +12,5 @@ All ADRs below are **Proposed**, recorded during Stage C planning on 2026-10-02 
 | [0006](0006-pure-versioned-engine-and-qualitative-chance.md) | Pure versioned prediction engine; qualitative pregnancy chance | Proposed |
 | [0007](0007-clinical-dating-and-source-specific-thresholds.md) | ACOG dating; thresholds tied to their source | Proposed |
 | [0008](0008-generic-notifications-under-lock.md) | Generic notifications while locked | Proposed |
-| [0009](0009-agent-operating-model-on-firstmate.md) | Agent operating model on Firstmate (no second orchestrator) | Proposed |
+| [0009](0009-agent-operating-model-on-firstmate.md) | Agent operating model on Firstmate (no second orchestrator) | Proposed; mechanisms superseded by 0011 |
+| [0011](0011-vscode-copilot-orchestration.md) | Orchestration on VS Code Copilot agents (replaces Pi, Herdr and tasks-axi) | Accepted (2026-10-28) |

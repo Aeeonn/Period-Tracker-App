@@ -172,6 +172,6 @@ The preview relay's push-test route (from `p0-relay-spike`) stays live for the P
 | FB-05 | Camera QR scan inside the Home Screen app | Typed/AirDrop pairing code (always available) |
 | FB-06 | Home Screen Web Push permission, delivery, generic text, Focus behaviour, using the live preview relay push-test endpoint from `p0-relay-spike` | In-app reminders only |
 | FB-07 | Passkey PRF on their phones and providers; offline behaviour; stability after iCloud restore (R4 §4) | Passphrase plus recovery code only |
-| FB-08 | Verifier sandbox enforceable with the installed Firstmate adapter ([agent-operating-model.md §6](agent-operating-model.md#6-verifier-safeguards-phase-0-proof-required)) | Record as a blocker; high-risk landings wait until the captain picks an AP-16 interim option (no option has the first mate execute project code) |
+| FB-08 | Verifier sandbox enforceable with the installed Firstmate adapter ([agent-operating-model.md §6](agent-operating-model.md#6-verifier-safeguards)) | Record as a blocker; high-risk landings wait until the captain picks an AP-16 interim option (no option has the first mate execute project code) |
 | FB-09 | Cloudflare terms allow this personal use (R5 C8) | Fallback as for FB-01 |
 | FB-10 | PBKDF2 600k timing on the slower phone | Recommend passkey unlock; keep the iteration count |

@@ -1,5 +1,7 @@
 # Backlog import — P0–P2 (Step 10)
 
+> **Superseded for tracking (2026-10-28).** This file was the one-time import into Firstmate's `tasks-axi` backlog. The live backlog is now [backlog.md](backlog.md), migrated from this file and Firstmate's records ([ADR-0011](../adr/0011-vscode-copilot-orchestration.md)). Keep this file as the approved plan's original item set; do not edit statuses here.
+
 **Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)). **Do not import yet.** The first mate imports this file only **after Stage F approval** (`flo-plan-approval`). Crewmates never import it. Implementation tasks are deliberately not in the live backlog now.
 
 - **What it contains.** One item per P0–P2 implementation task, deploy task, verify task and gate:

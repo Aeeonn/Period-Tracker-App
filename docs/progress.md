@@ -28,6 +28,7 @@ This log records approved choices separately from completed evidence and pending
 
 - The pinned local dependency installation above does not authorize hosting or deployment actions. The hosting account and scoped credential (AP-10), synthetic preview deployment and related actions (AP-18) remain pending.
 - **2026-10-28:** the concurrent-worker limit was raised from 3 to 6.
+- **2026-10-28:** orchestration moved from Firstmate/Pi/Herdr to VS Code Copilot agents and skills, with the backlog in [`docs/plan/backlog.md`](plan/backlog.md) ([ADR-0011](adr/0011-vscode-copilot-orchestration.md)). Pi cannot sign in under the company's Conditional Access policy. Briefs and reports stay in `~/firstmate/data/<id>/`.
 - **2026-10-28:** `p0-verifier-sandbox-proof` and its verify task were closed as superseded. Ordinary independent review without the declined extra isolation feature is accepted; verifier isolation is not enforced and no sandbox proof or security PASS is claimed. The evidence branch is preserved, not landed.
 
 ## Phase and verification status

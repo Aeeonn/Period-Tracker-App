@@ -5,13 +5,13 @@ description: Use when independently verifying an exact task revision, acceptance
 
 # Independent verification protocol
 
-Follow the verifier brief and [`docs/plan/agent-operating-model.md` §§5–7](../../../docs/plan/agent-operating-model.md). A verifier does not implement, edit reviewed source, commit, merge, or verify their own work.
+Follow the verifier brief and [`docs/plan/agent-operating-model.md` §§3–6](../../../docs/plan/agent-operating-model.md#3-the-loop-for-every-task). A verifier (the `flo-verifier` agent, or any agent given a verify brief) does not implement, edit reviewed source, commit, merge, or verify their own work.
 
 ## Pin the evidence
 
-- Record the exact candidate commit SHA supplied by the first mate. Confirm the inspected source is that revision; report any mismatch or later change. A changed candidate requires renewed verification.
+- Record the exact candidate commit SHA supplied by the orchestrator. Confirm the inspected source is that revision (`git rev-parse HEAD` in the detached laboratory, before and after); report any mismatch or later change. A changed candidate requires renewed verification.
 - Map each applicable acceptance criterion to evidence. Run only the commands authorized by the brief, record exact commands/results and relevant inputs, and use synthetic fixtures only.
-- Write the report to the brief's external report path. State the revision, verifier types, findings, evidence, and open issues. A PASS applies only to the exact reviewed SHA; do not infer device, clinical, or security assurance from unrelated checks.
+- Write the report to the brief's external report path (`~/firstmate/data/<task-id>/report.md`, never inside the reviewed source). State the revision, verifier types, verdict, findings, evidence, and open issues. A PASS applies only to the exact reviewed SHA; do not infer device, clinical, or security assurance from unrelated checks.
 - For algorithm audits, derive expected vector results from the specification and record them before examining implementation.
 
 ## Choose the applicable review type
@@ -27,4 +27,4 @@ Use only the types relevant to the brief; one type does not substitute for anoth
 
 ## Be honest about isolation
 
-Do not call a verifier sandbox, read-only boundary, or source-write prevention proven until the disposable-fixture checks in [`agent-operating-model.md` §6.3–6.4](../../../docs/plan/agent-operating-model.md#63-required-disposable-fixture-proof) have actually passed and the evidence record supports that claim. The plan's proposed safeguards are not proof. If enforcement is absent or unproven, say **“isolation not enforced”** where required and describe the residual risk; never imply that a separate session or worktree is a sandbox.
+No verifier sandbox exists. The captain declined the extra reviewer-isolation feature and approved ordinary independent review on 2026-10-28 ([agent-operating-model.md §6](../../../docs/plan/agent-operating-model.md#6-verifier-safeguards)). A separate subagent, context or worktree is **not** a read-only boundary. Every verify report says **"isolation not enforced"** and describes the residual risk: the verifier runs as the same OS user and could alter its own laboratory or read host files. This does not change what lands, because the orchestrator lands only the builder's branch at the exact reviewed SHA. Never claim sandboxing, read-only enforcement or source-write prevention.
