@@ -1,0 +1,237 @@
+{
+  "synthetic": true,
+  "provenance": "Reference outputs transcribed and hand-derived from docs/plan/algorithms-spec.md A1 TV-E1-TV-E5 and A3 TV-L1-TV-L3 before implementation. All dates and logs are synthetic.",
+  "source": "docs/plan/algorithms-spec.md A1, A3",
+  "vectors": [
+    {
+      "id": "TV-E1",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-09-05",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [
+          { "localDate": "2026-09-01", "flow": "medium" },
+          { "localDate": "2026-09-02", "flow": "heavy" },
+          { "localDate": "2026-09-03", "flow": "light" },
+          { "localDate": "2026-09-04", "flow": "none" },
+          { "localDate": "2026-09-05", "flow": "spotting" }
+        ],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-09-01",
+          "end": "2026-09-03",
+          "bleedingDays": 3,
+          "spottingDays": ["2026-09-05"],
+          "assumedDays": [],
+          "kind": "period",
+          "flags": []
+        }
+      ]
+    },
+    {
+      "id": "TV-E2",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-09-23",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [
+          { "localDate": "2026-09-20", "flow": "spotting" },
+          { "localDate": "2026-09-21", "flow": "spotting" },
+          { "localDate": "2026-09-22", "flow": "light" },
+          { "localDate": "2026-09-23", "flow": "medium" }
+        ],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-09-22",
+          "end": "2026-09-23",
+          "bleedingDays": 2,
+          "spottingDays": ["2026-09-20", "2026-09-21"],
+          "assumedDays": [],
+          "kind": "period",
+          "flags": []
+        }
+      ]
+    },
+    {
+      "id": "TV-E3",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-10-03",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [
+          { "localDate": "2026-10-01", "flow": "medium" },
+          { "localDate": "2026-10-02", "flow": "none" },
+          { "localDate": "2026-10-03", "flow": "light" }
+        ],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-10-01",
+          "end": "2026-10-03",
+          "bleedingDays": 2,
+          "spottingDays": [],
+          "assumedDays": [],
+          "kind": "period",
+          "flags": []
+        }
+      ]
+    },
+    {
+      "id": "TV-E4",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-10-04",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [
+          { "localDate": "2026-10-01", "flow": "medium" },
+          { "localDate": "2026-10-02", "flow": "none" },
+          { "localDate": "2026-10-03", "flow": "none" },
+          { "localDate": "2026-10-04", "flow": "light" }
+        ],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-10-01",
+          "end": "2026-10-01",
+          "bleedingDays": 1,
+          "spottingDays": [],
+          "assumedDays": [],
+          "kind": "period",
+          "flags": []
+        },
+        {
+          "start": "2026-10-04",
+          "end": "2026-10-04",
+          "bleedingDays": 1,
+          "spottingDays": [],
+          "assumedDays": [],
+          "kind": "period",
+          "flags": ["short_interval"]
+        }
+      ]
+    },
+    {
+      "id": "TV-E5",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-09-03",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [{ "localDate": "2026-09-01", "flow": "medium" }],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-09-01",
+          "end": "2026-09-01",
+          "bleedingDays": 1,
+          "spottingDays": [],
+          "assumedDays": ["2026-09-02", "2026-09-03"],
+          "kind": "period",
+          "flags": []
+        }
+      ]
+    },
+    {
+      "id": "TV-L1",
+      "operation": "periodLength",
+      "input": {
+        "today": "2026-10-02",
+        "profile": { "lifeStage": "cycle", "contraception": [] },
+        "episodes": [
+          {
+            "start": "2026-01-01",
+            "end": "2026-01-05",
+            "bleedingDays": 5,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          },
+          {
+            "start": "2026-02-01",
+            "end": "2026-02-06",
+            "bleedingDays": 6,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          },
+          {
+            "start": "2026-03-01",
+            "end": "2026-03-04",
+            "bleedingDays": 4,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          },
+          {
+            "start": "2026-04-01",
+            "end": "2026-04-05",
+            "bleedingDays": 5,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          }
+        ]
+      },
+      "expected": 5
+    },
+    {
+      "id": "TV-L2",
+      "operation": "periodLength",
+      "input": {
+        "today": "2026-10-02",
+        "profile": { "lifeStage": "cycle", "contraception": [] },
+        "episodes": [
+          {
+            "start": "2026-01-01",
+            "end": "2026-01-04",
+            "bleedingDays": 4,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          },
+          {
+            "start": "2026-02-01",
+            "end": "2026-02-07",
+            "bleedingDays": 7,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          }
+        ]
+      },
+      "expected": 6
+    },
+    {
+      "id": "TV-L3",
+      "operation": "periodLength",
+      "input": {
+        "today": "2026-10-02",
+        "profile": { "lifeStage": "cycle", "contraception": [] },
+        "episodes": []
+      },
+      "expected": 5
+    }
+  ]
+}
