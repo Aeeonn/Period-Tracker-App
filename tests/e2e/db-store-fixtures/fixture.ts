@@ -6,7 +6,7 @@ import { createCryptoApi } from '../../../src/crypto/primitives/index.ts';
 import { createMigrationRunner } from '../../../src/data/migrations/index.ts';
 import { openRecordStore, type OpenRecordStore } from '../../../src/data/store/store.ts';
 import type { RecordKeyProvider } from '../../../src/data/store/codec.ts';
-import { transactionDone } from '../../../src/data/store/idb.ts';
+import { requestResult, transactionDone } from '../../../src/data/store/idb.ts';
 import { createUpdateWriteGate, type UpdateWriteGate } from '../../../src/sw/client.ts';
 import schemaV0 from '../../fixtures/schema/v0.json';
 
@@ -54,13 +54,22 @@ export interface FixtureApi {
     failWrite?: boolean,
     failMigrateAt?: number,
   ): Promise<MigrationOutcome>;
+  runRecordChangeMigration(
+    databaseName: string,
+    removeId: LogicalId,
+    renameFrom: LogicalId,
+    renameTo: LogicalId,
+    failAfterTransform?: boolean,
+  ): Promise<MigrationOutcome>;
   setMigrationPending(databaseName: string): Promise<void>;
   setSchemaVersionWithoutNotification(databaseName: string, version: number): Promise<void>;
   startPausedMigration(databaseName: string, schemaVersion: number): void;
   migrationPreparationReached(): boolean;
+  resumeMigrationPreparation(): void;
   releaseMigrationPreparation(): Promise<MigrationOutcome | undefined>;
   migrationFailure(): string | undefined;
-  holdRawConnection(): Promise<void>;
+  holdRawConnection(databaseName?: string): Promise<void>;
+  readMigrationPending(): Promise<unknown>;
   releaseRawConnection(): void;
   startHeldWrite(record: LogicalRecord): Promise<void>;
   releaseHeldWrite(): Promise<void>;
@@ -164,6 +173,12 @@ async function openHandle(databaseName: string, schemaVersion: number): Promise<
     },
   });
   return store;
+}
+
+function resumeMigrationPreparation(): void {
+  releaseMigrationPause?.();
+  releaseMigrationPause = undefined;
+  migrationPause = undefined;
 }
 
 const api: FixtureApi = {
@@ -275,6 +290,43 @@ const api: FixtureApi = {
       objectStorePrototype.put = originalPut;
     }
   },
+  async runRecordChangeMigration(
+    databaseName,
+    removeId,
+    renameFrom,
+    renameTo,
+    failAfterTransform = false,
+  ) {
+    gate = createGate();
+    const runner = createMigrationRunner({
+      databaseName,
+      schemaVersion: 2,
+      steps: [
+        {
+          from: 1,
+          to: 2,
+          migrate(records) {
+            const migrated = records
+              .filter((record) => record.logicalId !== removeId)
+              .map((record) =>
+                record.logicalId === renameFrom
+                  ? ({ ...record, logicalId: renameTo } as LogicalRecord)
+                  : record,
+              );
+            if (failAfterTransform) {
+              throw new Error('synthetic injected record migration failure');
+            }
+            return migrated;
+          },
+        },
+      ],
+      crypto: cryptoApi,
+      indexKey,
+      keyProvider,
+      writeCoordinator: gate,
+    });
+    return runner.run();
+  },
   async setMigrationPending(databaseName) {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(databaseName);
@@ -327,10 +379,11 @@ const api: FixtureApi = {
   migrationPreparationReached() {
     return migrationPreparationWasReached;
   },
+  resumeMigrationPreparation() {
+    resumeMigrationPreparation();
+  },
   async releaseMigrationPreparation() {
-    releaseMigrationPause?.();
-    releaseMigrationPause = undefined;
-    migrationPause = undefined;
+    resumeMigrationPreparation();
     try {
       return await migrationPromise;
     } catch {
@@ -340,12 +393,22 @@ const api: FixtureApi = {
   migrationFailure() {
     return migrationError;
   },
-  async holdRawConnection() {
+  async holdRawConnection(databaseName = 'app') {
     rawBlocker = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('app');
+      const request = indexedDB.open(databaseName);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
     });
+  },
+  async readMigrationPending() {
+    if (!rawBlocker) throw new Error('Hold a raw database connection before reading meta');
+    const transaction = rawBlocker.transaction('meta', 'readonly');
+    const done = transactionDone(transaction);
+    const row = await requestResult(
+      transaction.objectStore('meta').get('migrationPending') as IDBRequest<{ value?: unknown } | undefined>,
+    );
+    await done;
+    return row?.value;
   },
   releaseRawConnection() {
     rawBlocker?.close();

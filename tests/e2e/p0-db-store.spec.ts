@@ -37,6 +37,13 @@ type DayBundleRecord = Extract<LogicalRecord, { readonly entity: 'DayBundle' }> 
 const fixtureRecord = schemaV0.record as unknown as DayBundleRecord;
 const canary = schemaV0.canary;
 
+function migrationAttemptId(pending: unknown): string | undefined {
+  if (typeof pending !== 'object' || pending === null || !('attemptId' in pending)) {
+    return undefined;
+  }
+  return typeof pending.attemptId === 'string' ? pending.attemptId : undefined;
+}
+
 test.beforeAll(async () => {
   vite = await createServer({
     configFile: resolve(process.cwd(), 'vite.config.ts'),
@@ -270,6 +277,169 @@ test('transaction schema recheck @db rejects stale writes without a broadcast', 
   expect(result.writeError).toContain('InvalidStateError');
   expect(result.reloadNeeded).toBe(true);
   expect(result.reloadVersion).toBe(1);
+});
+
+test('T2a @db serializes cross-window migrations with the Web Lock', async ({
+  page,
+  context,
+}) => {
+  await openFixture(page);
+  const migratingWindow = page;
+  const competingWindow = await context.newPage();
+  await openFixture(competingWindow);
+  const databaseName = 'app-cross-window-migration-lock';
+
+  await migratingWindow.evaluate(
+    async ({ databaseName, record }) => {
+      await window.floDbTest.open(databaseName, 1);
+      await window.floDbTest.put(record);
+      window.floDbTest.close();
+    },
+    { databaseName, record: fixtureRecord },
+  );
+  await migratingWindow.evaluate(
+    (name) => window.floDbTest.startPausedMigration(name, 2),
+    databaseName,
+  );
+  await expect
+    .poll(() => migratingWindow.evaluate(() => window.floDbTest.migrationPreparationReached()))
+    .toBe(true);
+
+  await migratingWindow.evaluate(
+    (name) => window.floDbTest.holdRawConnection(name),
+    databaseName,
+  );
+  const firstAttemptId = migrationAttemptId(
+    await migratingWindow.evaluate(() => window.floDbTest.readMigrationPending()),
+  );
+  expect(firstAttemptId).toMatch(/^[0-9a-f]{32}$/);
+
+  await competingWindow.evaluate((name) => window.floDbTest.startUpgrade(name, 2), databaseName);
+  try {
+    await competingWindow.waitForTimeout(150);
+    const pending = await migratingWindow.evaluate(() =>
+      window.floDbTest.readMigrationPending(),
+    );
+    expect(migrationAttemptId(pending)).toBe(firstAttemptId);
+    expect(await competingWindow.evaluate(() => window.floDbTest.migrationSettled())).toBe(false);
+  } finally {
+    await migratingWindow.evaluate(() => window.floDbTest.releaseRawConnection());
+    await migratingWindow.evaluate(() => window.floDbTest.resumeMigrationPreparation());
+  }
+
+  await expect
+    .poll(() => migratingWindow.evaluate(() => window.floDbTest.migrationSettled()))
+    .toBe(true);
+  expect(await migratingWindow.evaluate(() => window.floDbTest.migrationResult())).toEqual({
+    status: 'migrated',
+    from: 1,
+    to: 2,
+  });
+  await expect
+    .poll(() => competingWindow.evaluate(() => window.floDbTest.migrationSettled()))
+    .toBe(true);
+  expect(await competingWindow.evaluate(() => window.floDbTest.migrationResult())).toEqual({
+    status: 'up_to_date',
+    schemaVersion: 2,
+  });
+});
+
+test('T2b @db removes and renames records, is idempotent, and aborts safely', async ({
+  page,
+}) => {
+  await openFixture(page);
+  const databaseName = 'app-record-change-migration';
+  const removeId = 'synthetic-migration-removed' as LogicalId;
+  const renameFrom = 'synthetic-migration-before-rename' as LogicalId;
+  const renameTo = 'synthetic-migration-after-rename' as LogicalId;
+  const removedRecord = { ...fixtureRecord, logicalId: removeId } as LogicalRecord;
+  const renamedRecord = {
+    ...fixtureRecord,
+    logicalId: renameFrom,
+    body: { ...fixtureRecord.body, localDate: '2031-02-07' as LocalDate },
+  } as DayBundleRecord;
+
+  const result = await page.evaluate(
+    async ({ databaseName, removeId, renameFrom, renameTo, removedRecord, renamedRecord }) => {
+      await window.floDbTest.open(databaseName, 1);
+      await window.floDbTest.put(removedRecord);
+      await window.floDbTest.put(renamedRecord);
+      window.floDbTest.close();
+      const before = await window.floDbTest.rawDump(databaseName);
+      const aborted = await window.floDbTest.runRecordChangeMigration(
+        databaseName,
+        removeId,
+        renameFrom,
+        renameTo,
+        true,
+      );
+      const afterAbort = await window.floDbTest.rawDump(databaseName);
+      const migrated = await window.floDbTest.runRecordChangeMigration(
+        databaseName,
+        removeId,
+        renameFrom,
+        renameTo,
+      );
+      const afterMigration = await window.floDbTest.rawDump(databaseName);
+      const status = await window.floDbTest.open(databaseName, 2);
+      const removed = await window.floDbTest.get(removeId);
+      const oldKey = await window.floDbTest.get(renameFrom);
+      const renamed = await window.floDbTest.get(renameTo);
+      const listed = await window.floDbTest.list();
+      window.floDbTest.close();
+      const repeated = await window.floDbTest.runRecordChangeMigration(
+        databaseName,
+        removeId,
+        renameFrom,
+        renameTo,
+      );
+      const afterRepeated = await window.floDbTest.rawDump(databaseName);
+      return {
+        before,
+        aborted,
+        afterAbort,
+        migrated,
+        afterMigration,
+        status,
+        removed,
+        oldKey,
+        renamed,
+        listed,
+        repeated,
+        afterRepeated,
+      };
+    },
+    { databaseName, removeId, renameFrom, renameTo, removedRecord, renamedRecord },
+  );
+
+  type Dump = {
+    records: unknown[];
+    snapshots: unknown[];
+    meta: Array<{ key: string; value: unknown }>;
+  };
+  const before = JSON.parse(result.before) as Dump;
+  const afterAbort = JSON.parse(result.afterAbort) as Dump;
+  const afterMigration = JSON.parse(result.afterMigration) as Dump;
+  const afterRepeated = JSON.parse(result.afterRepeated) as Dump;
+
+  expect(result.aborted).toEqual({ status: 'failed', from: 1, snapshotKept: true });
+  expect(afterAbort.records).toEqual(before.records);
+  expect(afterAbort.meta.find((row) => row.key === 'schemaVersion')?.value).toBe(1);
+  expect(afterAbort.meta.find((row) => row.key === 'migrationPending')?.value).toBe(false);
+  expect(afterAbort.snapshots).toHaveLength(1);
+
+  expect(result.migrated).toEqual({ status: 'migrated', from: 1, to: 2 });
+  expect(result.status).toBe('READY');
+  expect(result.removed).toBeUndefined();
+  expect(result.oldKey).toBeUndefined();
+  expect(result.renamed).toMatchObject({ logicalId: renameTo, body: renamedRecord.body });
+  expect(result.listed.map((record) => record.logicalId)).toEqual([renameTo]);
+  expect(afterMigration.records).toHaveLength(1);
+  expect(afterMigration.meta.find((row) => row.key === 'schemaVersion')?.value).toBe(2);
+
+  expect(result.repeated).toEqual({ status: 'up_to_date', schemaVersion: 2 });
+  expect(afterRepeated.records).toEqual(afterMigration.records);
+  expect(afterRepeated.snapshots).toHaveLength(0);
 });
 
 test('migration barrier @db rejects a write from another open window', async ({
