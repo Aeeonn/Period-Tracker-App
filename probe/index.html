@@ -24,6 +24,8 @@
         --line: #bdc5d5;
         --accent: #364aa0;
         --focus: #b94708;
+        --status-success: #17633d;
+        --status-failure: #a32525;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -35,6 +37,8 @@
           --line: #586176;
           --accent: #b9c5ff;
           --focus: #ffc078;
+          --status-success: #6ed39a;
+          --status-failure: #ff8d8d;
         }
       }
 
@@ -114,10 +118,10 @@
         font-weight: 700;
       }
       .status[data-status='successful'] {
-        color: #17633d;
+        color: var(--status-success);
       }
       .status[data-status='failed'] {
-        color: #a32525;
+        color: var(--status-failure);
       }
       .status[data-status='unsupported'],
       .status[data-status='not-configured'] {
