@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "canary": "SYNTHETIC-CANARY-P0-DB-73",
+  "nextDate": "2031-02-04",
+  "record": {
+    "entity": "DayBundle",
+    "logicalId": "synthetic-p0-store-day",
+    "authorDevice": "synthetic-device-p0",
+    "hlc": { "wallMs": 1740000000000, "counter": 0, "deviceId": "synthetic-device-p0" },
+    "deleted": false,
+    "body": {
+      "localDate": "2031-02-03",
+      "flow": "medium",
+      "fieldHlc": {
+        "flow": { "wallMs": 1740000000000, "counter": 0, "deviceId": "synthetic-device-p0" }
+      }
+    }
+  }
+}
