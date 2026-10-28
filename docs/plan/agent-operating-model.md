@@ -120,7 +120,7 @@ Every brief (templates in [`.agents/skills/task-brief/assets/`](../../.agents/sk
 
 ## 8. Parallelism and waves
 
-- **At most 6 live subagents at once**, counting builders, verifiers, scouts and integrators together (raised from 3 by the captain on 2026-10-28). **One orchestrator chat at a time.**
+- **At most 10 live subagents at once**, counting builders, verifiers, scouts and integrators together (raised from 3 to 6, then to 10, by the captain on 2026-10-28). **One orchestrator chat at a time.**
 - **Foundation tasks** (contracts, schema, design tokens, interfaces) run **one at a time**.
 - **Wave rule:** tasks in the same wave never own the same file. This is checked mechanically ([consistency-check.md](consistency-check.md)). A planner proposal for new items must keep it.
 - **Integration cadence (the approved deviation in AP-17).** Integration is continuous at every landing, with **one integration ship task per phase**:

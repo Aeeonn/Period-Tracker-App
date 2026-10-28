@@ -1,6 +1,6 @@
 # ADR-0009: Agent operating model on Firstmate (no second orchestrator)
 
-- **Status:** Proposed (Stage C, 2026-10-02; revised in Stage E after the Stage D critique). **Mechanisms superseded by [ADR-0011](0011-vscode-copilot-orchestration.md) (2026-10-28):** Pi, Herdr, `tasks-axi` and Firstmate scripts are replaced by VS Code Copilot agents, repository skills and [`docs/plan/backlog.md`](../plan/backlog.md). The policy below still applies, with the worker cap raised to 6 and the verifier sandbox replaced by ordinary review ("isolation not enforced").
+- **Status:** Proposed (Stage C, 2026-10-02; revised in Stage E after the Stage D critique). **Mechanisms superseded by [ADR-0011](0011-vscode-copilot-orchestration.md) (2026-10-28):** Pi, Herdr, `tasks-axi` and Firstmate scripts are replaced by VS Code Copilot agents, repository skills and [`docs/plan/backlog.md`](../plan/backlog.md). The policy below still applies, with the worker cap raised to 10 and the verifier sandbox replaced by ordinary review ("isolation not enforced").
 - **Context:** The prompt's Step 9. Firstmate already supplies orchestration, worktrees, supervision and the backlog. `~/firstmate/config/crew-dispatch.json` is the routing source of truth.
 - **Decision:**
   - **Roles.** The first mate orchestrates. Ship crewmates implement. Independent scout verifiers review the exact revision. Verifiers never edit source.

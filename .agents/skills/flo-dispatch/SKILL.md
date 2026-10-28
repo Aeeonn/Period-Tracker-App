@@ -40,7 +40,7 @@ The orchestrator (`flo-orchestrator`) is Firstmate's first mate, and the user is
 3. Write the brief to `~/firstmate/data/<id>/brief.md` from the `task-brief` templates (`ship-brief.md`, `verify-brief.md`, `scout-brief.md`). Put the captain's own words in **Captain's intent** and only the needed build instructions in **Firstmate spec**.
 4. Update the backlog (`status in-flight`, `branch`, `notes`) and append `working [at=<epoch>]: dispatched <agent>/<model> slot <n>` to the status file.
 5. Launch with the task tool: `agent_type` = the routed agent, `mode: background`, `name` = the task id, `reasoning_effort: high` (the policy minimum, passed explicitly; never lower), `model` only for the documented overrides in §2, prompt = `Execute the Flo task brief at /home/justi/firstmate/data/<id>/brief.md (Windows: \\wsl.localhost\Ubuntu-24.04\home\justi\firstmate\data\<id>\brief.md). Task id <id>. Follow it exactly and finish with its ≤15-line summary.` Record the model and effort the runtime actually reports, if it reports them, in the backlog notes.
-6. **At most 6 live subagents** (builders, verifiers and others together). Foundation tasks run alone. Tasks in one wave never own the same file. Serialize only for a real semantic dependency or shared mutable state.
+6. **At most 10 live subagents** (builders, verifiers and others together). Foundation tasks run alone. Tasks in one wave never own the same file. Serialize only for a real semantic dependency or shared mutable state.
 
 ## 4. Supervise
 
