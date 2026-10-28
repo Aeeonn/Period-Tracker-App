@@ -4,31 +4,33 @@ This log records approved choices separately from completed evidence and pending
 
 ## Approved choices
 
-- **2026-10-02 — Captain approval, recorded in this task's launch brief: plan defaults accepted and this P0 documentation task authorized.** Keep the app's encrypted backup/restore; hosting custody is joint; use Canadian guidance. This plan approval does not authorize accounts, credentials, dependency or sandbox installation, deployment, payment, or destructive action.
-- Canadian guidance is selected, but **Canadian localization is not yet ready for P1**: content must have cited Canadian sources and independent review first.
-- Optional administrative help is exploratory only. It is not permission to access or edit private data, operate her account, change her records, or bypass category consent.
+- **2026-10-02 — Plan approval:** retain encrypted backup/restore, joint hosting custody, and Canadian guidance. The approval of plan defaults alone did not authorize infrastructure or operational actions; the separately approved pinned local dependency set is recorded below.
+- Canadian guidance is selected, but **Canadian localization is not ready for P1**: content needs cited Canadian sources and independent review first.
+- Optional administrative help remains exploratory only. It is not permission to access or edit private data, operate an account, change records, or bypass category consent.
 
 ## Completed evidence
 
-- Planning documents landed on local `master` at `4dba4fa` after preserving the pre-existing `PLANNING_PROMPT.md` edit and deleted project `crew-dispatch.json`. Neither the prompt edit nor deletion is to be reverted or recreated by this work.
-- Firstmate runtime/routing, model-catalog, and startup validation is complete; its report is [`/home/justi/firstmate/data/p0-dispatch-validate/report.md`] (outside this repository). It reported the five routing rules and required model profiles matched, with this session on `github-copilot/gpt-6-luna` at high reasoning.
-- This P0 task creates only the project constitution, reusable skills, and this progress log. `AGENTS.md` is 31 lines; `grep -c docs/plan AGENTS.md` returned 5. Link, anchor, and Pi-parsed skill-frontmatter checks passed for all five Markdown files and three skills; skills contain no copied formulas.
-- **Pi discovery evidence:** installed Pi 0.99.2 `DefaultResourceLoader`, run from the repository with in-memory settings and extensions disabled (no model invocation), discovered all three `.agents/skills/*/SKILL.md` files with no skill diagnostics. Its parsed `task-brief` description contains and matches the `task-brief canary` phrase. The documented discovery mechanism is therefore confirmed without a paid model call.
-- No application code or project test toolchain exists in this checkout. No application tests were run or dependencies installed.
+- **2026-10-02 — `flo-plan` — main `ccc7be6`:** Stage C planning documents; no separate verify report.
+- **2026-10-02 — `flo-plan-fixes` — main `4dba4fa`:** Stage E plan corrections; no separate verify report.
+- **2026-10-02 — `p0-agents-skills` — main `8ff2d5e`:** project instructions and reusable skills; no separate verify report. Awaiting `p0-lowrisk-review`.
+- **2026-10-05 — `p0-toolchain` — main `821e5a9`:** only the pinned local dependencies approved by `p0-local-install-approval` were installed. Verify: `/home/justi/firstmate/data/p0-toolchain-verify/report.md` (PASS for the exact candidate).
+- **2026-10-05 — `p0-feasibility-probe` — main `3e4051c`:** synthetic-only feasibility probe; no separate verify report. Awaiting `p0-lowrisk-review`.
+- **2026-10-05 — `p0-contracts` — main `1bc2261`:** verify: `/home/justi/firstmate/data/p0-contracts-verify/report.md` (PASS for the exact candidate; type contracts do not prove runtime behavior).
+- **2026-10-05 — `p0-design-tokens` — main `4527268`:** no separate verify report. Awaiting `p0-lowrisk-review`.
+- **2026-10-05 — `p0-app-shell` — main `8d81a42`:** task evidence: `/home/justi/firstmate/data/p0-app-shell/report.md`; no separate verify. Awaiting `p0-lowrisk-review`.
+- **2026-10-05 — `p0-localdate` — main `1e82364`:** verify: `/home/justi/firstmate/data/p0-localdate-verify/report.md` (PASS for the exact candidate).
+- **2026-10-05 — `p0-service-worker` — main `e425742`:** verify: `/home/justi/firstmate/data/p0-service-worker-verify/report.md` (PASS for the exact candidate).
+- **2026-10-05 — `p0-synthetic-data` — main `c88a0a2`:** task evidence: `/home/justi/firstmate/data/p0-synthetic-data/report.md`; awaiting `p0-lowrisk-review`.
+- **2026-10-28 — `p0-crypto-core` — main `c9535f6`:** landed rebased from reviewed candidate `dc34523` with an identical patch. Verify: `/home/justi/firstmate/data/p0-crypto-core-verify/report.md` (PASS for the reviewed candidate).
+- **2026-10-28 — `p0-csp-network` — main `5f4ac35`:** landed rebased from reviewed candidate `768ecac` with an identical patch. Verify: `/home/justi/firstmate/data/p0-csp-network-verify/report.md` (round 1 PASS for the exact candidate; round-0 FAIL preserved at `/home/justi/firstmate/data/p0-csp-network-verify/report-round-0.md`).
 
 ## Pending permissions and proof
 
-The following remain separate, pending items for `p0-approvals`; none is implied by plan approval:
-
-- **Hosting account:** create/use the jointly held hosting account (AP-10).
-- **Scoped credential:** issue and store any scoped hosting credential (AP-10).
-- **Verifier sandbox:** install the approved sandbox prerequisites/dependencies, if later approved (AP-16).
-- **Project dependencies:** install the pinned npm dependency set (AP-28).
-- **Synthetic preview deployment:** create or deploy preview hosting, relay, secrets, or push-test endpoint (AP-18).
-
-No infrastructure account was created, no credential or secret was issued, no package or sandbox prerequisite was installed, and no preview deployment was made for this task. No administrative override was exercised or authorized.
+- The pinned local dependency installation above does not authorize hosting or deployment actions. The hosting account and scoped credential (AP-10), synthetic preview deployment and related actions (AP-18) remain pending.
+- **2026-10-28:** the concurrent-worker limit was raised from 3 to 6.
+- **2026-10-28:** `p0-verifier-sandbox-proof` and its verify task were closed as superseded. Ordinary independent review without the declined extra isolation feature is accepted; verifier isolation is not enforced and no sandbox proof or security PASS is claimed. The evidence branch is preserved, not landed.
 
 ## Phase and verification status
 
-- Phase demos, captain approval pauses, and concurrency limits remain as specified in [plan §14](plan/plan.md#14-roadmap-phases-and-gates) and [agent-operating-model §§8, 10–11](plan/agent-operating-model.md#8-parallelism-and-waves); this log does not relax them.
-- No application implementation, project test, phone check, medical review, or security proof has occurred. Documentation and skill-discovery checks are not evidence for those foundations. Record any later results against the exact task revision and required verifier report.
+- P0 integration, phase verification, demo, and `p0-lowrisk-review` remain pending. Phase demos and captain approval pauses remain as specified in [plan §14](plan/plan.md#14-roadmap-phases-and-gates) and [agent-operating-model §§8, 10–11](plan/agent-operating-model.md#8-parallelism-and-waves).
+- No phone, medical, privacy, or security proof is claimed beyond the scope of the cited verify reports. WebKit emulation is not iPhone proof.
