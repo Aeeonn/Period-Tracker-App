@@ -19,7 +19,7 @@ Task `p0-relay-spike` (FB-01, FB-02, FB-09; serves FB-06). Synthetic data only. 
 Routes:
 
 - `GET /vapid-public-key`: the public VAPID key.
-- `POST /push-test`: enrollment-secret bearer, then a D1 rate limit (5 per 10 min), a 16 KB body limit, a push-host allowlist, and exactly one Web Push attempt with the fixed text "Synthetic probe test" / "This is a synthetic notification test."
+- `POST /push-test`: enrollment-secret bearer, a 16 KB body limit, and subscription/push-host validation, then a global D1 rate limit (5 per 10 min) before exactly one Web Push attempt with the fixed text "Synthetic probe test" / "This is a synthetic notification test."
 - `POST /spike/devices`, `/spike/signed` and `/spike/push-sign`: measurement only. They need the enrollment secret or a §5 signed request from a registered synthetic device.
 
 There is no CORS, no `console` output, and no reading of the client IP, user agent or `cf` request fields.
@@ -58,6 +58,8 @@ Method and limits:
 
 ## FB-09: terms for personal use
 
+**Verdict: PASS-with-caveats**, based on official Cloudflare terms read on 2026-10-29; this is a scoped terms reading, not production approval.
+
 The intended use:
 
 - One account holder runs the relay for the personal, non-commercial use of two people.
@@ -65,13 +67,13 @@ The intended use:
 - Traffic is far below the Free quotas: fewer than 100 writes per day are expected (storage-sync-decision.md §3).
 - Only ciphertext and opaque ids reach the relay (§5).
 
-This spike can reach only the Cloudflare API, so it could not read the current terms. Whether they allow this use is recorded here as **pending the account holder**, who should check:
+No personal/non-commercial Free-use ban was found in the [Self-Serve Agreement](https://www.cloudflare.com/terms/) or [Developer Platform terms](https://www.cloudflare.com/service-specific-terms-developer-platform/) covering Workers, D1 and Pages. The owner operates their own app; the partner is an app user, not a resale customer or an account opened on their behalf (§§2.2.1(a), 2.3).
 
-- the Cloudflare Self-Serve Subscription Agreement;
-- the Cloudflare Website and Online Services Terms of Use;
-- the Developer Platform (Workers and D1) service-specific terms.
+PHI as defined by US HIPAA requires Cloudflare's written consent (§2.2.1(i)); encryption supplies no exception. Lawful permissions remain necessary (§2.5.2), and sensitive-information disclosure is restricted (Developer Platform clause 8).
 
-Look for any restriction on personal or non-commercial Free-plan use and on storing user data in D1. Provider terms can change at any time (R5 C8). The design keeps the phones and backup files authoritative, so a change means exporting and switching transport.
+The fixed-function mailbox and consented generic push test are inferred not to be a VPN/similar proxy (§2.2.1(j)) or spam (§2.7); neither is expressly prohibited. The [Website Terms](https://www.cloudflare.com/website-terms/) exclude these account-based services.
+
+[Workers](https://developers.cloudflare.com/workers/platform/limits/) and [D1](https://developers.cloudflare.com/d1/platform/pricing/) Free overages produce limits/errors, not automatic Paid upgrades; count rows and all account usage, not just app writes. Free service can end without notice (§§2.6, 8), terms can change (§14), and post-termination retention is not assured: phones/backups stay authoritative; export while available and switch transport if necessary.
 
 ## FB-06 relay half: `POST /push-test`
 
@@ -124,6 +126,6 @@ Cloudflare itself always processes the client IP, TLS and request metadata for e
 
 ## Outcome and fallback
 
-FB-01 and FB-02 pass, FB-09 is pending the account holder's reading of the terms, and the relay half of FB-06 works live.
+FB-01 and FB-02 pass, FB-09 is PASS-with-caveats based on the scoped terms reading, and the relay half of FB-06 works live.
 
 If FB-01, FB-02 or FB-09 fails, use the storage-sync-decision.md §3 fallback: option 1 (manual exchange) alone, plus the optional option 2 transport (AP-12). Until then, this preview endpoint is used for nothing but the feasibility probe, and only with synthetic data.

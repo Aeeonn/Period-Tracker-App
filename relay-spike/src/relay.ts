@@ -164,14 +164,14 @@ function pushReason(text: string): string | undefined {
 async function pushTest(request: Request, env: Env, deps: Deps, now: number): Promise<Response> {
   const denied = await checkEnrollment(request, env);
   if (denied) return denied;
-  const vapid = env.VAPID_PRIVATE_JWK ? await importVapidKeys(env.VAPID_PRIVATE_JWK) : null;
-  if (!vapid) return json(503, { error: 'not configured' });
-  if (!(await takePushTestSlot(env, now))) return json(429, { error: 'rate limited' });
   const body = await readBody(request);
   if (body instanceof Response) return body;
   const input = parseJson(body) as { subscription?: unknown } | undefined;
   const subscription = parseSubscription(input?.subscription);
   if (!subscription) return json(400, { error: 'invalid subscription' });
+  const vapid = env.VAPID_PRIVATE_JWK ? await importVapidKeys(env.VAPID_PRIVATE_JWK) : null;
+  if (!vapid) return json(503, { error: 'not configured' });
+  if (!(await takePushTestSlot(env, now))) return json(429, { error: 'rate limited' });
   const push = await buildPushRequest(subscription, vapid, new URL(request.url).origin, now);
   let response: Response;
   try {

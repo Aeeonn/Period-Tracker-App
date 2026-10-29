@@ -71,10 +71,37 @@ async function subscriptionBody() {
 }
 
 describe('POST /push-test authorization', () => {
-  it('returns 401 without the enrollment secret and sends nothing', async () => {
-    const { body } = await subscriptionBody();
-    const response = await handle(post('/push-test', body), env, deps);
+  it('returns 401 before reading the body or accessing D1 when unauthenticated', async () => {
+    let bodyPulls = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          bodyPulls += 1;
+          controller.enqueue(utf8('synthetic body'));
+          controller.close();
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const noD1Env: Env = {
+      ...env,
+      DB: {
+        prepare: () => {
+          throw new Error('unauthenticated request accessed D1');
+        },
+        batch: () => {
+          throw new Error('unauthenticated request accessed D1');
+        },
+      },
+    };
+    const request = new Request(`${ORIGIN}/push-test`, {
+      method: 'POST',
+      body,
+      duplex: 'half',
+    });
+    const response = await handle(request, noD1Env, deps);
     expect(response.status).toBe(401);
+    expect(bodyPulls).toBe(0);
     expect(calls).toHaveLength(0);
   });
 
@@ -156,6 +183,41 @@ describe('POST /push-test with the secret', () => {
       sub.auth,
     );
     expect(opened.plaintext).toBe(PUSH_PAYLOAD);
+  });
+
+  it('does not consume rate-limit slots for authorized invalid requests', async () => {
+    const malformedJson = new Request(`${ORIGIN}/push-test`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...bearer },
+      body: '{not json',
+    });
+    const invalidSubscription = post('/push-test', { subscription: {} }, bearer);
+    const oversized = post('/push-test', { pad: 'x'.repeat(MAX_BODY_BYTES) }, bearer);
+    const invalidRequests = [
+      [malformedJson, 400],
+      [invalidSubscription, 400],
+      [oversized, 413],
+    ] as const;
+
+    for (const [request, expectedStatus] of invalidRequests) {
+      expect((await handle(request, env, deps)).status).toBe(expectedStatus);
+    }
+
+    const db = env.DB as ReturnType<typeof createTestD1>;
+    expect(db.sqlite.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM rate_limits').get()).toEqual(
+      { n: 0 },
+    );
+    expect(calls).toHaveLength(0);
+
+    const { body } = await subscriptionBody();
+    for (let i = 0; i < PUSH_TEST_LIMIT; i += 1) {
+      expect((await handle(post('/push-test', body, bearer), env, deps)).status).toBe(200);
+    }
+    expect((await handle(post('/push-test', body, bearer), env, deps)).status).toBe(429);
+    expect(db.sqlite.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM rate_limits').get()).toEqual(
+      { n: PUSH_TEST_LIMIT + 1 },
+    );
+    expect(calls).toHaveLength(PUSH_TEST_LIMIT);
   });
 
   it('rate-limits authorized calls to the window limit', async () => {
