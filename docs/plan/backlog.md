@@ -533,7 +533,7 @@
 - updated: 2026-10-29
 - hold: 
 - branch: `fm/p0-relay-spike` (slot 1)
-- notes: Round 0 (flo-builder / claude-opus-5.5 / high, slot 1) stopped before deploy: account has no workers.dev subdomain. Code under relay-spike/ uncommitted in slot 1 (67/67 tests, npm run check green); D1 flo-preview created, empty; no Worker, no secrets yet. Billing: Workers Free, no payment method (account holder, 2026-10-28). Open for p0-probe-deploy: probe must supply the push-test enrollment secret.
+- notes: Round 0 (flo-builder / claude-opus-5.5 / high, slot 1) candidate 3da4c51: Worker flo-preview-relay live (Workers Free, no payment method per account holder), D1 schema applied, secrets set outside repo. FB-02 PASS (p50 2.72 ms, p95 3.86 ms, max 4.24 ms < 10 ms); FB-01 PASS on account holder confirmation; FB-09 pending (account holder to read terms). Push-test: 401 without/wrong secret; one Apple attempt with synthetic token (400 BadWebPushToken). Final live checks ran over a phone hotspot (VPN MTU blackhole and Cisco Umbrella interception on the work network; not bypassed). Open: probe must supply the push-test enrollment secret (p0-probe-deploy); threat-model note on client DNS filters; root check coverage of relay-spike/. p0-relay-spike-verify round 0 running on 3da4c51 (flo-verifier / claude-opus-5.5 / high, slot 10); landing then needs captain approval.
 
 ### p0-relay-spike-verify
 
