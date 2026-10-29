@@ -28,6 +28,8 @@ This log records approved choices separately from completed evidence and pending
 - **2026-10-28 — `p0-db-store` — main `a3e2f36`:** encrypted IndexedDB record store and migrations. Verify: `/home/justi/firstmate/data/p0-db-store-verify/report.md` (PASS for the exact candidate; round 0 at `report-round-0.md`).
 - **2026-10-28 — `p0-db-store-followups` — main `1ed3bc4`:** migration-lock and record-change tests. Review: `/home/justi/firstmate/data/p0-db-store-followups-verify/report.md`.
 - **2026-10-28 — `ops-worker-cap-10` — main `9ee271f`:** the live-subagent limit is now 10 in the dispatch skill, orchestrator agent, operating model, plan note and ADR-0009/0011. Review: `/home/justi/firstmate/data/ops-worker-cap-10-verify/report.md` (PASS for the exact candidate).
+- **2026-10-28 — `p1-episodes` — main `f5920cb`:** engine A1/A3 (bleeding episodes, spotting, assumed days, period length); early start before the Phase 0 gate approved by the captain. Verify: `/home/justi/firstmate/data/p1-episodes-verify/report.md` (round 1 PASS for the exact candidate; round 0 at `report-round-0.md`).
+- **2026-10-28 — `p0-lock-contract` — main `9e31c9c`:** LockService key lifecycle, re-authenticated passphrase change and service-enforced recovery-code confirmation ([ADR-0010](adr/0010-lock-service-key-lifecycle.md), Proposed). Verify: `/home/justi/firstmate/data/p0-lock-contract-verify/report.md` (round 4 PASS for the exact candidate under the captain-approved bar; rounds 0–3 kept). Type contracts do not prove runtime behaviour; `p0-lock-verify` tests it.
 
 ## Pending permissions and proof
 
