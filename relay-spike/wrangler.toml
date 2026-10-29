@@ -1,0 +1,35 @@
+# P0 relay spike: the preview relay Worker and its D1 database. Synthetic data only.
+# Deploy with the scoped credential in the environment only:
+#   npx wrangler deploy --config relay-spike/wrangler.toml
+# The account comes from that environment and is never written here. The D1 database_id
+# below is a database resource id, not an account identifier.
+# T-RELAY-02 (configuration part): Workers logs, traces and observability are off,
+# Logpush is off, no tail consumers, no cron triggers, no routes or custom domains.
+
+name = "flo-preview-relay"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+preview_urls = false
+send_metrics = false
+logpush = false
+upload_source_maps = false
+tail_consumers = []
+streaming_tail_consumers = []
+
+[observability]
+enabled = false
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+persist = false
+
+[observability.traces]
+enabled = false
+persist = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flo-preview"
+database_id = "0213a155-8583-4544-bc1c-e204b7788f35"
