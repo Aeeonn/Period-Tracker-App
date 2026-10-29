@@ -531,9 +531,9 @@
 - record: `~/firstmate/data/p0-relay-spike/`
 - since: 2026-10-02
 - updated: 2026-10-29
-- hold: Captain decision: authorize creating a rebased candidate from current main 352dde4 with an identical patch, subject to the Flo rebase guard and renewed independent review? Any resulting SHA requires separate fresh landing approval. Options: authorize this rebase and review work, or decline and keep the original exact-SHA candidate blocked.
+- hold: Captain decision: authorize using current local main ec71718ddd056245c1a81151339d7ba44336d43b as the base for a patch-identical rebased candidate, Flo rebase guard, and renewed independent review? This base includes unpushed operational backlog commits e2c3eeb and ec71718. Any resulting SHA requires separate fresh landing approval. Options: authorize this updated base, or decline and leave the original exact-SHA candidate blocked.
 - branch: `fm/p0-relay-spike` (slot 1)
-- notes: Captain approval recorded exactly: 'Approve the landing' for candidate 3da4c5166fed9c38cead0ef81f60c32753424495; p0-relay-spike-verify PASS covers that exact SHA. Landing is blocked because main advanced from reviewed parent 245b368 to 352dde4, so the exact candidate does not fast-forward from current main. No rebase or later SHA is approved; a specific rebased candidate needs fresh captain authority before landing.
+- notes: Captain answer recorded exactly: authorize_rebase_review for rebasing the patch-identical candidate from 352dde4, using the Flo rebase guard and renewed independent review; any resulting SHA needs separate landing approval. This bounded work was not started: local main is now ec71718ddd056245c1a81151339d7ba44336d43b, beyond the authorized base. Preserved original candidate 3da4c5166fed9c38cead0ef81f60c32753424495 and local operational commits e2c3eeb/ec71718.
 - candidate: 3da4c5166fed9c38cead0ef81f60c32753424495
 
 ### p0-relay-spike-verify
