@@ -51,8 +51,36 @@ const unauthorized = (): Response => json(401, { error: 'unauthorized' });
 async function readBody(request: Request): Promise<Bytes | Response> {
   const declared = Number(request.headers.get('content-length') ?? '0');
   if (declared > MAX_BODY_BYTES) return json(413, { error: 'body too large' });
-  const body = new Uint8Array(await request.arrayBuffer());
-  if (body.length > MAX_BODY_BYTES) return json(413, { error: 'body too large' });
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array();
+
+  const chunks: Bytes[] = [];
+  let length = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > MAX_BODY_BYTES) {
+        try {
+          await reader.cancel();
+        } catch {
+          // The size limit still takes precedence if stream cancellation fails.
+        }
+        return json(413, { error: 'body too large' });
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   return body;
 }
 

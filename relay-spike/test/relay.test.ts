@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { type Bytes, toBase64Url, utf8 } from '../src/bytes.ts';
-import { type Deps, type Env, PUSH_TEST_LIMIT, handle } from '../src/relay.ts';
+import { type Deps, type Env, MAX_BODY_BYTES, PUSH_TEST_LIMIT, handle } from '../src/relay.ts';
 import { signRequest } from '../src/signed-request.ts';
 import { PUSH_PAYLOAD, importVapidKeys } from '../src/webpush.ts';
 import {
@@ -260,6 +260,77 @@ describe('signed spike routes', () => {
     expect(response.status).toBe(200);
     const db = env.DB as ReturnType<typeof createTestD1>;
     expect(db.sqlite.prepare('SELECT COUNT(*) AS n FROM nonces').get()).toEqual({ n: 1 });
+  });
+
+  it('rejects a chunked over-limit body and cancels without pulling later chunks', async () => {
+    const chunks = [new Uint8Array(MAX_BODY_BYTES), new Uint8Array([1]), new Uint8Array([2])];
+    let pulls = 0;
+    let cancelled = false;
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          const chunk = chunks[pulls];
+          if (!chunk) {
+            controller.close();
+            return;
+          }
+          pulls += 1;
+          controller.enqueue(chunk);
+        },
+        cancel() {
+          cancelled = true;
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const request = new Request(`${ORIGIN}/spike/signed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: stream,
+      duplex: 'half',
+    });
+
+    expect(request.headers.get('content-length')).toBeNull();
+    const response = await handle(request, env, deps);
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ error: 'body too large' });
+    expect(pulls).toBe(2);
+    expect(cancelled).toBe(true);
+  });
+
+  it('accepts a chunked body exactly at the byte limit', async () => {
+    const body = utf8(JSON.stringify({ pad: 'x'.repeat(MAX_BODY_BYTES - 10) }));
+    expect(body.byteLength).toBe(MAX_BODY_BYTES);
+    const sig = await signRequest(
+      device.privateKey,
+      'synthetic-device-1',
+      'POST',
+      '/spike/signed',
+      NOW_S,
+      'synthetic-nonce-0000000003',
+      body,
+    );
+    let pulls = 0;
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          pulls += 1;
+          controller.enqueue(body);
+          controller.close();
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const request = new Request(`${ORIGIN}/spike/signed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', sig },
+      body: stream,
+      duplex: 'half',
+    });
+
+    expect(request.headers.get('content-length')).toBeNull();
+    expect((await handle(request, env, deps)).status).toBe(200);
+    expect(pulls).toBe(1);
   });
 
   it('rejects a replayed nonce with 409', async () => {

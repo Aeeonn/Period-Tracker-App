@@ -116,8 +116,8 @@ Turning logs off does **not** hide traffic from the account holder or from Cloud
 
 - **Workers analytics** in the dashboard and GraphQL, per invocation group: request counts, CPU time and wall time quantiles, status (success or error), subrequest counts, time buckets, and the Cloudflare data center (colo). This spike's measurement used exactly this.
 - **Live traffic through `wrangler tail`** or the dashboard's live log stream. These work with logging off. For each request they show the full URL and path, the method, request headers, the client IP and `cf` fields such as country, colo and ASN, the response status, and any exceptions. They show nothing for traffic that happened before the tail started.
-- **Re-enabled logging.** Any account member with Workers edit rights can turn Workers Logs, observability, Logpush or a tail consumer back on at any time by redeploying.
-- **D1 contents.** The `devices`, `nonces` and `rate_limits` tables can be read through the dashboard, `wrangler d1 execute` or an export. In the real relay they hold opaque ids, public keys, timestamps and ciphertext only (§5).
+- **Re-enabled logging.** Any account member with Workers edit rights, or anyone holding a scoped deploy token with Workers Scripts Edit permission, can turn Workers Logs, observability, Logpush or a tail consumer back on at any time by redeploying.
+- **D1 contents.** The `devices`, `nonces` and `rate_limits` tables can be read through the dashboard, `wrangler d1 execute` or an export. In the real relay they hold opaque ids, public keys, sequence numbers (sequence-number cursors) and ciphertext only (§5).
 - **Account and API audit logs:** deploys, secret changes and token use.
 
 Cloudflare itself always processes the client IP, TLS and request metadata for every request, whatever these settings are (T13). The same applies to any network-level DNS or TLS inspection on the client's network.
