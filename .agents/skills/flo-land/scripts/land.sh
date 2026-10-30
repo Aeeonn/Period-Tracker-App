@@ -7,8 +7,8 @@
 #       <reviewed-sha> (hex, 7-40 chars) and exactly one commit ahead of main. With --push, then
 #       publish refs/heads/main only.
 #       --rebased-from: the tip is a rebase of the reviewed commit. Pass the tip as <reviewed-sha>
-#       and the reviewed commit here; landing proceeds only if both have the same patch-id and
-#       main changed none of the files the reviewed patch touches since the reviewed parent.
+#       and the reviewed commit here; landing proceeds only if both have the same patch-id.
+#       Overlapping files changed by main are reported as information, not a refusal.
 #       Otherwise the review must be renewed.
 #   land.sh push
 #       Publish local main only (for orchestrator chore commits such as backlog updates).
@@ -81,13 +81,17 @@ check_rebase() { # tip reviewed
   local tip=$1 reviewed=$2 parent overlap
   [[ $(g rev-list --count "$reviewed^..$reviewed") == 1 ]] || die "reviewed commit $reviewed is not a single non-root commit"
   [[ $(patch_id "$tip") == "$(patch_id "$reviewed")" ]] ||
-    die "rebased tip's patch differs from the reviewed patch; renewed review needed"
+    die "rebased tip's patch differs from the reviewed patch; review must be renewed"
   parent=$(g rev-parse "$reviewed^")
   overlap=$(comm -12 \
     <(g diff --name-only --no-renames "$reviewed^" "$reviewed" | sort -u) \
     <(g diff --name-only --no-renames "$parent" "$LOCAL" | sort -u))
-  [[ -z $overlap ]] || die "main changed files the reviewed patch touches since its review ($(tr '\n' ' ' <<<"$overlap")); renewed review needed"
-  echo "land: identity-preserving rebase of ${reviewed:0:12} (same patch-id, no overlapping main changes)"
+  if [[ -n $overlap ]]; then
+    local files
+    files=$(printf '%s\n' "$overlap" | awk 'BEGIN { ORS=", " } { print }' | sed 's/, $//')
+    echo "land: note: main also changed reviewed patch file(s): $files"
+  fi
+  echo "land: identity-preserving rebase of ${reviewed:0:12} (same patch-id)"
 }
 
 cmd_land() {

@@ -30,5 +30,5 @@ Each Flo ship task delivers **exactly one** Conventional Commit on its own `fm/<
 ## Correction rounds and rebases
 
 - After a review finding, fix it in the same worktree, then `git commit --amend --no-edit` (or reword it). The branch stays one commit. Re-run the checks and report the **new** SHA. A changed SHA always needs a renewed review.
-- Rebase onto the current `main` only when the brief or orchestrator asks for it: `git rebase main`, then re-run `npm run check` and compare patches (`git range-diff main...<old> main...HEAD` and `git patch-id --stable`). Report whether the patch is identical **and** whether `main` changed any file your reviewed patch touches. Either change means a renewed review.
+- Rebase onto the current `main` only when the brief or orchestrator asks for it: `git rebase main`, then re-run `npm run check` and compare patches (`git range-diff main...<old> main...HEAD` and `git patch-id --stable`). A patch-identical rebase that passes its tests needs no renewed review; report files changed by both the reviewed patch and `main` as informational overlap. A changed patch needs a renewed review, limited to the change (ADR-0012).
 - Never push, merge, force-push, reset main, delete branches, or commit on `main` or another task's branch. Landing belongs to the orchestrator (`flo-land`).

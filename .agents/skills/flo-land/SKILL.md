@@ -19,7 +19,7 @@ Land a branch only when **all** of these hold. Otherwise ask the captain or wait
    - Synthetic-only previews/redeploys from reviewed landed `main` run without per-deploy approval.
    - Production, real data, accounts/credentials, money and phase gates remain captain decisions.
    - Destructive or irreversible changes and installs not already approved retain explicit captain approval.
-4. Dependencies are landed, and the branch fast-forwards from `main`. If `main` moved, the builder rebases and re-runs the task tests. If stable patch-id is identical and tests pass, re-point the existing review to the rebased SHA and land without a new review, even if `main` touched the same files; a changed patch requires renewed review. `land.sh --rebased-from` still refuses overlapping changes; re-point review to the rebased SHA and use the exact-SHA local landing path. This script overlap-check change is proposed, not made here. Record the comparison in the backlog notes.
+4. Dependencies are landed, and the branch fast-forwards from `main`. If `main` moved, the builder rebases and re-runs the task tests. If stable patch-id is identical and tests pass, re-point the existing review to the rebased SHA and land without a new review, even if `main` touched the same files; a changed patch requires renewed review. `land.sh --rebased-from` reports overlapping files for information but does not refuse an identical patch. Record the comparison in the backlog notes.
 
 ## Commands (inside WSL)
 
@@ -31,7 +31,7 @@ $L land p0-lock <new-tip> --rebased-from <reviewed-sha> --push   # identity-pres
 $L push                                        # upload orchestrator chore commits (backlog/progress)
 ```
 
-The script stops before changing anything if: the primary checkout is dirty or not on `main`; the remote's fetch or push URL is not `git@github.com:Aeeonn/Period-Tracker-App.git`; live remote `main` has commits local `main` lacks; the reviewed SHA is not a hex SHA (branch names are refused) or is not the branch tip; the branch is not exactly one non-merge fast-forward commit ahead; or, with `--rebased-from`, the patch or overlapping files changed. After the merge and push, it re-reads both heads.
+The script stops before changing anything if: the primary checkout is dirty or not on `main`; the remote's fetch or push URL is not `git@github.com:Aeeonn/Period-Tracker-App.git`; live remote `main` has commits local `main` lacks; the reviewed SHA is not a hex SHA (branch names are refused) or is not the branch tip; the branch is not exactly one non-merge fast-forward commit ahead; or, with `--rebased-from`, the patch-id differs. Overlapping files are informational. After the merge and push, it re-reads both heads.
 
 ## After landing (same turn)
 
