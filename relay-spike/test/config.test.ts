@@ -25,6 +25,10 @@ describe('relay-spike/wrangler.toml', () => {
     expect(settings).toContain('preview_urls = false');
   });
 
+  it('configures only the exact synthetic probe origin for credential-free push-test', () => {
+    expect(section('vars')).toEqual(['PROBE_ORIGINS = "https://flo-preview-cm6.pages.dev"']);
+  });
+
   it('turns observability, logs and traces off', () => {
     expect(section('observability')).toEqual(['enabled = false']);
     expect(section('observability.logs')).toEqual([

@@ -33,3 +33,6 @@ persist = false
 binding = "DB"
 database_name = "flo-preview"
 database_id = "0213a155-8583-4544-bc1c-e204b7788f35"
+
+[vars]
+PROBE_ORIGINS = "https://flo-preview-cm6.pages.dev"

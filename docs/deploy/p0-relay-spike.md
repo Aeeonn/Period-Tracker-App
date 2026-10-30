@@ -19,10 +19,16 @@ Task `p0-relay-spike` (FB-01, FB-02, FB-09; serves FB-06). Synthetic data only. 
 Routes:
 
 - `GET /vapid-public-key`: the public VAPID key.
-- `POST /push-test`: enrollment-secret bearer, a 16 KB body limit, and subscription/push-host validation, then a global D1 rate limit (5 per 10 min) before exactly one Web Push attempt with the fixed text "Synthetic probe test" / "This is a synthetic notification test."
+- `POST /push-test`: enrollment-secret bearer or the exact allowlisted probe `Origin` (see below), a 16 KB body limit, and subscription/push-host validation, then a shared D1 rate limit (5 per 10 min) before exactly one Web Push attempt with the fixed text "Synthetic probe test" / "This is a synthetic notification test."
 - `POST /spike/devices`, `/spike/signed` and `/spike/push-sign`: measurement only. They need the enrollment secret or a §5 signed request from a registered synthetic device.
 
-There is no CORS, no `console` output, and no reading of the client IP, user agent or `cf` request fields.
+CORS is enabled only for the allowlisted `POST /push-test` browser flow below. There is no CORS on other routes, no `console` output, and no reading of the client IP, user agent or `cf` request fields.
+
+## Probe origin push-test
+
+`PROBE_ORIGINS` is a comma-separated list of exact origins; the current Worker config names only `https://flo-preview-cm6.pages.dev`. An exact matching `Origin` may call `POST /push-test` without the enrollment secret. The secret-authenticated path remains available. Allowed preflights receive 204; non-allowlisted preflights receive 403 without CORS. Only the exact origin is echoed in `Access-Control-Allow-Origin`, with `Vary: Origin`, `POST`, `Content-Type`, and a 600-second preflight cache. Credentials and wildcard origins are never enabled; other routes are unchanged.
+
+`Origin` is a browser-enforced signal, not authentication: non-browser clients can forge it. The shared five-per-ten-minute push-test rate limit, push-host allowlist, and fixed generic notification text bound abuse. This source/config change is not deployed; the orchestrator redeploys later.
 
 ## FB-01: Free plan, no payment method
 

@@ -15,6 +15,7 @@ import {
 // Synthetic bearer value for tests only; the preview value lives outside the repository.
 const testBearer = 'synthetic-test-bearer-0123456789abcdef';
 const ORIGIN = 'https://relay.example.test';
+const PROBE_ORIGIN = 'https://flo-preview-cm6.pages.dev';
 const NOW_MS = 1_800_000_000_000;
 const NOW_S = NOW_MS / 1000;
 
@@ -34,6 +35,7 @@ beforeEach(async () => {
     DB: createTestD1(),
     ENROLLMENT_SECRET_HASH: hash,
     VAPID_PRIVATE_JWK: await newVapidJwk(),
+    PROBE_ORIGINS: PROBE_ORIGIN,
   };
   calls = [];
   pushResponse = () => new Response(JSON.stringify({ reason: 'BadDeviceToken' }), { status: 400 });
@@ -54,6 +56,12 @@ function post(path: string, body: unknown, headers: Record<string, string> = {})
   });
 }
 
+function expectProbeCors(response: Response): void {
+  expect(response.headers.get('access-control-allow-origin')).toBe(PROBE_ORIGIN);
+  expect(response.headers.get('vary')).toBe('Origin');
+  expect(response.headers.get('access-control-allow-credentials')).toBeNull();
+}
+
 const bearer = { authorization: `Bearer ${testBearer}` };
 
 async function subscriptionBody() {
@@ -69,6 +77,242 @@ async function subscriptionBody() {
     },
   };
 }
+
+describe('probe-origin /push-test access', () => {
+  it('accepts an allowlisted Origin without a secret and still sends only fixed text', async () => {
+    const { sub, body } = await subscriptionBody();
+    const response = await handle(
+      post('/push-test', { ...body, title: 'caller text' }, { Origin: PROBE_ORIGIN }),
+      env,
+      deps,
+    );
+
+    expect(response.status).toBe(200);
+    expectProbeCors(response);
+    expect(await response.json()).toMatchObject({
+      attempted: 1,
+      pushService: 'web.push.apple.com',
+    });
+    expect(calls).toHaveLength(1);
+    const [call] = calls;
+    if (!call) throw new Error('no call');
+    const opened = await decryptPushBody(
+      call.init.body as Bytes,
+      sub.privateKey,
+      sub.p256dh,
+      sub.auth,
+    );
+    expect(JSON.parse(opened.plaintext)).toEqual({
+      title: 'Synthetic probe test',
+      body: 'This is a synthetic notification test.',
+    });
+  });
+
+  it.each([
+    ['absent', null],
+    ['opaque null', 'null'],
+    ['look-alike suffix', 'https://flo-preview-cm6.pages.dev.evil.com'],
+    ['wrong scheme', 'http://flo-preview-cm6.pages.dev'],
+    ['different port', 'https://flo-preview-cm6.pages.dev:8443'],
+  ])('returns 401 without CORS for a %s Origin', async (_name, origin) => {
+    const { body } = await subscriptionBody();
+    const headers = origin === null ? {} : { Origin: origin };
+    const response = await handle(post('/push-test', body, headers), env, deps);
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('access-control-allow-origin')).toBeNull();
+    expect(response.headers.get('vary')).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('answers an allowlisted preflight with the narrow CORS contract', async () => {
+    const response = await handle(
+      new Request(`${ORIGIN}/push-test`, {
+        method: 'OPTIONS',
+        headers: {
+          Origin: PROBE_ORIGIN,
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'content-type',
+        },
+      }),
+      env,
+      deps,
+    );
+
+    expect(response.status).toBe(204);
+    expectProbeCors(response);
+    expect(response.headers.get('access-control-allow-methods')).toBe('POST');
+    expect(response.headers.get('access-control-allow-headers')).toBe('Content-Type');
+    expect(response.headers.get('access-control-max-age')).toBe('600');
+  });
+
+  it('refuses a non-allowlisted preflight without CORS', async () => {
+    const response = await handle(
+      new Request(`${ORIGIN}/push-test`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'https://evil.example.test' },
+      }),
+      env,
+      deps,
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get('access-control-allow-origin')).toBeNull();
+    expect(response.headers.get('vary')).toBeNull();
+  });
+
+  it.each(['empty', 'absent'])(
+    'does not allow origins when PROBE_ORIGINS is %s',
+    async (setting) => {
+      if (setting === 'empty') env.PROBE_ORIGINS = '';
+      else delete env.PROBE_ORIGINS;
+      const { body } = await subscriptionBody();
+      const response = await handle(post('/push-test', body, { Origin: PROBE_ORIGIN }), env, deps);
+
+      expect(response.status).toBe(401);
+      expect(response.headers.get('access-control-allow-origin')).toBeNull();
+      expect(calls).toHaveLength(0);
+    },
+  );
+
+  it('reuses the push-host subscription validation without consuming a slot', async () => {
+    const { body } = await subscriptionBody();
+    body.subscription.endpoint = 'https://relay.example.test/internal';
+    const response = await handle(post('/push-test', body, { Origin: PROBE_ORIGIN }), env, deps);
+
+    expect(response.status).toBe(400);
+    expectProbeCors(response);
+    expect(calls).toHaveLength(0);
+    const db = env.DB as ReturnType<typeof createTestD1>;
+    expect(db.sqlite.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM rate_limits').get()).toEqual(
+      { n: 0 },
+    );
+  });
+
+  it('adds CORS to allowed-origin method errors without counting them', async () => {
+    const response = await handle(
+      new Request(`${ORIGIN}/push-test`, { headers: { Origin: PROBE_ORIGIN } }),
+      env,
+      deps,
+    );
+
+    expect(response.status).toBe(405);
+    expectProbeCors(response);
+    const db = env.DB as ReturnType<typeof createTestD1>;
+    expect(db.sqlite.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM rate_limits').get()).toEqual(
+      { n: 0 },
+    );
+  });
+
+  it('keeps secret authentication working for a non-allowlisted Origin without CORS', async () => {
+    const { body } = await subscriptionBody();
+    const response = await handle(
+      post('/push-test', body, { ...bearer, Origin: 'https://other.example.test' }),
+      env,
+      deps,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('access-control-allow-origin')).toBeNull();
+    expect(response.headers.get('vary')).toBeNull();
+  });
+
+  it('adds CORS to allowlisted 400, 413, 429, 502 and 503 responses', async () => {
+    const invalid = await handle(
+      post('/push-test', { subscription: {} }, { Origin: PROBE_ORIGIN }),
+      env,
+      deps,
+    );
+    expect(invalid.status).toBe(400);
+    expectProbeCors(invalid);
+
+    const oversized = await handle(
+      post('/push-test', { pad: 'x'.repeat(MAX_BODY_BYTES) }, { Origin: PROBE_ORIGIN }),
+      env,
+      deps,
+    );
+    expect(oversized.status).toBe(413);
+    expectProbeCors(oversized);
+
+    const { body } = await subscriptionBody();
+    const unconfigured: Env = { ...env };
+    delete unconfigured.VAPID_PRIVATE_JWK;
+    const unavailable = await handle(
+      post('/push-test', body, { Origin: PROBE_ORIGIN }),
+      unconfigured,
+      deps,
+    );
+    expect(unavailable.status).toBe(503);
+    expectProbeCors(unavailable);
+
+    deps.fetch = (url, init) => {
+      calls.push({ url, init });
+      return Promise.reject(new Error('synthetic network failure'));
+    };
+    const failed = await handle(post('/push-test', body, { Origin: PROBE_ORIGIN }), env, deps);
+    expect(failed.status).toBe(502);
+    expectProbeCors(failed);
+    deps.fetch = (url, init) => {
+      calls.push({ url, init });
+      return Promise.resolve(pushResponse());
+    };
+
+    for (let index = 1; index < PUSH_TEST_LIMIT; index += 1) {
+      const accepted = await handle(post('/push-test', body, { Origin: PROBE_ORIGIN }), env, deps);
+      expect(accepted.status).toBe(200);
+      expectProbeCors(accepted);
+    }
+    const limited = await handle(post('/push-test', body, { Origin: PROBE_ORIGIN }), env, deps);
+    expect(limited.status).toBe(429);
+    expectProbeCors(limited);
+  });
+
+  it('shares the same rate limit between secret and allowlisted-origin requests', async () => {
+    const { body } = await subscriptionBody();
+    for (let index = 0; index < 2; index += 1) {
+      expect((await handle(post('/push-test', body, bearer), env, deps)).status).toBe(200);
+    }
+    for (let index = 0; index < PUSH_TEST_LIMIT - 2; index += 1) {
+      const response = await handle(post('/push-test', body, { Origin: PROBE_ORIGIN }), env, deps);
+      expect(response.status).toBe(200);
+      expectProbeCors(response);
+    }
+    const originLimited = await handle(
+      post('/push-test', body, { Origin: PROBE_ORIGIN }),
+      env,
+      deps,
+    );
+    expect(originLimited.status).toBe(429);
+    expectProbeCors(originLimited);
+    expect((await handle(post('/push-test', body, bearer), env, deps)).status).toBe(429);
+
+    const db = env.DB as ReturnType<typeof createTestD1>;
+    expect(db.sqlite.prepare('SELECT COALESCE(SUM(count), 0) AS n FROM rate_limits').get()).toEqual(
+      {
+        n: PUSH_TEST_LIMIT + 2,
+      },
+    );
+    expect(calls).toHaveLength(PUSH_TEST_LIMIT);
+  });
+
+  it('keeps the secret-authenticated response body while adding allowlisted-origin CORS', async () => {
+    const { body } = await subscriptionBody();
+    const response = await handle(
+      post('/push-test', body, { ...bearer, Origin: PROBE_ORIGIN }),
+      env,
+      deps,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      attempted: 1,
+      pushService: 'web.push.apple.com',
+      pushStatus: 400,
+      pushReason: 'BadDeviceToken',
+    });
+    expectProbeCors(response);
+  });
+});
 
 describe('POST /push-test authorization', () => {
   it('returns 401 before reading the body or accessing D1 when unauthenticated', async () => {
@@ -94,11 +338,12 @@ describe('POST /push-test authorization', () => {
         },
       },
     };
-    const request = new Request(`${ORIGIN}/push-test`, {
+    const requestInit: RequestInit & { duplex: 'half' } = {
       method: 'POST',
       body,
       duplex: 'half',
-    });
+    };
+    const request = new Request(`${ORIGIN}/push-test`, requestInit);
     const response = await handle(request, noD1Env, deps);
     expect(response.status).toBe(401);
     expect(bodyPulls).toBe(0);
@@ -345,12 +590,13 @@ describe('signed spike routes', () => {
       },
       { highWaterMark: 0 },
     );
-    const request = new Request(`${ORIGIN}/spike/signed`, {
+    const requestInit: RequestInit & { duplex: 'half' } = {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: stream,
       duplex: 'half',
-    });
+    };
+    const request = new Request(`${ORIGIN}/spike/signed`, requestInit);
 
     expect(request.headers.get('content-length')).toBeNull();
     const response = await handle(request, env, deps);
@@ -383,12 +629,13 @@ describe('signed spike routes', () => {
       },
       { highWaterMark: 0 },
     );
-    const request = new Request(`${ORIGIN}/spike/signed`, {
+    const requestInit: RequestInit & { duplex: 'half' } = {
       method: 'POST',
       headers: { 'content-type': 'application/json', sig },
       body: stream,
       duplex: 'half',
-    });
+    };
+    const request = new Request(`${ORIGIN}/spike/signed`, requestInit);
 
     expect(request.headers.get('content-length')).toBeNull();
     expect((await handle(request, env, deps)).status).toBe(200);
@@ -470,6 +717,16 @@ describe('routing', () => {
     expect(await response.json()).toEqual({
       key: toBase64Url(vapid?.publicRaw ?? new Uint8Array()),
     });
+  });
+
+  it('keeps CORS limited to /push-test', async () => {
+    const response = await handle(
+      new Request(`${ORIGIN}/vapid-public-key`, { headers: { Origin: PROBE_ORIGIN } }),
+      env,
+      deps,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('access-control-allow-origin')).toBeNull();
   });
 
   it('returns 404 for unknown paths, including prototype names', async () => {

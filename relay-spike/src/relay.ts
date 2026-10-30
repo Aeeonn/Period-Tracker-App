@@ -25,6 +25,8 @@ export interface Env {
   ENROLLMENT_SECRET_HASH?: string;
   /** Preview-only VAPID P-256 private key as JWK JSON (Worker secret). */
   VAPID_PRIVATE_JWK?: string;
+  /** Comma-separated exact browser origins allowed to call /push-test without the secret. */
+  PROBE_ORIGINS?: string;
 }
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
@@ -47,6 +49,32 @@ function json(status: number, body: unknown): Response {
 }
 
 const unauthorized = (): Response => json(401, { error: 'unauthorized' });
+
+function isProbeOriginAllowed(env: Env, origin: string | null): origin is string {
+  if (!origin) return false;
+  return (env.PROBE_ORIGINS ?? '').split(',').some((entry) => entry.trim() === origin);
+}
+
+function withPushTestCors(response: Response, origin: string, preflight = false): Response {
+  const headers = new Headers(response.headers);
+  headers.set('access-control-allow-origin', origin);
+  const vary = (headers.get('vary') ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (!vary.some((entry) => entry.toLowerCase() === 'origin')) vary.push('Origin');
+  headers.set('vary', vary.join(', '));
+  if (preflight) {
+    headers.set('access-control-allow-methods', 'POST');
+    headers.set('access-control-allow-headers', 'Content-Type');
+    headers.set('access-control-max-age', '600');
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 async function readBody(request: Request): Promise<Bytes | Response> {
   const declared = Number(request.headers.get('content-length') ?? '0');
@@ -161,9 +189,15 @@ function pushReason(text: string): string | undefined {
   return undefined;
 }
 
-async function pushTest(request: Request, env: Env, deps: Deps, now: number): Promise<Response> {
+async function pushTest(
+  request: Request,
+  env: Env,
+  deps: Deps,
+  now: number,
+  allowlistedOrigin: boolean,
+): Promise<Response> {
   const denied = await checkEnrollment(request, env);
-  if (denied) return denied;
+  if (denied && !allowlistedOrigin) return denied;
   const body = await readBody(request);
   if (body instanceof Response) return body;
   const input = parseJson(body) as { subscription?: unknown } | undefined;
@@ -238,7 +272,24 @@ async function spikeRoute(
 export async function handle(request: Request, env: Env, deps: Deps): Promise<Response> {
   const path = new URL(request.url).pathname;
   const now = Math.floor(deps.nowMs() / 1000);
+  const requestOrigin = path === '/push-test' ? request.headers.get('origin') : null;
+  const corsOrigin = isProbeOriginAllowed(env, requestOrigin) ? requestOrigin : null;
+  const addPushTestCors = (response: Response, preflight = false): Response =>
+    corsOrigin ? withPushTestCors(response, corsOrigin, preflight) : response;
   try {
+    if (path === '/push-test') {
+      if (request.method === 'OPTIONS') {
+        return addPushTestCors(
+          corsOrigin
+            ? new Response(null, { status: 204 })
+            : json(403, { error: 'origin not allowed' }),
+          true,
+        );
+      }
+      if (request.method !== 'POST')
+        return addPushTestCors(json(405, { error: 'method not allowed' }));
+      return addPushTestCors(await pushTest(request, env, deps, now, corsOrigin !== null));
+    }
     if (path === '/vapid-public-key') {
       if (request.method !== 'GET') return json(405, { error: 'method not allowed' });
       const vapid = env.VAPID_PRIVATE_JWK ? await importVapidKeys(env.VAPID_PRIVATE_JWK) : null;
@@ -247,7 +298,6 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
         : json(503, { error: 'not configured' });
     }
     const routes = new Map<string, () => Promise<Response>>([
-      ['/push-test', () => pushTest(request, env, deps, now)],
       ['/spike/devices', () => registerDevice(request, env)],
       ['/spike/signed', () => spikeRoute(request, env, path, now, false)],
       ['/spike/push-sign', () => spikeRoute(request, env, path, now, true)],
@@ -257,6 +307,6 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
     if (request.method !== 'POST') return json(405, { error: 'method not allowed' });
     return await route();
   } catch {
-    return json(500, { error: 'internal error' });
+    return addPushTestCors(json(500, { error: 'internal error' }));
   }
 }
