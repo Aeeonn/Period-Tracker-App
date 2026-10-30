@@ -83,6 +83,30 @@
       "title": "Mental health support: get help",
       "url": "https://www.canada.ca/en/public-health/services/mental-health-services/mental-health-get-help.html",
       "accessed": "2026-10-28"
+    },
+    "NHS_HEAVY_PERIODS": {
+      "publisher": "National Health Service (NHS)",
+      "title": "Heavy periods (reviewed 19 September 2024)",
+      "url": "https://www.nhs.uk/conditions/heavy-periods/",
+      "accessed": "2026-10-30"
+    },
+    "NICE_NG88": {
+      "publisher": "National Institute for Health and Care Excellence (NICE)",
+      "title": "Heavy menstrual bleeding: assessment and management (NG88)",
+      "url": "https://www.nice.org.uk/guidance/ng88",
+      "accessed": "2026-10-30"
+    },
+    "FIGO_AUB_SYSTEMS_2023": {
+      "publisher": "International Journal of Gynecology & Obstetrics (Wiley)",
+      "title": "Contemporary evaluation of women and girls with abnormal uterine bleeding: FIGO Systems 1 and 2 (Jain V, Munro MG, Critchley HOD, 2023; Int J Gynaecol Obstet)",
+      "url": "https://obgyn.onlinelibrary.wiley.com/doi/10.1002/ijgo.14946",
+      "accessed": "2026-10-30"
+    },
+    "PCOS_INTERNATIONAL_GUIDELINE_2023": {
+      "publisher": "The Endocrine Society (Journal of Clinical Endocrinology & Metabolism)",
+      "title": "Recommendations from the 2023 International Evidence-based Guideline for the Assessment and Management of Polycystic Ovary Syndrome (Teede et al.)",
+      "url": "https://academic.oup.com/jcem/article/108/10/2447/7242360",
+      "accessed": "2026-10-30"
     }
   },
   "crisisResources": {

@@ -1,0 +1,420 @@
+{
+  "synthetic": true,
+  "provenance": "A11 TV-W1-TV-W12 and TV-W3b were transcribed and hand-derived from docs/plan/algorithms-spec.md before implementation; dates and logs are synthetic.",
+  "source": "docs/plan/algorithms-spec.md A11",
+  "scenarios": {
+    "w1": {
+      "today": "2026-10-04",
+      "starts": ["2026-08-01", "2026-08-29", "2026-09-26"],
+      "periodDays": [4, 5, 9]
+    },
+    "w2": {
+      "today": "2026-07-12",
+      "birthYear": null,
+      "starts": [
+        "2026-01-01",
+        "2026-01-29",
+        "2026-03-10",
+        "2026-04-06",
+        "2026-05-14",
+        "2026-06-12",
+        "2026-07-12"
+      ],
+      "periodDays": [1, 1, 1, 1, 1, 1, 1]
+    },
+    "w3": {
+      "today": "2026-08-31",
+      "starts": ["2026-06-01"],
+      "periodDays": [1]
+    },
+    "w3b": {
+      "today": "2026-08-31",
+      "starts": ["2026-06-02"],
+      "periodDays": [1]
+    },
+    "w4": {
+      "today": "2026-10-30",
+      "starts": ["2026-10-30"],
+      "periodDays": [1],
+      "extraLogs": [
+        {
+          "localDate": "2026-10-30",
+          "heavy_detail": ["soaking_hourly_over_2h"],
+          "symptoms_body": ["dizziness"]
+        }
+      ]
+    },
+    "w5": {
+      "today": "2026-08-31",
+      "lifeStage": "pregnancy",
+      "starts": ["2026-06-01"],
+      "periodDays": [1]
+    },
+    "w6": {
+      "today": "2026-10-30",
+      "starts": ["2026-10-30"],
+      "periodDays": [1],
+      "extraLogs": [
+        {
+          "localDate": "2026-10-30",
+          "heavy_detail": ["clots_over_2_5cm"]
+        }
+      ]
+    },
+    "w7": {
+      "today": "2026-10-30",
+      "starts": ["2026-10-28"],
+      "periodDays": [3],
+      "extraLogs": [
+        {
+          "localDate": "2026-10-29",
+          "heavy_detail": ["change_every_1_2h"]
+        },
+        {
+          "localDate": "2026-10-30",
+          "heavy_detail": ["change_every_1_2h"]
+        }
+      ]
+    },
+    "w8": {
+      "today": "2026-10-10",
+      "starts": ["2026-10-01"],
+      "periodDays": [1],
+      "extraLogs": [
+        {
+          "localDate": "2026-10-10",
+          "sex": [
+            {
+              "activity": ["vaginal"],
+              "protection": ["none"],
+              "bleeding_after": "yes"
+            }
+          ]
+        }
+      ]
+    },
+    "w9": {
+      "today": "2026-09-14",
+      "starts": ["2026-09-01"],
+      "periodDays": [5],
+      "extraLogs": [
+        {
+          "localDate": "2026-09-14",
+          "flow": "spotting"
+        }
+      ]
+    },
+    "w10": {
+      "today": "2026-10-10",
+      "starts": ["2026-08-01", "2026-08-29", "2026-09-26"],
+      "periodDays": [1, 1, 1],
+      "extraLogs": [
+        {
+          "localDate": "2026-08-14",
+          "flow": "spotting"
+        },
+        {
+          "localDate": "2026-09-11",
+          "flow": "spotting"
+        }
+      ]
+    },
+    "w11": {
+      "today": "2026-10-10",
+      "starts": ["2026-08-01", "2026-08-29", "2026-09-26"],
+      "periodDays": [1, 1, 1],
+      "contraception": [
+        {
+          "method": "combined_pill",
+          "startDate": "2026-08-02",
+          "regimen": {
+            "activeDays": 21,
+            "breakDays": 7,
+            "continuous": false
+          }
+        }
+      ],
+      "extraLogs": [
+        {
+          "localDate": "2026-08-14",
+          "flow": "spotting"
+        },
+        {
+          "localDate": "2026-09-11",
+          "flow": "spotting"
+        }
+      ]
+    },
+    "w12": {
+      "today": "2026-10-02",
+      "extraLogs": [
+        {
+          "localDate": "2026-10-02",
+          "mood": ["thoughts_of_self_harm"]
+        }
+      ]
+    },
+    "w01D": {
+      "today": "2026-10-02",
+      "extraLogs": [
+        {
+          "localDate": "2026-10-02",
+          "heavy_detail": ["soaking_hourly_over_2h"],
+          "symptoms_body": ["dizziness"]
+        }
+      ]
+    },
+    "w01D1": {
+      "today": "2026-10-03",
+      "extraLogs": [
+        {
+          "localDate": "2026-10-02",
+          "heavy_detail": ["soaking_hourly_over_2h"],
+          "symptoms_body": ["dizziness"]
+        }
+      ]
+    },
+    "w01D2": {
+      "today": "2026-10-04",
+      "extraLogs": [
+        {
+          "localDate": "2026-10-02",
+          "heavy_detail": ["soaking_hourly_over_2h"],
+          "symptoms_body": ["dizziness"]
+        }
+      ]
+    },
+    "w01Old": {
+      "today": "2026-10-15",
+      "extraLogs": [
+        {
+          "localDate": "2025-03-04",
+          "heavy_detail": ["soaking_hourly_over_2h"],
+          "symptoms_body": ["dizziness"]
+        }
+      ]
+    }
+  },
+  "vectors": [
+    {
+      "id": "TV-W1",
+      "scenario": "w1",
+      "expected": [
+        {
+          "ruleId": "W-03",
+          "severity": "INFO",
+          "dismissible": true,
+          "scopeStart": "2026-09-26",
+          "evidenceDates": [
+            "2026-09-26",
+            "2026-09-27",
+            "2026-09-28",
+            "2026-09-29",
+            "2026-09-30",
+            "2026-10-01",
+            "2026-10-02",
+            "2026-10-03",
+            "2026-10-04"
+          ],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING", "FIGO_AUB_SYSTEMS_2023"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W2",
+      "scenario": "w2",
+      "expected": [
+        {
+          "ruleId": "W-04",
+          "severity": "DISCUSS",
+          "dismissible": true,
+          "scopeStart": "2026-07-12",
+          "evidenceDates": ["2026-01-29", "2026-03-10", "2026-04-06", "2026-05-14"],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING", "FIGO_AUB_SYSTEMS_2023"]
+        },
+        {
+          "ruleId": "W-05",
+          "severity": "INFO",
+          "dismissible": true,
+          "scopeStart": "2026-07-12",
+          "evidenceDates": ["2026-01-29", "2026-03-10", "2026-04-06"],
+          "sourceIds": ["FIGO_AUB_SYSTEMS_2023"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W3",
+      "scenario": "w3",
+      "expected": [
+        {
+          "ruleId": "W-06",
+          "severity": "SEEK_ADVICE_SOON",
+          "dismissible": true,
+          "scopeStart": "2026-06-01",
+          "evidenceDates": ["2026-06-01"],
+          "sourceIds": ["PCOS_INTERNATIONAL_GUIDELINE_2023", "ACOG_ABNORMAL_BLEEDING"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W3b",
+      "scenario": "w3b",
+      "expected": []
+    },
+    {
+      "id": "TV-W4",
+      "scenario": "w4",
+      "expected": [
+        {
+          "ruleId": "W-01",
+          "severity": "EMERGENCY",
+          "dismissible": false,
+          "scopeStart": "2026-10-30",
+          "evidenceDates": ["2026-10-30"],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W5",
+      "scenario": "w5",
+      "expected": []
+    },
+    {
+      "id": "TV-W6",
+      "scenario": "w6",
+      "expected": [
+        {
+          "ruleId": "W-02",
+          "severity": "DISCUSS",
+          "dismissible": true,
+          "scopeStart": "2026-10-30",
+          "evidenceDates": ["2026-10-30"],
+          "sourceIds": ["NHS_HEAVY_PERIODS", "NICE_NG88"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W7",
+      "scenario": "w7",
+      "expected": [
+        {
+          "ruleId": "W-02",
+          "severity": "SEEK_ADVICE_SOON",
+          "dismissible": true,
+          "scopeStart": "2026-10-28",
+          "evidenceDates": ["2026-10-29", "2026-10-30"],
+          "sourceIds": ["NHS_HEAVY_PERIODS", "NICE_NG88"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W8",
+      "scenario": "w8",
+      "expected": [
+        {
+          "ruleId": "W-07",
+          "severity": "DISCUSS",
+          "dismissible": true,
+          "scopeStart": "2026-10-01",
+          "evidenceDates": ["2026-10-10"],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W9",
+      "scenario": "w9",
+      "expected": [
+        {
+          "ruleId": "W-07",
+          "severity": "INFO",
+          "dismissible": true,
+          "scopeStart": "2026-09-01",
+          "evidenceDates": ["2026-09-14"],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W10",
+      "scenario": "w10",
+      "expected": [
+        {
+          "ruleId": "W-07",
+          "severity": "DISCUSS",
+          "dismissible": true,
+          "scopeStart": "2026-08-29",
+          "evidenceDates": ["2026-08-14", "2026-09-11"],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W11",
+      "scenario": "w11",
+      "expected": [
+        {
+          "ruleId": "W-07",
+          "severity": "INFO",
+          "dismissible": true,
+          "scopeStart": "2026-08-29",
+          "evidenceDates": ["2026-08-14", "2026-09-11"],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING"]
+        }
+      ]
+    },
+    {
+      "id": "TV-W12",
+      "scenario": "w12",
+      "expected": [
+        {
+          "ruleId": "W-11",
+          "severity": "EMERGENCY",
+          "dismissible": false,
+          "scopeStart": "2026-10-02",
+          "evidenceDates": ["2026-10-02"],
+          "sourceIds": ["CANADA_988", "CANADA_988_ABOUT", "CANADA_MENTAL_HEALTH"]
+        }
+      ]
+    },
+    {
+      "id": "CAP-W01-D",
+      "scenario": "w01D",
+      "expected": [
+        {
+          "ruleId": "W-01",
+          "severity": "EMERGENCY",
+          "dismissible": false,
+          "scopeStart": "2026-10-02",
+          "evidenceDates": ["2026-10-02"],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING"]
+        }
+      ]
+    },
+    {
+      "id": "CAP-W01-D+1",
+      "scenario": "w01D1",
+      "expected": [
+        {
+          "ruleId": "W-01",
+          "severity": "EMERGENCY",
+          "dismissible": false,
+          "scopeStart": "2026-10-02",
+          "evidenceDates": ["2026-10-02"],
+          "sourceIds": ["ACOG_ABNORMAL_BLEEDING"]
+        }
+      ]
+    },
+    {
+      "id": "CAP-W01-D+2",
+      "scenario": "w01D2",
+      "expected": []
+    },
+    {
+      "id": "CAP-W01-old-only",
+      "scenario": "w01Old",
+      "expected": []
+    }
+  ]
+}

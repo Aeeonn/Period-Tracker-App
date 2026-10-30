@@ -9,6 +9,7 @@ import { ENGINE_VERSION } from '../contracts/engine-api.ts';
 import { calculateCyclePrediction } from './cycle/prediction.ts';
 import { calculateFertility } from './cycle/fertility.ts';
 import { deriveEpisodes } from './episodes/index.ts';
+import { calculateWarnings } from './warnings/index.ts';
 import { PARAMS_V1 } from './params.ts';
 
 function canonicalValue(value: unknown): string {
@@ -109,6 +110,7 @@ export function runEngine(input: EngineInput, params: EngineParams = PARAMS_V1):
   const episodes = deriveEpisodes(input, params);
   const cycle = calculateCyclePrediction(input, params, episodes);
   const fertility = calculateFertility(input, params, episodes, cycle);
+  const warnings = calculateWarnings(input, episodes, cycle.cycles);
   const validCycles = cycle.cycles.filter((item) => item.excludedBecause === undefined);
   const explanations: Explanation[] = [
     {
@@ -138,7 +140,7 @@ export function runEngine(input: EngineInput, params: EngineParams = PARAMS_V1):
     prediction: cycle.prediction,
     fertility: fertility.fertility,
     chanceByDay: fertility.chanceByDay,
-    warnings: [],
+    warnings,
     tendencies: [],
     explanations,
   };
