@@ -4,11 +4,7 @@ type ResultState = 'untested' | 'not-configured' | 'unsupported' | 'successful' 
 type ProbeResult = { state: ResultState; summary: string };
 type LaunchMarker = { key: 'synthetic-launch-marker'; visits: number };
 type PasskeyPrfResults = { prf?: { enabled?: boolean; results?: { first?: ArrayBuffer } } };
-type PushWorkerEvent = Event & { waitUntil(promise: Promise<unknown>): void };
-type PushWorkerScope = EventTarget & {
-  registration: ServiceWorkerRegistration;
-  addEventListener(type: 'push', listener: (event: PushWorkerEvent) => void): void;
-};
+type PushStep = 'permission' | 'register' | 'activate' | 'subscribe' | 'send';
 
 const QR_PAYLOAD = 'SYNTHETIC-PROBE-V1';
 const QR_MATRIX = [
@@ -45,21 +41,7 @@ declare global {
   }
 }
 
-const isPushWorker = typeof document === 'undefined' && 'registration' in globalThis;
-
-if (isPushWorker) {
-  const worker = globalThis as unknown as PushWorkerScope;
-  worker.addEventListener('push', (event) => {
-    event.waitUntil(
-      worker.registration.showNotification('Synthetic probe test', {
-        body: 'This is a synthetic notification test.',
-        tag: 'synthetic-probe-test',
-      }),
-    );
-  });
-} else {
-  initializeProbe();
-}
+initializeProbe();
 
 function initializeProbe(): void {
   const results = new Map<string, ProbeResult>();
@@ -432,15 +414,6 @@ function initializeProbe(): void {
 
     run.addEventListener('click', async () => {
       run.disabled = true;
-      if (!pushUrl || !pushVapidKey) {
-        setResult(
-          'push',
-          'not-configured',
-          'The approved endpoint or public VAPID key is absent. No permission prompt or request was made.',
-        );
-        run.disabled = false;
-        return;
-      }
       if (
         !window.isSecureContext ||
         !('Notification' in window) ||
@@ -459,6 +432,8 @@ function initializeProbe(): void {
         run.disabled = false;
         return;
       }
+
+      let step: PushStep = 'permission';
       try {
         let permission = Notification.permission;
         if (permission === 'default') permission = await Notification.requestPermission();
@@ -466,15 +441,16 @@ function initializeProbe(): void {
           setResult(
             'push',
             'failed',
-            'Notification permission was not granted. No test push request was sent.',
+            'The permission step failed because notification permission was not granted. No test push request was sent.',
           );
-          run.disabled = false;
           return;
         }
-        const registration = await navigator.serviceWorker.register(import.meta.url, {
-          type: 'module',
-        });
+
+        step = 'register';
+        const registration = await navigator.serviceWorker.register('/probe-sw.js', { scope: '/' });
+        step = 'activate';
         await waitForActiveServiceWorker(registration);
+        step = 'subscribe';
         let subscription = await registration.pushManager.getSubscription();
         if (!subscription) {
           subscription = await registration.pushManager.subscribe({
@@ -482,6 +458,8 @@ function initializeProbe(): void {
             applicationServerKey: pushVapidKey,
           });
         }
+
+        step = 'send';
         setResult(
           'push',
           'untested',
@@ -500,7 +478,7 @@ function initializeProbe(): void {
           setResult(
             'push',
             'failed',
-            `The preview endpoint did not accept the synthetic push request (HTTP ${response.status}). No response body or subscription details were retained.`,
+            'The send step failed. The preview endpoint did not accept the synthetic push request. No response body or subscription details were retained.',
           );
           return;
         }
@@ -515,9 +493,7 @@ function initializeProbe(): void {
         setResult(
           'push',
           'failed',
-          isAbortError(error)
-            ? 'The permission or push action was cancelled. No push request was confirmed.'
-            : 'The synthetic push test could not complete. The endpoint, browser permission, service worker, and VAPID setup may need review; raw errors are not retained.',
+          `The ${step} step failed (${pushErrorName(error)}). No raw error details or subscription details were retained.`,
         );
       } finally {
         run.disabled = false;
@@ -972,6 +948,19 @@ function validateCsvFixture(text: string): boolean {
     lines[0] === 'synthetic,label,value' &&
     lines[1] === 'true,Synthetic sample,only'
   );
+}
+
+function pushErrorName(error: unknown): string {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    typeof error.name === 'string' &&
+    /^[A-Za-z][A-Za-z0-9]*$/.test(error.name)
+  ) {
+    return error.name;
+  }
+  return 'UnknownError';
 }
 
 function isAbortError(error: unknown): boolean {
