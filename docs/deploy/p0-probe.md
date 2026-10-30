@@ -37,3 +37,12 @@
 - Reason: the probe manifest link lets an iOS Home Screen launch expose the push APIs.
 - Smoke checks passed at `https://flo-preview-cm6.pages.dev` and the deployment URL: root HTML contains manifest and apple-touch-icon links; `/manifest.webmanifest` returned 200 with `display: standalone`; `/icons/icon-192.png` returned 200; CSP allows the relay origin; and the bundle contains the `/push-test` URL.
 - `check-preview.ts` passed for both origins; all five served files matched the built probe.
+
+## Dedicated push-worker redeploy (2026-10-30)
+
+- Source commit: `627a745` (the push-worker fix), included in landed `main` commit `c80408d`.
+- Pages project: `flo-preview`; deployment: `https://df38093c.flo-preview-cm6.pages.dev`.
+- Reason: the probe main bundle contains DOM-based modulepreload code; this build serves a dedicated classic worker at `/probe-sw.js` instead.
+- Push configuration used the relay's `/push-test` URL and a public VAPID key fetched at build time; the public key is not recorded. No push-test POST was sent.
+- `check-preview.ts` on the stable origin and deployment URL: **PASS**, six served files matched on each.
+- Orchestrator smoke checks passed on both origins: `/probe-sw.js` returned HTTP 200 with `application/javascript` and a push handler; HTML contained manifest and apple-touch-icon links; `/manifest.webmanifest` returned HTTP 200 with `display: standalone`; `/icons/icon-192.png` returned HTTP 200; CSP retained `connect-src 'self' https://flo-preview-relay.my-app123.workers.dev` and `worker-src 'self'`; the bundle contained `/push-test` and `/probe-sw.js`.
