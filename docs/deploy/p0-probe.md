@@ -19,5 +19,13 @@
 
 ## FB-06 push
 
-- Status: **Not configured**. Neither a push URL nor a VAPID public key was supplied at build time; no relay endpoint was used and the probe makes no push request.
-- A separate relay change and probe rebuild are required. The intended route is `https://flo-preview-relay.my-app123.workers.dev/push-test`; that change must be origin-bound, credential-free, and serve CORS for the deployed probe origin `https://a9508ed8.flo-preview-cm6.pages.dev`. If using the project's stable origin instead, allow `https://flo-preview-cm6.pages.dev` explicitly as well.
+- Status: **Configured**. Push URL and VAPID public key were configured from the relay's public endpoint; the public key is not recorded here.
+- Pages project: `flo-preview`.
+- Deployment ID/URL: `f1ace8e6` (identifier in the Wrangler deployment URL), `https://f1ace8e6.flo-preview-cm6.pages.dev`.
+- Build commit (HEAD at build): `85ea971588e5c29596bdfa626aa46b12b18d90c3`.
+- Build listing SHA-256: `21b67600b8ffa2c9ed90ea3b44169552516322a74460a47b2f447abc46d6b2b3`.
+- Smoke: `npx --no-install tsx tools/deploy/check-preview.ts https://f1ace8e6.flo-preview-cm6.pages.dev` **PASS**, all five served files byte-equal.
+- Smoke: `curl -sI https://flo-preview-cm6.pages.dev/` returned HTTP 200; the served CSP includes `connect-src 'self' https://flo-preview-relay.my-app123.workers.dev`.
+- Smoke: deployed JavaScript bundle contains `https://flo-preview-relay.my-app123.workers.dev/push-test`.
+- Smoke: OPTIONS preflight from `https://flo-preview-cm6.pages.dev` returned HTTP 204 with exact `Access-Control-Allow-Origin: https://flo-preview-cm6.pages.dev`. No POST was sent.
+- History: the initial deployment was **Not configured** because no push URL or VAPID public key was supplied; no relay endpoint or probe push request was used. A separate relay change and probe rebuild were required. The intended endpoint was `https://flo-preview-relay.my-app123.workers.dev/push-test`, with origin-bound, credential-free access and CORS for the then-deployed origin `https://a9508ed8.flo-preview-cm6.pages.dev`; the stable origin `https://flo-preview-cm6.pages.dev` could be explicitly allowed instead.
