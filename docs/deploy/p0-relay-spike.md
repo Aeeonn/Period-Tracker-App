@@ -4,17 +4,17 @@ Task `p0-relay-spike` (FB-01, FB-02, FB-09; serves FB-06). Synthetic data only. 
 
 ## Deployment
 
-| Item                 | Value                                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Environment          | Preview only (AP-18). Synthetic data only. Not for production or real data                                 |
-| Worker               | `flo-preview-relay`, code in `relay-spike/`, config `relay-spike/wrangler.toml`                            |
-| URL                  | `https://flo-preview-relay.my-app123.workers.dev` (workers.dev only; preview URLs off; no route or domain) |
-| D1 database          | `flo-preview` (binding `DB`), schema `relay-spike/schema.sql`: `devices`, `nonces`, `rate_limits`          |
-| Deployed             | 2026-10-29 with wrangler 4.147.0, compatibility date 2026-10-01, bundle 16.25 KiB (5.02 KiB gzip)          |
-| Worker secrets       | `ENROLLMENT_SECRET_HASH` (SHA-256 of the preview enrollment secret) and `VAPID_PRIVATE_JWK`. Preview-only  |
-| Local secret copy    | Outside the repository, mode 600, on the deploying machine only. Never printed or committed                |
-| Public VAPID key     | Served by `GET /vapid-public-key`. The probe can fetch it there, so it is not repeated in this record      |
-| Status after the run | Kept live. `p2-preview-relay-deploy` will replace the code on the same Worker                              |
+| Item                 | Value                                                                                                                                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Environment          | Preview only (AP-18). Synthetic data only. Not for production or real data                                                                                                                     |
+| Worker               | `flo-preview-relay`, code in `relay-spike/`, config `relay-spike/wrangler.toml`                                                                                                                |
+| URL                  | `https://flo-preview-relay.my-app123.workers.dev` (workers.dev only; preview URLs off; no route or domain)                                                                                     |
+| D1 database          | `flo-preview` (binding `DB`), schema `relay-spike/schema.sql`: `devices`, `nonces`, `rate_limits`                                                                                              |
+| Deployed             | 2026-10-30 redeploy from landed main 95ded02 with wrangler 4.147.0; compatibility date 2026-10-01 unchanged; bundle 16.75 KiB (5.18 KiB gzip); Version ID 4dd47273-a275-47b2-88af-d90473c88de8 |
+| Worker secrets       | `ENROLLMENT_SECRET_HASH` (SHA-256 of the preview enrollment secret) and `VAPID_PRIVATE_JWK`. Preview-only                                                                                      |
+| Local secret copy    | Outside the repository, mode 600, on the deploying machine only. Never printed or committed                                                                                                    |
+| Public VAPID key     | Served by `GET /vapid-public-key`. The probe can fetch it there, so it is not repeated in this record                                                                                          |
+| Status after the run | Kept live. `p2-preview-relay-deploy` will replace the code on the same Worker                                                                                                                  |
 
 Routes:
 
@@ -100,6 +100,23 @@ Commands: `curl -s -o /dev/null -w '%{http_code}' -X POST https://flo-preview-re
 - These live in `relay-spike/test/`.
 
 **Not demonstrated here:** delivery to a real device. `p0-device-feasibility` confirms that end to end with the probe.
+
+## Redeploy 2026-10-30
+
+Post-deploy smoke checks against the preview Worker (synthetic data only):
+
+| Call                                                             | Result                                                                        |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `POST /push-test` without authorization (`curl`)                 | HTTP 401                                                                      |
+| `push-test.sh` step 1, no secret                                 | HTTP 401                                                                      |
+| `push-test.sh` step 2, wrong secret and synthetic subscription   | HTTP 401                                                                      |
+| `push-test.sh` step 3, preview secret and synthetic subscription | HTTP 200; `attempted: 1`, `web.push.apple.com` returned 400 `BadWebPushToken` |
+| `GET /push-test`                                                 | HTTP 405                                                                      |
+| `GET /nope`                                                      | HTTP 404                                                                      |
+| `GET /vapid-public-key`                                          | HTTP 200; response body discarded                                             |
+| Authorized `POST /push-test` with a 16,385-byte synthetic body   | HTTP 413                                                                      |
+
+The 2026-10-29 deployment and smoke results above remain as history.
 
 ## T-RELAY-02 (configuration part): logging off, and what stays visible
 
