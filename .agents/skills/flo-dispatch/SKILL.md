@@ -1,7 +1,7 @@
 ---
 name: flo-dispatch
 description: "Use when the Flo orchestrator starts a session, picks ready work, routes a task to an agent and model, dispatches builders/verifiers/researchers/critics/planners as Copilot subagents, supervises them, runs correction rounds, or escalates to the captain. Firstmate's supervisor loop for VS Code, replacing fm-spawn, herdr and pi."
-argument-hint: "session-start | dispatch <task-id> | supervise | correction <task-id>"
+argument-hint: 'session-start | dispatch <task-id> | supervise | correction <task-id>'
 ---
 
 # Flo dispatch and supervision (Firstmate loop on VS Code Copilot)
@@ -20,13 +20,13 @@ The orchestrator (`flo-orchestrator`) is Firstmate's first mate, and the user is
 
 ## 2. Routing (maps `~/firstmate/config/crew-dispatch.json` to agents)
 
-| Rule | Work | Agent | Model (agent default) | Effort |
-|---|---|---|---|---|
-| 1 | Independent verification of high-risk changes: algorithms, crypto, keys, sync, consent, data layer, migrations, backup, SW update safety, CSP/network, medical content | `flo-verifier` | Claude Opus 5.5 | high |
-| 2 | Plan synthesis or critique, architecture, ambiguous multi-file work, high-risk work without an approved design, **any build after 2 failed rounds** | `flo-planner`, `flo-critic`; builds use `flo-builder` with `model: claude-opus-5.5` | Claude Opus 5.5 | high |
-| 3 | Research and evidence cross-checks | `flo-researcher` | GPT-6.1 Sol (`model: gpt-6-luna` only as a per-task override recorded at dispatch, e.g. if Sol is unavailable) | high |
-| 4 | Bounded high-risk implementation with an approved design and tests; a rule-1 verify is required | `flo-builder` | GPT-6 Luna | high |
-| 5 | Routine UI, tests, docs, integration; low-risk reviews | `flo-builder`; low-risk reviews use `flo-verifier` with `model: gpt-6-luna` | GPT-6 Luna | high |
+| Rule | Work                                                                                                                                                                             | Agent                                                                               | Model (agent default)                                                                                          | Effort |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ |
+| 1    | Dedicated verification of prediction/medical engine algorithms, crypto and keys, pairing and sync merge, consent enforcement, migrations and backup/restore, and medical content | `flo-verifier`                                                                      | Claude Opus 5.5                                                                                                | high   |
+| 2    | Plan synthesis or critique, architecture, ambiguous multi-file work, high-risk work without an approved design, **any build after 2 failed rounds**                              | `flo-planner`, `flo-critic`; builds use `flo-builder` with `model: claude-opus-5.5` | Claude Opus 5.5                                                                                                | high   |
+| 3    | Research and evidence cross-checks                                                                                                                                               | `flo-researcher`                                                                    | GPT-6.1 Sol (`model: gpt-6-luna` only as a per-task override recorded at dispatch, e.g. if Sol is unavailable) | high   |
+| 4    | Bounded implementation with an approved design; rule-1 verification only for the six areas in rule 1                                                                             | `flo-builder`                                                                       | GPT-6 Luna                                                                                                     | high   |
+| 5    | Relay glue, CSP/header tweaks, settings, UI, docs, preview deploys and routine work; one batched review per wave                                                                 | `flo-builder`; rule-5 review uses `flo-verifier` with `model: gpt-6-luna`           | GPT-6 Luna                                                                                                     | high   |
 
 - Use the most specific, highest-priority rule. **Unknown risk is not low risk.** High effort is the minimum.
 - Set the task tool's `model` only for the two documented overrides above (they are required by this routing policy). Never lower effort.
@@ -52,8 +52,8 @@ The orchestrator (`flo-orchestrator`) is Firstmate's first mate, and the user is
 
 ## 5. Review and correction rounds
 
-- **High-risk** ship tasks need their rule-1 `<id>-verify` PASS by `flo-verifier` for the exact SHA **before landing**. **Low-risk** tasks land after their own gates, or after the narrow review their brief names; the phase `pN-lowrisk-review` follows, and its findings become fix tasks before the phase gate. Every reviewer gets the spec, the acceptance criteria, the exact SHA and the evidence paths, not the builder's summary.
-- A FAIL or in-scope finding opens a **correction round**: write `~/firstmate/data/<id>/correction-note.md` (round N, findings with inputs, what to change, what stays out of scope), then `--resume` the builder in the same slot. The builder amends its one commit. Then a renewed review covers the changed scope on the new SHA. Keep superseded reports as `report-round-<n>.md`.
+- Only prediction/medical engine algorithms, crypto and keys, pairing and sync merge, consent enforcement, migrations and backup/restore, and medical content require a dedicated Opus rule-1 `<id>-verify` PASS before landing. Relay glue, CSP/header tweaks, settings, UI, docs and preview deploys use builder gates plus one batched rule-5 Luna review per wave. Review FAILs are limited to correctness, security, data-loss or spec defects; low-severity issues and nits go on a follow-up list and never fail the gate. Give reviewers the spec, acceptance criteria, exact SHA and evidence paths, including builder evidence for that SHA.
+- After a FAIL, write `~/firstmate/data/<id>/correction-note.md` (round N, findings with inputs, what to change, what stays out of scope), then `--resume` the builder in the same slot. Re-review only finding closure and adjacent regression; a low-severity closure may use `gpt-6-luna`. Keep superseded reports as `report-round-<n>.md` and reuse builder evidence for the same SHA rather than rerunning everything.
 - After **2 documented failed rounds**, the next build attempt runs on Claude Opus 5.5. After **3 rounds**, stop. Mark the item `blocked` with evidence and propose a different approach to the captain. Changing models never resets the count.
 - Findings outside the task's scope become new backlog items or held proposals, not scope creep.
 
@@ -64,7 +64,7 @@ Follow `flo-land`. Then re-run `backlog.py ready` and dispatch what has unblocke
 ## 7. Talking to the captain
 
 - Address the user as "captain" in chat, as Firstmate does. Speak in outcomes: what finished, what it means, and what decision is needed. Translate internal terms (worktree → isolated copy, brief → instructions, hold → the concrete decision).
-- Escalate immediately: work ready for approval, finished findings, security-sensitive/destructive/irreversible actions, credentials or accounts, phase gates, and real blockers after the playbook is exhausted. Batch everything else.
+- Security-sensitive changes land automatically when their required review passes for the exact SHA; synthetic-only previews/redeploys from reviewed landed `main` run without per-deploy approval. Escalate production, real data, accounts/credentials, money, phase gates, installs not already approved, and destructive or irreversible actions, plus real blockers after the playbook is exhausted. Batch everything else.
 - The final message of each turn stands alone with all key outcomes and open decisions.
 
 ## 8. Hard boundaries (every agent)

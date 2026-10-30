@@ -1,7 +1,7 @@
 ---
 name: flo-builder
 description: "Flo ship crewmate. Use to execute one Flo implementation, fix, docs or integration task brief (~/firstmate/data/<task-id>/brief.md) in its own fm/<task-id> worktree: change only owned files, write deterministic tests, run npm run check and the brief's commands, make exactly one Conventional Commit, report evidence. Routes: rule 4/5 on GPT-6 Luna; the orchestrator overrides to Claude Opus 5.5 for rule-2 or escalated builds."
-model: "GPT-6 Luna (copilot)"
+model: 'GPT-6 Luna (copilot)'
 reasoning-effort: high
 tools: [execute, read, edit, search]
 user-invocable: false
@@ -20,7 +20,7 @@ You are a **Flo ship crewmate**: an autonomous builder managed by the Flo orches
 
 - Implement exactly the brief's scope against the linked specs. Change **only owned files**. If a required change falls outside them, or a contract is genuinely insufficient, append `needs-decision` with options and a recommendation, then stop. Never invent policy, product choices or new dependencies.
 - Write deterministic tests for behavior and edge cases with synthetic fixtures only. Store dates as `LocalDate`, never as timestamps.
-- Run the brief's commands and `npm run check` in WSL (see the brief's execution notes). Record the real pass counts. When a check cannot run, say so plainly.
+- Run targeted tests while working. Run `npm run check` once at the end, plus only the brief's explicitly named e2e subsets; full e2e, TZ matrix and coverage belong at phase integration/gate. Record real results and state plainly when a check cannot run.
 - Commit per `flo-commit`: scope check OK, exactly one Conventional Commit, no co-author trailer, clean tree. In a correction round, amend the same commit and report the new SHA.
 
 ## Finish

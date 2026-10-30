@@ -1,7 +1,7 @@
 ---
 name: flo-land
-description: "Use when the Flo orchestrator lands a verified task branch on main or uploads main to GitHub: guarded fast-forward of fm/<task-id> at the exact reviewed SHA, merge-authority check, main-only push after verifying the remote and its live head, then backlog/progress/slot cleanup."
-argument-hint: "land <task-id> <reviewed-sha> [--push] | push | preflight"
+description: 'Use when the Flo orchestrator lands a verified task branch on main or uploads main to GitHub: guarded fast-forward of fm/<task-id> at the exact reviewed SHA, merge-authority check, main-only push after verifying the remote and its live head, then backlog/progress/slot cleanup.'
+argument-hint: 'land <task-id> <reviewed-sha> [--push] | push | preflight'
 ---
 
 # Guarded landing and main-only upload
@@ -13,11 +13,13 @@ Only the orchestrator lands. Builders and verifiers never merge or push. [`land.
 Land a branch only when **all** of these hold. Otherwise ask the captain or wait.
 
 1. The builder reported a clean, one-commit branch, and `npm run check` (plus the brief's commands) passed on that exact SHA.
-2. Every required review passed **for that exact SHA**: the `-verify` PASS for high-risk work, or the narrow review the brief named. A candidate changed after review needs a renewed review.
-3. Merge authority, from `~/firstmate/data/captain.md`:
-   - **Routine** passing work lands and uploads automatically (captain's standing "yes").
-   - **Security-sensitive** work (crypto, keys, lock, store, sync, consent, CSP/network, backup, migrations), destructive or irreversible work, and anything touching accounts, credentials, billing or deployment needs the captain's explicit approval for that change. Record it in the item first. A conditional approval ("land automatically if the review passes") counts only when its condition is met.
-4. Dependencies are landed, and the branch fast-forwards from `main`. If `main` moved, the builder rebases (`flo-commit`). Land a rebased tip with `--rebased-from <reviewed-sha>`. The script refuses unless the patch-id is identical **and** `main` changed none of the files the reviewed patch touches; otherwise renew the review. Record the comparison in the backlog notes.
+2. Required review evidence is PASS for the candidate: a dedicated Opus `-verify` for prediction/medical engine algorithms, crypto and keys, pairing and sync merge, consent enforcement, migrations and backup/restore, and medical content; otherwise builder gates plus the batched rule-5 wave review. FAIL only for correctness, security, data-loss or spec defects. After FAIL, re-review only finding closure and adjacent regression. A patch-identical rebase that passes its tests is re-pointed to the rebased SHA without a new review, even if touched files overlap.
+3. Standing authority:
+   - Security-sensitive work lands automatically when its required review passes for the exact SHA.
+   - Synthetic-only previews/redeploys from reviewed landed `main` run without per-deploy approval.
+   - Production, real data, accounts/credentials, money and phase gates remain captain decisions.
+   - Destructive or irreversible changes and installs not already approved retain explicit captain approval.
+4. Dependencies are landed, and the branch fast-forwards from `main`. If `main` moved, the builder rebases and re-runs the task tests. If stable patch-id is identical and tests pass, re-point the existing review to the rebased SHA and land without a new review, even if `main` touched the same files; a changed patch requires renewed review. `land.sh --rebased-from` still refuses overlapping changes; re-point review to the rebased SHA and use the exact-SHA local landing path. This script overlap-check change is proposed, not made here. Record the comparison in the backlog notes.
 
 ## Commands (inside WSL)
 
@@ -33,7 +35,7 @@ The script stops before changing anything if: the primary checkout is dirty or n
 
 ## After landing (same turn)
 
-1. Backlog: `backlog.py set <id> status done` and `set <id> landed "main \`<sha7>\`"`. For the `-verify` item: `status done` and `report`. Commit and push with `chore(backlog): land <id>` (see `flo-backlog`).
+1. Backlog: `backlog.py set <id> status done` and `set <id> landed "main \`<sha7>\`"`. For the `-verify`item:`status done`and`report`. Commit and push with `chore(backlog): land <id>`(see`flo-backlog`).
 2. `docs/progress.md`: add one line (date, id, main SHA, verify report path), in the same chore commit.
 3. Release the slots: `flo-worktree.sh release <id>` and `release <id>-verify`. Keep the branch.
 4. Re-evaluate `backlog.py ready` and dispatch newly unblocked work.

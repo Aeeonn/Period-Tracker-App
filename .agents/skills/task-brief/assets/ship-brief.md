@@ -13,11 +13,12 @@ Implement {task-id} as specified in docs/plan/task-briefs.md#{task-id} (read its
 Owned files: {exact globs from the plan, plus any minimal test paths granted at intake}. Must not touch anything else, in particular {the closest non-owned paths}, package.json, package-lock.json, config files, docs/** and AGENTS.md unless listed above. Propose progress-log lines and ADR text in the report; do not write them.
 
 Acceptance (Given/When/Then, synthetic data only):
+
 - {criterion → the command or test that demonstrates it}
 
-Commands: {task commands}; `npm run check`; {e2e greps with the WebKit projects that must report real counts}.
+Commands: {targeted task tests to run while working}; at the end, `npm run check` once; {only e2e subsets explicitly required by this brief, with real counts per WebKit project}. Full e2e, the TZ matrix and coverage run at phase integration and the phase gate, not per task.
 
-Route: rule {n} ({reason}), agent flo-builder, model {model}, effort high, prior failed fix rounds {n}. The orchestrator's dispatch record is the route evidence; do not print or block on PI_* variables. {Required independent review before landing.} {Security-sensitive: landing also needs the captain's explicit approval.} Delivery: local branch only; the orchestrator lands it.
+Route: rule {n} ({reason}), agent flo-builder, model {model}, effort high, prior failed fix rounds {n}. The orchestrator's dispatch record is the route evidence; do not print or block on PI_* variables. {Dedicated Opus `<task>-verify` only for prediction/medical engine algorithms, crypto and keys, pairing and sync merge, consent enforcement, migrations and backup/restore, or medical content; otherwise builder gates plus one batched rule-5 Luna review per wave. Security-sensitive changes land on required-review PASS; synthetic-only previews from reviewed landed `main` run without per-deploy approval. Production, real data, accounts/credentials, money and phase gates remain captain decisions; destructive or irreversible changes and installs not already approved retain explicit captain approval.} Delivery: local branch only; the orchestrator lands it.
 
 # Setup
 
@@ -37,4 +38,4 @@ Execution environment: your shell tool is Windows PowerShell. Run project comman
 
 # Definition of done
 
-Every acceptance criterion passes with the commands above; `npm run check` green; e2e subsets green with real counts on both WebKit projects; the flo-commit scope check prints OK with one commit. Write /home/justi/firstmate/data/{task-id}/report.md (~15 lines plus an evidence table): full commit SHA, files changed, commands with real counts, acceptance-to-evidence map, checks not run (stated plainly), open issues, proposed progress-log line and any ADR text. Append `done [at=<epoch>]: ready in branch fm/{task-id} at <full SHA>` and end with a ≤15-line summary as your final reply.
+Every acceptance criterion passes with the brief's commands; targeted tests run while working and `npm run check` passes once at the end; e2e subsets run only if this brief names them; the flo-commit scope check prints OK with one commit.

@@ -14,9 +14,9 @@ Read first (before the implementation): docs/plan/task-briefs.md#{ship-id} and #
 
 Scope: {what to review, e.g. the full diff main..SHA, or only the changed scope since the previous reviewed SHA; what evidence carries forward}. Any change outside the ship's owned files is a finding.
 
-Commands on the exact head: `npm run check`; {task commands}; {e2e greps}. Record real pass counts per WebKit project; an empty grep is not evidence.
+Evidence and commands on the exact head: reuse the builder's results for that same SHA. Run {targeted probes named in the brief} plus only checks you doubt; {e2e subsets only if explicitly named}. Do not repeat the full suite by default. Record real results; an empty grep is not evidence.
 
-Route: rule {1|5}, agent flo-verifier, model {model}, effort high. This review is a mandatory independent gate: the ship cannot land without a PASS for this exact SHA, and any later source change needs a renewed review. Ordinary independent review without a sandbox is approved: isolation is not enforced, and the report must say so.
+Route: rule {1|5}, agent flo-verifier, model {model}, effort high. Review scope: {initial review, or after FAIL, closure of findings and adjacent regression only}. A review FAILs only for correctness, security, data-loss or spec defects; low-severity items and nits go on a follow-up list and never fail the gate. A patch-identical rebase that passes its tests needs no new review: re-point the review reference to the rebased SHA, even if files overlap. Ordinary independent review without a sandbox is approved: isolation is not enforced, and the report must say so.
 
 # Setup
 

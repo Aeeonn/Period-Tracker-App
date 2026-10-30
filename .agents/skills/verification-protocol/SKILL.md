@@ -9,9 +9,10 @@ Follow the verifier brief and [`docs/plan/agent-operating-model.md` §§3–6](.
 
 ## Pin the evidence
 
-- Record the exact candidate commit SHA supplied by the orchestrator. Confirm the inspected source is that revision (`git rev-parse HEAD` in the detached laboratory, before and after); report any mismatch or later change. A changed candidate requires renewed verification.
-- Map each applicable acceptance criterion to evidence. Run only the commands authorized by the brief, record exact commands/results and relevant inputs, and use synthetic fixtures only.
+- Record the exact candidate commit SHA supplied by the orchestrator. Confirm the inspected source is that revision (`git rev-parse HEAD` in the detached laboratory, before and after); report any mismatch or later change. A changed patch normally needs review on its new SHA. For a rebase with identical stable patch-id, re-run the task tests and re-point the review record to the rebased SHA without a new review, even if `main` touched the same files.
+- Map each applicable acceptance criterion to evidence. Reuse the builder evidence for the same exact SHA; run targeted probes and only other checks the verifier doubts, not the full suite by default. Record exact commands/results and relevant inputs, and use synthetic fixtures only.
 - Write the report to the brief's external report path (`~/firstmate/data/<task-id>/report.md`, never inside the reviewed source). State the revision, verifier types, verdict, findings, evidence, and open issues. A PASS applies only to the exact reviewed SHA; do not infer device, clinical, or security assurance from unrelated checks.
+- A review FAILs only for correctness, security, data-loss or spec defects. Low-severity issues and nits go on a follow-up list and never fail the gate. After a FAIL, re-review only that the findings are closed and nothing adjacent regressed; low-severity closure may use the cheaper `flo-verifier` with `gpt-6-luna`.
 - For algorithm audits, derive expected vector results from the specification and record them before examining implementation.
 
 ## Choose the applicable review type
