@@ -12,7 +12,7 @@ fi
 
 entry="$1"
 case "$entry" in
-  probe|app) ;;
+  probe|app|--self-check-project-parser) ;;
   *)
     printf 'Unknown entry: %s (expected probe or app)\n' "$entry" >&2
     exit 2
@@ -29,11 +29,63 @@ redact_wrangler_output() {
 }
 
 load_cloudflare_credentials() {
-  set +x
+  set +v +x
   set -a
   . "$HOME/.config/flo-deploy/cloudflare.env"
   set +a
 }
+
+parse_project_list() {
+  env -i PATH="$PATH" node -e '
+      let input = "";
+      process.stdin.setEncoding("utf8");
+      process.stdin.on("data", (chunk) => { input += chunk; });
+      process.stdin.on("end", () => {
+        const starts = [input.indexOf("["), input.indexOf("{")].filter((index) => index >= 0);
+        if (starts.length === 0) { process.exitCode = 2; return; }
+        const start = Math.min(...starts);
+        let parsed;
+        try { parsed = JSON.parse(input.slice(start)); }
+        catch { process.exitCode = 2; return; }
+        const projects = Array.isArray(parsed) ? parsed :
+          Array.isArray(parsed?.result) ? parsed.result :
+          Array.isArray(parsed?.projects) ? parsed.projects :
+          Array.isArray(parsed?.data) ? parsed.data : null;
+        if (!projects) { process.exitCode = 2; return; }
+        const found = projects.some((project) =>
+          project?.["Project Name"] === "flo-preview" || project?.name === "flo-preview"
+        );
+        process.stdout.write(found ? "present" : "absent");
+      });
+    '
+}
+
+check_project_fixture() {
+  local label="$1" expected="$2" fixture="$3" actual
+  if ! actual="$(printf '%s\n' "$fixture" | parse_project_list)"; then
+    printf 'Project parser failed for %s fixture.\n' "$label" >&2
+    return 1
+  fi
+  if [[ "$actual" != "$expected" ]]; then
+    printf 'Project parser returned %s for %s fixture; expected %s.\n' "$actual" "$label" "$expected" >&2
+    return 1
+  fi
+  printf '%s fixture: %s\n' "$label" "$actual"
+}
+
+self_check_project_parser() {
+  check_project_fixture \
+    'Wrangler-shaped' \
+    present \
+    '[{"Project Name":"flo-preview","Project Domains":[],"Git Provider":null,"Last Modified":null}]'
+  check_project_fixture 'legacy name' present '[{"name":"flo-preview"}]'
+  check_project_fixture 'absent project' absent '[{"Project Name":"another-project"}]'
+}
+
+if [[ "$#" -eq 1 && "$1" == --self-check-project-parser ]]; then
+  self_check_project_parser
+  exit $?
+fi
 
 run_wrangler() {
   (
@@ -79,25 +131,7 @@ project_list_status=0
 set +e
 project_state="$(
   run_wrangler_json pages project list --json |
-    env -i PATH="$PATH" node -e '
-      let input = "";
-      process.stdin.setEncoding("utf8");
-      process.stdin.on("data", (chunk) => { input += chunk; });
-      process.stdin.on("end", () => {
-        const starts = [input.indexOf("["), input.indexOf("{")].filter((index) => index >= 0);
-        if (starts.length === 0) { process.exitCode = 2; return; }
-        const start = Math.min(...starts);
-        let parsed;
-        try { parsed = JSON.parse(input.slice(start)); }
-        catch { process.exitCode = 2; return; }
-        const projects = Array.isArray(parsed) ? parsed :
-          Array.isArray(parsed?.result) ? parsed.result :
-          Array.isArray(parsed?.projects) ? parsed.projects :
-          Array.isArray(parsed?.data) ? parsed.data : null;
-        if (!projects) { process.exitCode = 2; return; }
-        process.stdout.write(projects.some((project) => project?.name === "flo-preview") ? "present" : "absent");
-      });
-    '
+    parse_project_list
 )"
 project_list_status=$?
 set -e
