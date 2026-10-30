@@ -52,6 +52,18 @@ interface GoldenFixture {
   readonly source: string;
   readonly scenarios: Readonly<Record<string, RawScenario>>;
   readonly vectors: readonly GoldenVector[];
+  readonly a5Assertions: {
+    readonly suppressedCopy: readonly {
+      readonly scenario: string;
+      readonly category: ChanceCategory;
+      readonly text: string;
+    }[];
+    readonly lower: {
+      readonly scenario: string;
+      readonly text: string;
+      readonly planningRange: string;
+    };
+  };
 }
 
 const fixture = JSON.parse(
@@ -167,28 +179,9 @@ describe('P1 cycle golden vectors', () => {
 });
 
 describe('A5 fixed explanatory copy', () => {
-  it.each([
-    ['q1', 'PREGNANT_NOT_SHOWN', "You're in pregnancy mode, so conception chance isn't shown."],
-    [
-      'q2',
-      'POSSIBLE_BEFORE_FIRST_PERIOD',
-      "Can't estimate yet after birth. Pregnancy is possible before your first period returns.",
-    ],
-    ['pill', 'DEPENDS_ON_METHOD', 'Depends on using your method correctly.'],
-    ['q5', 'UNKNOWN_TEST', 'Unknown \u2014 your period is late; consider a test.'],
-    [
-      'q3',
-      'NOT_ESTIMATED_CYCLE_LENGTH',
-      "Can't estimate fertile days for cycles this short or long. Pregnancy is possible on any day you have sex without contraception.",
-    ],
-    [
-      'q4',
-      'NO_DATA_YET',
-      'Log your period to see estimates. Until then, pregnancy is possible on any day you have sex without contraception.',
-    ],
-  ] as const)(
-    '%s maps its suppression to the named category and fixed text',
-    (scenarioName, category, text) => {
+  it.each(fixture.a5Assertions.suppressedCopy)(
+    '$scenario maps its suppression to the named category and fixed text',
+    ({ scenario: scenarioName, category, text }) => {
       const scenario = fixture.scenarios[scenarioName];
       if (scenario === undefined) throw new Error(`Missing scenario ${scenarioName}`);
       const output = runEngine(inputFor(scenario));
@@ -200,14 +193,12 @@ describe('A5 fixed explanatory copy', () => {
   );
 
   it('uses the fixed lower-category text and planning-range limitation', () => {
-    const scenario = fixture.scenarios.p2;
-    if (scenario === undefined) throw new Error('Missing TV-P2 scenario');
+    const scenario = fixture.scenarios[fixture.a5Assertions.lower.scenario];
+    if (scenario === undefined) throw new Error('Missing A5 lower-category scenario');
     const output = runEngine(inputFor(scenario));
     const chance = output.explanations.find((item) => item.topic === 'chance');
     const prediction = output.explanations.find((item) => item.topic === 'prediction');
-    expect(chance?.values.lowerText).toBe(
-      'Lower \u2014 not zero. Pregnancy is possible on any day you have sex without contraception.',
-    );
-    expect(prediction?.values.planningRange).toBe('not a calibrated probability interval');
+    expect(chance?.values.lowerText).toBe(fixture.a5Assertions.lower.text);
+    expect(prediction?.values.planningRange).toBe(fixture.a5Assertions.lower.planningRange);
   });
 });

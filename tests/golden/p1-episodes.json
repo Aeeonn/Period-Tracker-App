@@ -1,6 +1,6 @@
 {
   "synthetic": true,
-  "provenance": "Reference outputs transcribed and hand-derived from docs/plan/algorithms-spec.md A1 TV-E1-TV-E5 and A3 TV-L1-TV-L3 before implementation. All dates and logs are synthetic.",
+  "provenance": "A1 TV-E1-TV-E5 and A3 TV-L1-TV-L3 were hand-derived from docs/plan/algorithms-spec.md before implementation; TV-E6/E7 are synthetic edge vectors for the captain-approved F3 follow-up. All dates and logs are synthetic.",
   "source": "docs/plan/algorithms-spec.md A1, A3",
   "vectors": [
     {
@@ -232,6 +232,58 @@
         "episodes": []
       },
       "expected": 5
+    },
+    {
+      "id": "TV-E6-none-ends-assumed-days",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-03-04",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [
+          { "localDate": "2026-03-01", "flow": "medium" },
+          { "localDate": "2026-03-02", "flow": "none" }
+        ],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-03-01",
+          "end": "2026-03-01",
+          "bleedingDays": 1,
+          "spottingDays": [],
+          "assumedDays": [],
+          "kind": "period",
+          "flags": []
+        }
+      ]
+    },
+    {
+      "id": "TV-E7-spotting-does-not-end-assumptions",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-03-04",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [
+          { "localDate": "2026-03-01", "flow": "medium" },
+          { "localDate": "2026-03-02", "flow": "spotting" }
+        ],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-03-01",
+          "end": "2026-03-01",
+          "bleedingDays": 1,
+          "spottingDays": ["2026-03-02"],
+          "assumedDays": ["2026-03-03", "2026-03-04"],
+          "kind": "period",
+          "flags": []
+        }
+      ]
     }
   ]
 }

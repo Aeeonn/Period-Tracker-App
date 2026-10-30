@@ -157,6 +157,8 @@ describe('A1/A3 golden vectors TV-E1–TV-E5 and TV-L1–TV-L3', () => {
       'TV-L1',
       'TV-L2',
       'TV-L3',
+      'TV-E6-none-ends-assumed-days',
+      'TV-E7-spotting-does-not-end-assumptions',
     ]);
   });
 
@@ -366,18 +368,25 @@ describe('A1 deterministic ordering and edge cases', () => {
 });
 
 describe('A1/A3 follow-ups D6 and D7', () => {
-  it.each(['none', 'spotting'] as const)(
-    'does not assume an explicitly logged %s day after a one-day start (D6)',
-    (flow) => {
-      const input = syntheticInput('2026-01-03', {
-        dayLogs: [
-          { localDate: '2026-01-01', flow: 'medium' },
-          { localDate: '2026-01-02', flow },
-        ],
-      });
-      expect(deriveEpisodes(input)[0]?.assumedDays).toEqual([requireDate('2026-01-03')]);
-    },
-  );
+  it('ends assumed days after an explicitly logged none (D6)', () => {
+    const input = syntheticInput('2026-01-03', {
+      dayLogs: [
+        { localDate: '2026-01-01', flow: 'medium' },
+        { localDate: '2026-01-02', flow: 'none' },
+      ],
+    });
+    expect(deriveEpisodes(input)[0]?.assumedDays).toEqual([]);
+  });
+
+  it('does not assume an explicitly logged spotting day, but does not end later assumptions (D6)', () => {
+    const input = syntheticInput('2026-01-03', {
+      dayLogs: [
+        { localDate: '2026-01-01', flow: 'medium' },
+        { localDate: '2026-01-02', flow: 'spotting' },
+      ],
+    });
+    expect(deriveEpisodes(input)[0]?.assumedDays).toEqual([requireDate('2026-01-03')]);
+  });
 
   it('excludes short_interval episodes from A3 period-length statistics (D7)', () => {
     const input = syntheticInput('2026-04-01');
@@ -461,5 +470,49 @@ describe('A3 period-length edge cases', () => {
         syntheticEpisode('2026-02-01', 4, 'postpartum_lochia'),
       ]),
     ).toBe(7);
+  });
+});
+
+describe('A1 explicit none and spotting episode endings', () => {
+  it('ends an in-progress episode on the last bleeding day after an explicit none log', () => {
+    const input = syntheticInput('2026-03-04', {
+      dayLogs: [
+        { localDate: '2026-03-01', flow: 'medium' },
+        { localDate: '2026-03-02', flow: 'none' },
+      ],
+    });
+
+    expect(deriveEpisodes(input)).toStrictEqual([
+      {
+        start: requireDate('2026-03-01'),
+        end: requireDate('2026-03-01'),
+        bleedingDays: 1,
+        spottingDays: [],
+        assumedDays: [],
+        kind: 'period',
+        flags: [],
+      },
+    ]);
+  });
+
+  it('does not end an in-progress episode after a spotting log', () => {
+    const input = syntheticInput('2026-03-04', {
+      dayLogs: [
+        { localDate: '2026-03-01', flow: 'medium' },
+        { localDate: '2026-03-02', flow: 'spotting' },
+      ],
+    });
+
+    expect(deriveEpisodes(input)).toStrictEqual([
+      {
+        start: requireDate('2026-03-01'),
+        end: requireDate('2026-03-01'),
+        bleedingDays: 1,
+        spottingDays: [requireDate('2026-03-02')],
+        assumedDays: [requireDate('2026-03-03'), requireDate('2026-03-04')],
+        kind: 'period',
+        flags: [],
+      },
+    ]);
   });
 });

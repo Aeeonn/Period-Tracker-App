@@ -172,23 +172,31 @@ export function deriveEpisodes(
 
   const latest = drafts[drafts.length - 1];
   const latestEpisode = baseEpisodes[baseEpisodes.length - 1];
-  const latestIsInProgress =
+  const latestHasSingleLoggedDay =
     latest !== undefined &&
     latestEpisode !== undefined &&
     latest.bleedingDates.size === 1 &&
     latest.bleedingDates.has(latest.start);
-  const completedEpisodes = latestIsInProgress ? baseEpisodes.slice(0, -1) : baseEpisodes;
+  const latestNoneDate =
+    latest !== undefined && latestHasSingleLoggedDay
+      ? [...logsByDate.entries()]
+          .filter(([date, log]) => log.flow === 'none' && compare(date, latest.start) > 0)
+          .map(([date]) => date)
+          .sort(compare)[0]
+      : undefined;
+  const completedEpisodes = latestHasSingleLoggedDay ? baseEpisodes.slice(0, -1) : baseEpisodes;
   const expectedPeriodLength =
     options.expectedPeriodLength ??
     estimatePeriodLength(input, completedEpisodes, { defaultPeriodLen: options.defaultPeriodLen });
 
   const assumedDays: LocalDate[] = [];
-  if (latest !== undefined && latestIsInProgress) {
+  if (latest !== undefined && latestHasSingleLoggedDay) {
     const elapsed = diffDays(latest.start, input.today);
     if (elapsed >= 0 && elapsed < expectedPeriodLength) {
       const assumedCount = Math.min(elapsed, expectedPeriodLength - 1);
       for (let offset = 1; offset <= assumedCount; offset += 1) {
         const assumedDate = addDays(latest.start, offset);
+        if (latestNoneDate !== undefined && compare(assumedDate, latestNoneDate) >= 0) break;
         if (logsByDate.get(assumedDate)?.flow === undefined) assumedDays.push(assumedDate);
       }
     }

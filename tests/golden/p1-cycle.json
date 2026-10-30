@@ -2,6 +2,45 @@
   "synthetic": true,
   "provenance": "Reference inputs and expected values hand-derived from docs/plan/algorithms-spec.md A2, A4, A5, A16, not generated from engine output. All dates and logs are synthetic.",
   "source": "docs/plan/algorithms-spec.md A2, A4, A5, A16 (P1 rows)",
+  "a5Assertions": {
+    "suppressedCopy": [
+      {
+        "scenario": "q1",
+        "category": "PREGNANT_NOT_SHOWN",
+        "text": "You're in pregnancy mode, so conception chance isn't shown."
+      },
+      {
+        "scenario": "q2",
+        "category": "POSSIBLE_BEFORE_FIRST_PERIOD",
+        "text": "Can't estimate yet after birth. Pregnancy is possible before your first period returns."
+      },
+      {
+        "scenario": "pill",
+        "category": "DEPENDS_ON_METHOD",
+        "text": "Depends on using your method correctly."
+      },
+      {
+        "scenario": "q5",
+        "category": "UNKNOWN_TEST",
+        "text": "Unknown \u2014 your period is late; consider a test."
+      },
+      {
+        "scenario": "q3",
+        "category": "NOT_ESTIMATED_CYCLE_LENGTH",
+        "text": "Can't estimate fertile days for cycles this short or long. Pregnancy is possible on any day you have sex without contraception."
+      },
+      {
+        "scenario": "q4",
+        "category": "NO_DATA_YET",
+        "text": "Log your period to see estimates. Until then, pregnancy is possible on any day you have sex without contraception."
+      }
+    ],
+    "lower": {
+      "scenario": "p2",
+      "text": "Lower \u2014 not zero. Pregnancy is possible on any day you have sex without contraception.",
+      "planningRange": "not a calibrated probability interval"
+    }
+  },
   "scenarios": {
     "p1": { "today": "2026-09-10", "starts": ["2026-09-01"] },
     "p5": { "today": "2026-09-10", "starts": ["2026-09-01"], "typicalCycleLength": 30 },
@@ -306,17 +345,17 @@
           "cyclesUsed": 1,
           "halfWidth": 3,
           "expectedPeriodLength": 5
-        }
-      },
-      "cycleRows": [
-        {
-          "start": "2026-01-05",
-          "nextStart": "2026-04-20",
-          "length": 105,
-          "excludedBecause": "too_long"
         },
-        { "start": "2026-04-20", "nextStart": "2026-05-18", "length": 28 }
-      ]
+        "cycleRows": [
+          {
+            "start": "2026-01-05",
+            "nextStart": "2026-04-20",
+            "length": 105,
+            "excludedBecause": "too_long"
+          },
+          { "start": "2026-04-20", "nextStart": "2026-05-18", "length": 28 }
+        ]
+      }
     },
     {
       "id": "TV-P8",
@@ -332,20 +371,20 @@
           "halfWidth": 2,
           "variability": "regular",
           "expectedPeriodLength": 5
-        }
-      },
-      "cycleRows": [
-        { "start": "2026-01-05", "nextStart": "2026-02-02", "length": 28 },
-        { "start": "2026-02-02", "nextStart": "2026-03-02", "length": 28 },
-        { "start": "2026-03-02", "nextStart": "2026-03-30", "length": 28 },
-        {
-          "start": "2026-03-30",
-          "nextStart": "2026-05-25",
-          "length": 56,
-          "excludedBecause": "possible_missed_log",
-          "missedLogPromptDate": "2026-04-27"
-        }
-      ]
+        },
+        "cycleRows": [
+          { "start": "2026-01-05", "nextStart": "2026-02-02", "length": 28 },
+          { "start": "2026-02-02", "nextStart": "2026-03-02", "length": 28 },
+          { "start": "2026-03-02", "nextStart": "2026-03-30", "length": 28 },
+          {
+            "start": "2026-03-30",
+            "nextStart": "2026-05-25",
+            "length": 56,
+            "excludedBecause": "possible_missed_log",
+            "missedLogPromptDate": "2026-04-27"
+          }
+        ]
+      }
     },
     {
       "id": "TV-F1",

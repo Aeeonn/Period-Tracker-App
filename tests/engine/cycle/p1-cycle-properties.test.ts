@@ -11,7 +11,10 @@ import { PARAMS_V1 } from '../../../src/engine/params.ts';
 interface RawScenario {
   readonly today: string;
   readonly starts?: readonly string[];
-  readonly lifeStage?: string;
+  readonly periodLengths?: readonly number[];
+  readonly missingFlowMasks?: readonly number[];
+  readonly lifeStage?: EngineInput['profile']['lifeStage'];
+  readonly birthYear?: number;
   readonly typicalCycleLength?: number;
   readonly typicalPeriodLength?: number;
   readonly contraception?: readonly unknown[];
@@ -26,17 +29,20 @@ function date(text: string): LocalDate {
 
 function inputFor(scenario: RawScenario): EngineInput {
   const today = date(scenario.today);
-  const dayLogs = (scenario.starts ?? []).flatMap((start) =>
-    Array.from({ length: 5 }, (_, offset) => ({
+  const dayLogs = (scenario.starts ?? []).flatMap((start, index) => {
+    const periodLength = scenario.periodLengths?.[index] ?? 5;
+    const missingFlowMask = scenario.missingFlowMasks?.[index] ?? 0;
+    return Array.from({ length: periodLength }, (_, offset) => ({
       localDate: addDays(date(start), offset),
       flow: 'medium' as const,
-    })),
-  );
+    })).filter((_, offset) => (missingFlowMask & (1 << offset)) === 0);
+  });
   return {
     today,
     profile: {
-      lifeStage: (scenario.lifeStage ?? 'cycle') as EngineInput['profile']['lifeStage'],
+      lifeStage: scenario.lifeStage ?? 'cycle',
       contraception: (scenario.contraception ?? []) as EngineInput['profile']['contraception'],
+      ...(scenario.birthYear === undefined ? {} : { birthYear: scenario.birthYear }),
       ...(scenario.typicalCycleLength === undefined
         ? {}
         : { typicalCycleLength: scenario.typicalCycleLength }),
@@ -51,17 +57,84 @@ function inputFor(scenario: RawScenario): EngineInput {
   };
 }
 
-function historyInput(intervals: readonly number[]): EngineInput {
+interface GeneratedHistory {
+  readonly intervals: readonly number[];
+  readonly periodLengths: readonly number[];
+  readonly missingFlowMasks: readonly number[];
+  readonly daysAfterLastStart: number;
+  readonly lifeStage: EngineInput['profile']['lifeStage'];
+  readonly hormonalMode: 'none' | 'active' | 'recently_stopped';
+  readonly birthYear: number;
+  readonly nonFlowMask: number;
+}
+
+function historyInput(history: GeneratedHistory): EngineInput {
   const starts = [date('2024-01-01')];
-  for (const interval of intervals) {
+  for (const interval of history.intervals) {
     const previous = starts[starts.length - 1];
     if (previous === undefined) throw new Error('Expected a preceding period start');
     starts.push(addDays(previous, interval));
   }
+  const first = starts[0];
   const last = starts[starts.length - 1];
-  if (last === undefined) throw new Error('Expected one synthetic period start');
-  const today = addDays(last, 10);
-  return inputFor({ today, starts: starts.map(String) });
+  if (first === undefined || last === undefined) {
+    throw new Error('Expected synthetic period starts');
+  }
+  const today = addDays(last, history.daysAfterLastStart);
+  const contraception =
+    history.hormonalMode === 'none'
+      ? []
+      : [
+          {
+            method: 'combined_pill',
+            startDate: history.hormonalMode === 'active' ? first : addDays(today, -80),
+            ...(history.hormonalMode === 'recently_stopped'
+              ? { endDate: addDays(today, -10) }
+              : {}),
+            regimen: { activeDays: 21, breakDays: 7, continuous: false },
+          },
+        ];
+  const pregnancies =
+    history.lifeStage === 'pregnancy'
+      ? [
+          {
+            id: 'synthetic-property-pregnancy',
+            lmp: addDays(today, -120),
+            eddSource: 'lmp',
+            fetusCount: 1,
+          },
+        ]
+      : history.lifeStage === 'postpartum'
+        ? [
+            {
+              id: 'synthetic-property-birth',
+              lmp: addDays(today, -300),
+              eddSource: 'lmp',
+              fetusCount: 1,
+              endedOn: addDays(today, -30),
+              outcome: 'birth',
+            },
+          ]
+        : [];
+  const input = inputFor({
+    today: String(today),
+    starts: starts.map(String),
+    periodLengths: history.periodLengths,
+    missingFlowMasks: history.missingFlowMasks,
+    lifeStage: history.lifeStage,
+    birthYear: history.birthYear,
+    contraception,
+    pregnancies,
+  });
+  const nonFlowLogs = [
+    { localDate: addDays(first, -3), mood: ['calm'] },
+    { localDate: addDays(first, -2), energy: 'high' },
+    { localDate: addDays(first, -1), desire: 'high' },
+  ].filter((_, index) => (history.nonFlowMask & (1 << index)) !== 0);
+  return {
+    ...input,
+    dayLogs: [...input.dayLogs, ...nonFlowLogs] as unknown as EngineInput['dayLogs'],
+  };
 }
 
 function assertProperty<TArgs extends unknown[]>(
@@ -71,11 +144,21 @@ function assertProperty<TArgs extends unknown[]>(
   fc.assert(property, { seed, numRuns: 1_000, endOnFailure: true });
 }
 
-const intervalsArbitrary = fc.array(fc.integer({ min: 15, max: 90 }), {
-  minLength: 0,
-  maxLength: 10,
-});
-const historyArbitrary = intervalsArbitrary.map(historyInput);
+const historyArbitrary = fc
+  .record({
+    intervals: fc.array(fc.integer({ min: 1, max: 120 }), { minLength: 0, maxLength: 10 }),
+    periodLengths: fc.array(fc.integer({ min: 1, max: 8 }), { minLength: 1, maxLength: 11 }),
+    missingFlowMasks: fc.array(fc.integer({ min: 0, max: 255 }), {
+      minLength: 1,
+      maxLength: 11,
+    }),
+    daysAfterLastStart: fc.integer({ min: 10, max: 120 }),
+    lifeStage: fc.constantFrom('cycle', 'ttc', 'pregnancy', 'postpartum', 'perimenopause'),
+    hormonalMode: fc.constantFrom('none', 'active', 'recently_stopped'),
+    birthYear: fc.integer({ min: 1975, max: 2008 }),
+    nonFlowMask: fc.integer({ min: 1, max: 7 }),
+  })
+  .map(historyInput);
 
 describe('P1 cycle invariants and regression properties', () => {
   it('T-CON-15 keeps the expected period length when a mood-only log is added on an unlogged day', () => {
@@ -126,27 +209,19 @@ describe('P1 cycle invariants and regression properties', () => {
   });
 
   it('E2: output is independent of day-log order', () => {
-    const flows = fc.array(fc.constantFrom('none', 'spotting', 'light', 'medium', 'heavy'), {
-      minLength: 1,
-      maxLength: 24,
-    });
-    const logs = flows.chain((values) => {
-      const today = date('2026-10-30');
-      const dayLogs = values.map((flow, index) => ({
-        localDate: addDays(today, index + 1 - values.length),
-        flow,
-      }));
-      return fc.shuffledSubarray(dayLogs, {
-        minLength: dayLogs.length,
-        maxLength: dayLogs.length,
-      });
-    });
+    const shuffledHistories = historyArbitrary.chain((input) =>
+      fc
+        .shuffledSubarray([...input.dayLogs], {
+          minLength: input.dayLogs.length,
+          maxLength: input.dayLogs.length,
+        })
+        .map((dayLogs) => ({ input, dayLogs })),
+    );
     assertProperty(
-      fc.property(logs, (dayLogs) => {
-        const input = inputFor({ today: '2026-10-30' });
-        const ordered = { ...input, dayLogs: dayLogs as EngineInput['dayLogs'] };
-        const reversed = { ...input, dayLogs: [...dayLogs].reverse() as EngineInput['dayLogs'] };
-        expect(JSON.stringify(runEngine(ordered))).toBe(JSON.stringify(runEngine(reversed)));
+      fc.property(shuffledHistories, ({ input, dayLogs }) => {
+        expect(JSON.stringify(runEngine(input))).toBe(
+          JSON.stringify(runEngine({ ...input, dayLogs })),
+        );
       }),
       20261031,
     );
