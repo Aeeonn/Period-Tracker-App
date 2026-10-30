@@ -4,17 +4,17 @@ Task `p0-relay-spike` (FB-01, FB-02, FB-09; serves FB-06). Synthetic data only. 
 
 ## Deployment
 
-| Item                 | Value                                                                                                                                                                                          |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Environment          | Preview only (AP-18). Synthetic data only. Not for production or real data                                                                                                                     |
-| Worker               | `flo-preview-relay`, code in `relay-spike/`, config `relay-spike/wrangler.toml`                                                                                                                |
-| URL                  | `https://flo-preview-relay.my-app123.workers.dev` (workers.dev only; preview URLs off; no route or domain)                                                                                     |
-| D1 database          | `flo-preview` (binding `DB`), schema `relay-spike/schema.sql`: `devices`, `nonces`, `rate_limits`                                                                                              |
-| Deployed             | 2026-10-30 redeploy from landed main 95ded02 with wrangler 4.147.0; compatibility date 2026-10-01 unchanged; bundle 16.75 KiB (5.18 KiB gzip); Version ID 4dd47273-a275-47b2-88af-d90473c88de8 |
-| Worker secrets       | `ENROLLMENT_SECRET_HASH` (SHA-256 of the preview enrollment secret) and `VAPID_PRIVATE_JWK`. Preview-only                                                                                      |
-| Local secret copy    | Outside the repository, mode 600, on the deploying machine only. Never printed or committed                                                                                                    |
-| Public VAPID key     | Served by `GET /vapid-public-key`. The probe can fetch it there, so it is not repeated in this record                                                                                          |
-| Status after the run | Kept live. `p2-preview-relay-deploy` will replace the code on the same Worker                                                                                                                  |
+| Item                 | Value                                                                                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Environment          | Preview only (AP-18). Synthetic data only. Not for production or real data                                                                                                                                              |
+| Worker               | `flo-preview-relay`, code in `relay-spike/`, config `relay-spike/wrangler.toml`                                                                                                                                         |
+| URL                  | `https://flo-preview-relay.my-app123.workers.dev` (workers.dev only; preview URLs off; no route or domain)                                                                                                              |
+| D1 database          | `flo-preview` (binding `DB`), schema `relay-spike/schema.sql`: `devices`, `nonces`, `rate_limits`                                                                                                                       |
+| Deployed             | 2026-10-30 redeploy: landed relay code d0ba90d deployed from main 2bf9345; wrangler 4.147.0; compatibility date 2026-10-01 unchanged; bundle 18.49 KiB (5.62 KiB gzip); Version ID 61b53eeb-d566-48a7-afb6-7d0d1e15808e |
+| Worker secrets       | `ENROLLMENT_SECRET_HASH` (SHA-256 of the preview enrollment secret) and `VAPID_PRIVATE_JWK`. Preview-only                                                                                                               |
+| Local secret copy    | Outside the repository, mode 600, on the deploying machine only. Never printed or committed                                                                                                                             |
+| Public VAPID key     | Served by `GET /vapid-public-key`. The probe can fetch it there, so it is not repeated in this record                                                                                                                   |
+| Status after the run | Kept live. `p2-preview-relay-deploy` will replace the code on the same Worker                                                                                                                                           |
 
 Routes:
 
@@ -28,7 +28,7 @@ CORS is enabled only for the allowlisted `POST /push-test` browser flow below. T
 
 `PROBE_ORIGINS` is a comma-separated list of exact origins; the current Worker config names only `https://flo-preview-cm6.pages.dev`. An exact matching `Origin` may call `POST /push-test` without the enrollment secret. The secret-authenticated path remains available. Allowed preflights receive 204; non-allowlisted preflights receive 403 without CORS. Only the exact origin is echoed in `Access-Control-Allow-Origin`, with `Vary: Origin`, `POST`, `Content-Type`, and a 600-second preflight cache. Credentials and wildcard origins are never enabled; other routes are unchanged.
 
-`Origin` is a browser-enforced signal, not authentication: non-browser clients can forge it. The shared five-per-ten-minute push-test rate limit, push-host allowlist, and fixed generic notification text bound abuse. This source/config change is not deployed; the orchestrator redeploys later.
+`Origin` is a browser-enforced signal, not authentication: non-browser clients can forge it. The shared five-per-ten-minute push-test rate limit, push-host allowlist, and fixed generic notification text bound abuse. This source/config change was deployed on 2026-10-30; see the probe-origin redeploy record below.
 
 ## FB-01: Free plan, no payment method
 
@@ -123,6 +123,21 @@ Post-deploy smoke checks against the preview Worker (synthetic data only):
 | Authorized `POST /push-test` with a 16,385-byte synthetic body   | HTTP 413                                                                      |
 
 The 2026-10-29 deployment and smoke results above remain as history.
+
+## Redeploy 2026-10-30 (probe origin)
+
+On 2026-10-30, landed relay code `d0ba90d` from main `2bf9345` was deployed with Wrangler `4.147.0`. Upload: 18.49 KiB (5.62 KiB gzip). Version ID: `61b53eeb-d566-48a7-afb6-7d0d1e15808e`. Synthetic smoke checks against the live preview Worker:
+
+| Check                                                                                                               | Result                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 1. `POST /push-test`, no Origin, no secret                                                                          | HTTP 401                                                                                             |
+| 2. Preflight from `https://flo-preview-cm6.pages.dev`                                                               | HTTP 204; exact ACAO; `Vary: Origin`; no credentials or wildcard                                     |
+| 3a. Preflight from look-alike `https://flo-preview-cm6.pages.dev.evil.example`                                      | HTTP 403; no ACAO                                                                                    |
+| 3b. POST from look-alike `https://flo-preview-cm6.pages.dev.evil.example`, no secret                                | HTTP 401; no ACAO                                                                                    |
+| 4. Probe-origin `POST /push-test` from `https://flo-preview-cm6.pages.dev`, no secret; synthetic Apple subscription | HTTP 200; `attempted: 1`; Apple 400 `BadWebPushToken` (valid attempt 1/2)                            |
+| 5. `bash relay-spike/push-test.sh`                                                                                  | Steps 1/2 HTTP 401; step 3 HTTP 200; `attempted: 1`; Apple 400 `BadWebPushToken` (valid attempt 2/2) |
+| 6. `GET /push-test`; `GET /nope`; `GET /vapid-public-key`                                                           | HTTP 405; 404; 200 (key body discarded)                                                              |
+| 7. Probe-origin POST with a 17,014-byte synthetic body                                                              | HTTP 413                                                                                             |
 
 ## T-RELAY-02 (configuration part): logging off, and what stays visible
 
