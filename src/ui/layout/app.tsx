@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Button, Card } from '../components/base';
+import { TODAY_PREVIEW_FIXTURE, TodayScreen } from '../screens/today';
 import {
   createUpdateWriteGate,
   registerServiceWorker,
@@ -254,7 +255,11 @@ export function App() {
             </Card>
           </div>
         ) : null}
-        <PlaceholderScreen role={role} tab={selectedTab} />
+        {role === 'owner' && selectedTab.id === 'today' ? (
+          <TodayScreen {...TODAY_PREVIEW_FIXTURE} />
+        ) : (
+          <PlaceholderScreen role={role} tab={selectedTab} />
+        )}
       </main>
 
       <nav class="shell-tabbar" aria-label={`${roleLabel} navigation`}>
