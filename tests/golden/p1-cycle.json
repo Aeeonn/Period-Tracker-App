@@ -1,0 +1,518 @@
+{
+  "synthetic": true,
+  "provenance": "Reference inputs and expected values hand-derived from docs/plan/algorithms-spec.md A2, A4, A5, A16, not generated from engine output. All dates and logs are synthetic.",
+  "source": "docs/plan/algorithms-spec.md A2, A4, A5, A16 (P1 rows)",
+  "scenarios": {
+    "p1": { "today": "2026-09-10", "starts": ["2026-09-01"] },
+    "p5": { "today": "2026-09-10", "starts": ["2026-09-01"], "typicalCycleLength": 30 },
+    "p6": { "today": "2026-09-10", "starts": ["2026-08-01", "2026-08-31"] },
+    "p2": {
+      "today": "2026-09-10",
+      "starts": [
+        "2026-03-02",
+        "2026-03-30",
+        "2026-04-27",
+        "2026-05-25",
+        "2026-06-22",
+        "2026-07-20",
+        "2026-08-17"
+      ]
+    },
+    "p3": {
+      "today": "2026-09-20",
+      "starts": [
+        "2026-03-02",
+        "2026-03-30",
+        "2026-04-27",
+        "2026-05-25",
+        "2026-06-22",
+        "2026-07-20",
+        "2026-08-17",
+        "2026-09-10"
+      ]
+    },
+    "p4": {
+      "today": "2026-10-30",
+      "starts": [
+        "2026-03-02",
+        "2026-03-30",
+        "2026-04-27",
+        "2026-05-25",
+        "2026-06-22",
+        "2026-07-20",
+        "2026-08-17",
+        "2026-09-10",
+        "2026-10-04",
+        "2026-10-28"
+      ]
+    },
+    "p7": { "today": "2026-06-08", "starts": ["2026-01-05", "2026-04-20", "2026-05-18"] },
+    "p8": {
+      "today": "2026-06-01",
+      "starts": ["2026-01-05", "2026-02-02", "2026-03-02", "2026-03-30", "2026-05-25"]
+    },
+    "f3": {
+      "today": "2026-09-14",
+      "starts": [
+        "2026-03-02",
+        "2026-03-30",
+        "2026-04-27",
+        "2026-05-25",
+        "2026-06-22",
+        "2026-07-20",
+        "2026-08-17"
+      ]
+    },
+    "pill": {
+      "today": "2026-08-01",
+      "starts": ["2026-07-15"],
+      "contraception": [
+        {
+          "method": "combined_pill",
+          "startDate": "2026-06-01",
+          "regimen": { "activeDays": 21, "breakDays": 7, "continuous": false }
+        }
+      ]
+    },
+    "q1": {
+      "today": "2026-09-10",
+      "starts": [
+        "2026-03-02",
+        "2026-03-30",
+        "2026-04-27",
+        "2026-05-25",
+        "2026-06-22",
+        "2026-07-20",
+        "2026-08-17"
+      ],
+      "lifeStage": "pregnancy"
+    },
+    "q2": {
+      "today": "2026-09-20",
+      "lifeStage": "postpartum",
+      "pregnancies": [
+        {
+          "id": "synthetic-birth",
+          "eddSource": "lmp",
+          "fetusCount": 1,
+          "endedOn": "2026-08-01",
+          "outcome": "birth"
+        }
+      ]
+    },
+    "q3": {
+      "today": "2026-03-20",
+      "starts": ["2026-01-01", "2026-01-20", "2026-02-08", "2026-02-28", "2026-03-19"]
+    },
+    "q4": { "today": "2026-10-02" },
+    "q5": {
+      "today": "2026-09-17",
+      "starts": [
+        "2026-03-02",
+        "2026-03-30",
+        "2026-04-27",
+        "2026-05-25",
+        "2026-06-22",
+        "2026-07-20",
+        "2026-08-17"
+      ]
+    },
+    "q6": {
+      "today": "2026-09-17",
+      "starts": [
+        "2026-03-02",
+        "2026-03-30",
+        "2026-04-27",
+        "2026-05-25",
+        "2026-06-22",
+        "2026-07-20",
+        "2026-08-17"
+      ],
+      "contraception": [
+        {
+          "method": "combined_pill",
+          "startDate": "2026-09-01",
+          "regimen": { "activeDays": 21, "breakDays": 7, "continuous": false }
+        }
+      ]
+    },
+    "k2": {
+      "today": "2026-08-10",
+      "starts": ["2026-07-02", "2026-08-04"],
+      "contraception": [
+        {
+          "method": "combined_pill",
+          "startDate": "2026-06-01",
+          "endDate": "2026-07-01",
+          "regimen": { "activeDays": 21, "breakDays": 7, "continuous": false }
+        }
+      ]
+    },
+    "k3": {
+      "today": "2026-08-01",
+      "starts": ["2026-07-15"],
+      "contraception": [
+        {
+          "method": "combined_pill",
+          "startDate": "2026-06-01",
+          "regimen": { "activeDays": 21, "breakDays": 7, "continuous": false }
+        }
+      ]
+    },
+    "copper": {
+      "today": "2026-09-10",
+      "starts": [
+        "2026-03-02",
+        "2026-03-30",
+        "2026-04-27",
+        "2026-05-25",
+        "2026-06-22",
+        "2026-07-20",
+        "2026-08-17"
+      ],
+      "contraception": [
+        {
+          "method": "copper_iud",
+          "startDate": "2026-01-01",
+          "regimen": { "activeDays": 0, "breakDays": 0, "continuous": true }
+        }
+      ]
+    },
+    "hormonal3": {
+      "today": "2026-07-20",
+      "starts": ["2026-05-01", "2026-06-01", "2026-07-01"],
+      "contraception": [
+        {
+          "method": "combined_pill",
+          "startDate": "2026-04-01",
+          "regimen": { "activeDays": 21, "breakDays": 7, "continuous": false }
+        }
+      ]
+    }
+  },
+  "vectors": [
+    {
+      "id": "TV-P1",
+      "scenario": "p1",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-09-29",
+          "lo": "2026-09-22",
+          "hi": "2026-10-06",
+          "state": "upcoming",
+          "cyclesUsed": 0,
+          "halfWidth": 7,
+          "expectedPeriodLength": 5
+        }
+      }
+    },
+    {
+      "id": "TV-P5",
+      "scenario": "p5",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-10-01",
+          "lo": "2026-09-26",
+          "hi": "2026-10-06",
+          "state": "upcoming",
+          "cyclesUsed": 0,
+          "halfWidth": 5,
+          "expectedPeriodLength": 5
+        }
+      }
+    },
+    {
+      "id": "TV-P6",
+      "scenario": "p6",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-09-30",
+          "lo": "2026-09-27",
+          "hi": "2026-10-03",
+          "state": "upcoming",
+          "cyclesUsed": 1,
+          "halfWidth": 3,
+          "expectedPeriodLength": 5
+        }
+      },
+      "cycleRows": [{ "start": "2026-08-01", "nextStart": "2026-08-31", "length": 30 }]
+    },
+    {
+      "id": "TV-P2",
+      "scenario": "p2",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-09-14",
+          "lo": "2026-09-12",
+          "hi": "2026-09-16",
+          "state": "upcoming",
+          "cyclesUsed": 6,
+          "halfWidth": 2,
+          "variability": "regular",
+          "expectedPeriodLength": 5
+        }
+      }
+    },
+    {
+      "id": "TV-P3",
+      "scenario": "p3",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-10-08",
+          "lo": "2026-10-04",
+          "hi": "2026-10-10",
+          "state": "upcoming",
+          "cyclesUsed": 7,
+          "halfWidth": 2,
+          "variability": "regular",
+          "expectedPeriodLength": 5
+        }
+      },
+      "explanationIncludes": ["last cycle was shorter than usual"]
+    },
+    {
+      "id": "TV-P4",
+      "scenario": "p4",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-11-21",
+          "lo": "2026-11-15",
+          "hi": "2026-11-27",
+          "state": "upcoming",
+          "cyclesUsed": 9,
+          "halfWidth": 6,
+          "variability": "regular",
+          "expectedPeriodLength": 5
+        }
+      },
+      "explanationIncludes": ["recently changed", "wider while they settle"]
+    },
+    {
+      "id": "TV-P7",
+      "scenario": "p7",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-06-15",
+          "lo": "2026-06-12",
+          "hi": "2026-06-18",
+          "state": "upcoming",
+          "cyclesUsed": 1,
+          "halfWidth": 3,
+          "expectedPeriodLength": 5
+        }
+      },
+      "cycleRows": [
+        {
+          "start": "2026-01-05",
+          "nextStart": "2026-04-20",
+          "length": 105,
+          "excludedBecause": "too_long"
+        },
+        { "start": "2026-04-20", "nextStart": "2026-05-18", "length": 28 }
+      ]
+    },
+    {
+      "id": "TV-P8",
+      "scenario": "p8",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-06-22",
+          "lo": "2026-06-20",
+          "hi": "2026-06-24",
+          "state": "upcoming",
+          "cyclesUsed": 3,
+          "halfWidth": 2,
+          "variability": "regular",
+          "expectedPeriodLength": 5
+        }
+      },
+      "cycleRows": [
+        { "start": "2026-01-05", "nextStart": "2026-02-02", "length": 28 },
+        { "start": "2026-02-02", "nextStart": "2026-03-02", "length": 28 },
+        { "start": "2026-03-02", "nextStart": "2026-03-30", "length": 28 },
+        {
+          "start": "2026-03-30",
+          "nextStart": "2026-05-25",
+          "length": 56,
+          "excludedBecause": "possible_missed_log",
+          "missedLogPromptDate": "2026-04-27"
+        }
+      ]
+    },
+    {
+      "id": "TV-F1",
+      "scenario": "p2",
+      "expected": {
+        "fertility": {
+          "kind": "fertility",
+          "source": "calendar",
+          "ovulationCenter": "2026-08-31",
+          "ovulationRange": { "start": "2026-08-27", "end": "2026-09-04" },
+          "coreWindow": { "start": "2026-08-26", "end": "2026-09-01" },
+          "possibleBand": { "start": "2026-08-22", "end": "2026-09-05" },
+          "higherDays": { "start": "2026-08-29", "end": "2026-08-31" },
+          "markersDisagree": false,
+          "methodDoesNotChangeOvulation": false
+        }
+      },
+      "chanceDays": {
+        "2026-08-30": "HIGHER",
+        "2026-08-27": "MEDIUM",
+        "2026-08-23": "MEDIUM",
+        "2026-09-07": "LOWER",
+        "2026-09-14": "LOWER"
+      }
+    },
+    {
+      "id": "TV-F2",
+      "scenario": "pill",
+      "expected": {
+        "fertility": { "kind": "suppressed", "reason": "hormonal" },
+        "chanceEvery": "DEPENDS_ON_METHOD"
+      }
+    },
+    {
+      "id": "TV-F3",
+      "scenario": "f3",
+      "expected": {
+        "chanceDays": { "2026-09-06": "LOWER" },
+        "explanationIncludes": [
+          "Ovulation can happen outside these dates",
+          "The calendar can't tell."
+        ]
+      }
+    },
+    {
+      "id": "TV-Q1",
+      "scenario": "q1",
+      "expected": {
+        "fertility": { "kind": "suppressed", "reason": "pregnant" },
+        "chanceEvery": "PREGNANT_NOT_SHOWN"
+      }
+    },
+    {
+      "id": "TV-Q2",
+      "scenario": "q2",
+      "expected": {
+        "fertility": { "kind": "suppressed", "reason": "postpartum_before_first_period" },
+        "chanceEvery": "POSSIBLE_BEFORE_FIRST_PERIOD"
+      }
+    },
+    {
+      "id": "TV-Q3",
+      "scenario": "q3",
+      "expected": {
+        "fertility": { "kind": "suppressed", "reason": "cycle_length" },
+        "chanceEvery": "NOT_ESTIMATED_CYCLE_LENGTH"
+      }
+    },
+    {
+      "id": "TV-Q4",
+      "scenario": "q4",
+      "expected": {
+        "prediction": { "kind": "suppressed", "reason": "no_data" },
+        "fertility": { "kind": "suppressed", "reason": "no_data" },
+        "chanceDays": { "2026-10-02": "NO_DATA_YET" }
+      }
+    },
+    {
+      "id": "TV-Q5",
+      "scenario": "q5",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-09-14",
+          "lo": "2026-09-12",
+          "hi": "2026-09-16",
+          "state": "late",
+          "daysLate": 3,
+          "cyclesUsed": 6,
+          "halfWidth": 2,
+          "variability": "regular",
+          "expectedPeriodLength": 5
+        },
+        "fertility": { "kind": "suppressed", "reason": "late" },
+        "chanceEvery": "UNKNOWN_TEST"
+      }
+    },
+    {
+      "id": "TV-Q6",
+      "scenario": "q6",
+      "expected": {
+        "fertility": { "kind": "suppressed", "reason": "hormonal" },
+        "chanceEvery": "DEPENDS_ON_METHOD"
+      }
+    },
+    {
+      "id": "TV-K2",
+      "scenario": "k2",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-09-06",
+          "lo": "2026-09-01",
+          "hi": "2026-09-11",
+          "state": "upcoming",
+          "cyclesUsed": 1,
+          "halfWidth": 5,
+          "expectedPeriodLength": 5
+        }
+      }
+    },
+    {
+      "id": "TV-K3",
+      "scenario": "k3",
+      "expected": {
+        "prediction": { "kind": "suppressed", "reason": "hormonal" },
+        "fertility": { "kind": "suppressed", "reason": "hormonal" },
+        "chanceEvery": "DEPENDS_ON_METHOD",
+        "explanationIncludes": ["Bleeding patterns on this method vary"]
+      }
+    },
+    {
+      "id": "A16-copper-IUD",
+      "scenario": "copper",
+      "expected": {
+        "fertility": {
+          "kind": "fertility",
+          "source": "calendar",
+          "ovulationCenter": "2026-08-31",
+          "ovulationRange": { "start": "2026-08-27", "end": "2026-09-04" },
+          "coreWindow": { "start": "2026-08-26", "end": "2026-09-01" },
+          "possibleBand": { "start": "2026-08-22", "end": "2026-09-05" },
+          "higherDays": { "start": "2026-08-29", "end": "2026-08-31" },
+          "markersDisagree": false,
+          "methodDoesNotChangeOvulation": true
+        }
+      },
+      "explanationIncludes": ["does not change ovulation"]
+    },
+    {
+      "id": "A16-hormonal-3",
+      "scenario": "hormonal3",
+      "expected": {
+        "prediction": {
+          "kind": "prediction",
+          "center": "2026-07-31",
+          "lo": "2026-07-27",
+          "hi": "2026-08-04",
+          "state": "upcoming",
+          "cyclesUsed": 2,
+          "halfWidth": 4,
+          "variability": "regular",
+          "expectedPeriodLength": 5
+        },
+        "fertility": { "kind": "suppressed", "reason": "hormonal" },
+        "chanceEvery": "DEPENDS_ON_METHOD"
+      }
+    }
+  ]
+}

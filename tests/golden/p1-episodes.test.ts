@@ -365,6 +365,35 @@ describe('A1 deterministic ordering and edge cases', () => {
   });
 });
 
+describe('A1/A3 follow-ups D6 and D7', () => {
+  it.each(['none', 'spotting'] as const)(
+    'does not assume an explicitly logged %s day after a one-day start (D6)',
+    (flow) => {
+      const input = syntheticInput('2026-01-03', {
+        dayLogs: [
+          { localDate: '2026-01-01', flow: 'medium' },
+          { localDate: '2026-01-02', flow },
+        ],
+      });
+      expect(deriveEpisodes(input)[0]?.assumedDays).toEqual([requireDate('2026-01-03')]);
+    },
+  );
+
+  it('excludes short_interval episodes from A3 period-length statistics (D7)', () => {
+    const input = syntheticInput('2026-04-01');
+    const shortEpisode: Episode = {
+      ...syntheticEpisode('2026-02-01', 10),
+      flags: ['short_interval'],
+    };
+    expect(
+      estimatePeriodLength(input, [
+        syntheticEpisode('2026-01-01', 4),
+        shortEpisode,
+        syntheticEpisode('2026-03-01', 6),
+      ]),
+    ).toBe(5);
+  });
+});
 describe('A3 period-length edge cases', () => {
   it('uses completed episodes for assumed days in the A1/A3 composition (A13a)', () => {
     const dates = [

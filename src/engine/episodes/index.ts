@@ -188,7 +188,8 @@ export function deriveEpisodes(
     if (elapsed >= 0 && elapsed < expectedPeriodLength) {
       const assumedCount = Math.min(elapsed, expectedPeriodLength - 1);
       for (let offset = 1; offset <= assumedCount; offset += 1) {
-        assumedDays.push(addDays(latest.start, offset));
+        const assumedDate = addDays(latest.start, offset);
+        if (logsByDate.get(assumedDate)?.flow === undefined) assumedDays.push(assumedDate);
       }
     }
   }
@@ -205,7 +206,12 @@ export function estimatePeriodLength(
   options: Pick<EngineParams, 'defaultPeriodLen'> = EPISODE_DEFAULTS,
 ): number {
   const recent = [...episodes]
-    .filter((episode) => episode.kind === 'period' && episode.assumedDays.length === 0)
+    .filter(
+      (episode) =>
+        episode.kind === 'period' &&
+        episode.assumedDays.length === 0 &&
+        !episode.flags.includes('short_interval'),
+    )
     .sort((left, right) => compare(left.start, right.start))
     .slice(-6);
   if (recent.length === 0) return input.profile.typicalPeriodLength ?? options.defaultPeriodLen;
