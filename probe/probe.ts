@@ -69,6 +69,13 @@ function initializeProbe(): void {
   const pushVapidKey = decodeBase64Url(vapidInput);
   const canRunPush = pushUrl !== null && pushVapidKey !== null;
 
+  function isHomeScreenApp(): boolean {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
+    );
+  }
+
   for (const item of document.querySelectorAll<HTMLElement>('[data-result]')) {
     const key = item.dataset.result;
     if (key) results.set(key, { state: 'untested', summary: 'Not run.' });
@@ -440,10 +447,14 @@ function initializeProbe(): void {
         !('serviceWorker' in navigator) ||
         !('PushManager' in window)
       ) {
+        const homeScreenApp = isHomeScreenApp();
+        const reinstallHint = homeScreenApp
+          ? ''
+          : " Delete the old Home Screen icon, re-add this page from Safari's Share menu, and open it from the icon.";
         setResult(
           'push',
           'unsupported',
-          'This browser context does not expose the notification, service-worker, and push APIs required by the test.',
+          `This browser context does not expose the notification, service-worker, and push APIs required by the test. Home Screen app: ${homeScreenApp ? 'yes' : 'no'}.${reinstallHint}`,
         );
         run.disabled = false;
         return;
@@ -764,9 +775,12 @@ function initializeProbe(): void {
 
   function bindCopyControl(): void {
     button('copy-results')?.addEventListener('click', async () => {
-      const summary = [...results.entries()]
-        .map(([key, result]) => `${key}: ${labelFor(result.state)} — ${result.summary}`)
-        .join('\n');
+      const summary = [
+        `Home Screen app: ${isHomeScreenApp() ? 'yes' : 'no'}`,
+        ...[...results.entries()].map(
+          ([key, result]) => `${key}: ${labelFor(result.state)} — ${result.summary}`,
+        ),
+      ].join('\n');
       const status = document.querySelector<HTMLElement>('#copy-status');
       try {
         await navigator.clipboard.writeText(summary);
