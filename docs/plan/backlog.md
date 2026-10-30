@@ -532,10 +532,10 @@
 - brief: [task-briefs.md#p0-relay-spike](task-briefs.md#p0-relay-spike)
 - record: `~/firstmate/data/p0-relay-spike/`
 - since: 2026-10-02
-- updated: 2026-10-29
+- updated: 2026-10-30
 - branch: fm/p0-relay-spike-rebase-dc28a68 (landed); preserved fm/p0-relay-spike and fm/p0-relay-spike-rebase
-- notes: Landed locally on main as exact reviewed SHA 54da5b008706582730c4223535a37c63701fa7d1 with the captain's exact landing approval. Push to origin deferred by the captain (network/VPN); not yet on remote. Independent PASS for this exact SHA in ~/firstmate/data/p0-relay-spike-rebase-dc28a68-verify/report.md. Non-blocking follow-ups: F8 measurement routes buffer chunked bodies before the 16 KB limit; deploy record wording on scoped-token holders and sequence storage; global push-test rate limit. No fresh npm audit/check:deps on this SHA (disclosed limitation). FB-09 terms remain pending as nonblocking follow-up.
-- landed: main `54da5b0` (local only; not yet pushed)
+- notes: Landed locally on main as exact reviewed SHA 54da5b008706582730c4223535a37c63701fa7d1 with the captain's exact landing approval. Pushed to origin 2026-10-30. Independent PASS for this exact SHA in ~/firstmate/data/p0-relay-spike-rebase-dc28a68-verify/report.md. Non-blocking follow-ups: F8 measurement routes buffer chunked bodies before the 16 KB limit; deploy record wording on scoped-token holders and sequence storage; global push-test rate limit. No fresh npm audit/check:deps on this SHA (disclosed limitation). FB-09 terms remain pending as nonblocking follow-up.
+- landed: main `54da5b0`
 
 ### p0-relay-spike-verify
 
@@ -2380,9 +2380,9 @@
 - record: `~/firstmate/data/p0-relay-followups/`
 - since: 2026-10-29
 - notes: Captain asked for the relay review follow-ups, quick and short, local only (no push). Global push-test rate limit left as-is (design choice for p2).
-- updated: 2026-10-29
+- updated: 2026-10-30
 - branch: fm/p0-relay-followups (slot 15)
-- landed: main `bacb606` (local only; not yet pushed)
+- landed: main `bacb606`
 
 ### p0-relay-followups-2
 
@@ -2398,6 +2398,6 @@
 - record: `~/firstmate/data/p0-relay-followups-2/`
 - since: 2026-10-29
 - notes: Captain chose these two follow-ups, local only (no push). FB-09 research: ~/firstmate/data/p0-fb09-terms/report.md (PASS-with-caveats).
-- updated: 2026-10-29
-- landed: main `518ffb9` (local only; not yet pushed)
+- updated: 2026-10-30
+- landed: main `518ffb9`
 - branch: fm/p0-relay-followups-2 (slot 16)
