@@ -29,3 +29,11 @@
 - Smoke: deployed JavaScript bundle contains `https://flo-preview-relay.my-app123.workers.dev/push-test`.
 - Smoke: OPTIONS preflight from `https://flo-preview-cm6.pages.dev` returned HTTP 204 with exact `Access-Control-Allow-Origin: https://flo-preview-cm6.pages.dev`. No POST was sent.
 - History: the initial deployment was **Not configured** because no push URL or VAPID public key was supplied; no relay endpoint or probe push request was used. A separate relay change and probe rebuild were required. The intended endpoint was `https://flo-preview-relay.my-app123.workers.dev/push-test`, with origin-bound, credential-free access and CORS for the then-deployed origin `https://a9508ed8.flo-preview-cm6.pages.dev`; the stable origin `https://flo-preview-cm6.pages.dev` could be explicitly allowed instead.
+
+## Manifest-link redeploy (2026-10-30)
+
+- Source commit: `17064af` (landed on `main`).
+- Pages project: `flo-preview`; deployment: `https://ef4b1386.flo-preview-cm6.pages.dev`.
+- Reason: the probe manifest link lets an iOS Home Screen launch expose the push APIs.
+- Smoke checks passed at `https://flo-preview-cm6.pages.dev` and the deployment URL: root HTML contains manifest and apple-touch-icon links; `/manifest.webmanifest` returned 200 with `display: standalone`; `/icons/icon-192.png` returned 200; CSP allows the relay origin; and the bundle contains the `/push-test` URL.
+- `check-preview.ts` passed for both origins; all five served files matched the built probe.
