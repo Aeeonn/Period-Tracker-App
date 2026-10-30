@@ -208,15 +208,63 @@ describe('P1 cycle invariants and regression properties', () => {
     );
   });
 
-  it('E2: output is independent of day-log order', () => {
-    const shuffledHistories = historyArbitrary.chain((input) =>
-      fc
-        .shuffledSubarray([...input.dayLogs], {
-          minLength: input.dayLogs.length,
-          maxLength: input.dayLogs.length,
-        })
-        .map((dayLogs) => ({ input, dayLogs })),
+  it('E2: output is independent of day-log order across flow values', () => {
+    const flowArbitrary = fc.constantFrom(
+      'none',
+      'spotting',
+      'light',
+      'medium',
+      'heavy',
+      'very_heavy',
     );
+    const shuffledHistories = historyArbitrary.chain((baseInput) => {
+      // Synthetic cycle spans can overlap; keep one log per date as required by the engine input contract.
+      const uniqueLogsByDate = new Map<LocalDate, EngineInput['dayLogs'][number]>();
+      for (const log of baseInput.dayLogs) {
+        if (!uniqueLogsByDate.has(log.localDate)) uniqueLogsByDate.set(log.localDate, log);
+      }
+      const uniqueLogs = [...uniqueLogsByDate.values()];
+      const existingFlowCount = uniqueLogs.filter(({ flow }) => flow !== undefined).length;
+      return fc
+        .tuple(
+          fc.array(flowArbitrary, {
+            minLength: existingFlowCount,
+            maxLength: existingFlowCount,
+          }),
+          flowArbitrary,
+        )
+        .chain(([generatedFlows, tailFlow]) => {
+          let flowIndex = 0;
+          const generatedLogs = uniqueLogs.map((log) => {
+            if (log.flow === undefined) return log;
+            const flow = generatedFlows[flowIndex];
+            if (flow === undefined) {
+              throw new Error('Expected one generated flow value per flow log');
+            }
+            flowIndex += 1;
+            return { ...log, flow };
+          });
+          const tailLog = {
+            localDate: addDays(baseInput.today, -2),
+            flow: tailFlow,
+          };
+          const input = {
+            ...baseInput,
+            dayLogs: [
+              ...generatedLogs,
+              tailLog,
+              { localDate: addDays(baseInput.today, -1), flow: 'none' },
+              { localDate: baseInput.today, flow: 'spotting' },
+            ] as EngineInput['dayLogs'],
+          };
+          return fc
+            .shuffledSubarray([...input.dayLogs], {
+              minLength: input.dayLogs.length,
+              maxLength: input.dayLogs.length,
+            })
+            .map((dayLogs) => ({ input, dayLogs }));
+        });
+    });
     assertProperty(
       fc.property(shuffledHistories, ({ input, dayLogs }) => {
         expect(JSON.stringify(runEngine(input))).toBe(

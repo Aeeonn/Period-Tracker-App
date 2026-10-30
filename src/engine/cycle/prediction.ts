@@ -169,6 +169,7 @@ function variabilityLabel(
   const spread = Math.max(...lengths) - Math.min(...lengths);
   const year = Number(input.today.slice(0, 4));
   const age = input.profile.birthYear === undefined ? undefined : year - input.profile.birthYear;
+  // V1 fallback: unknown ages and ages outside 18-41 use the 7-day limit; FIGO cites only 18-25 and 26-41.
   const figoLimit = age !== undefined && age >= 18 && age <= 25 ? 9 : 7;
   return spread <= figoLimit ? 'regular' : 'variable';
 }

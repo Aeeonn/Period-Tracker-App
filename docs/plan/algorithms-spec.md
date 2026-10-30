@@ -178,7 +178,7 @@ lo, hi   = center − h, center + h
 if n ≥ 1:  Llast = len_0; lo = min(lo, lastStart + Llast); hi = max(hi, lastStart + Llast)   # one unusual cycle widens, not moves
 state    = today < lo: "upcoming" | lo ≤ today ≤ hi: "expected now" | today > hi and no new start: "late"
 late     : daysLate = today − center; show test guidance (A10/F-037); keep window unchanged
-variability label = "regular" if (max−min of recent ≤ 6 months) ≤ FIGO limit for age (≤9 at 18–25; ≤7 at 26–41) else "variable"   (EVID FIGO, R3 §6)
+variability label = "regular" if (max−min of recent ≤ 6 months) ≤ FIGO limit for age (≤9 at 18–25; ≤7 at 26–41) else "variable"   (EVID FIGO, R3 §6) (v1 fallback: unknown ages and ages outside 18-41 use the 7-day limit; FIGO cites only 18-25 and 26-41.)
 ```
 
 **Uncertainty shown to her:** "Most likely around Oct 8 (between Oct 4 and Oct 10)." This comes with a short explanation, such as "based on your last 7 cycles; your last one was shorter than usual".

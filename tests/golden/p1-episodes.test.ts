@@ -378,6 +378,63 @@ describe('A1/A3 follow-ups D6 and D7', () => {
     expect(deriveEpisodes(input)[0]?.assumedDays).toEqual([]);
   });
 
+  it('property: F3 truncates assumed days at none and preserves A1 continuation', () => {
+    fc.assert(
+      fc.property(
+        fc.record({
+          startOffset: fc.integer({ min: 0, max: 3650 }),
+          noneOffset: fc.constantFrom(2, 3),
+        }),
+        ({ startOffset, noneOffset }) => {
+          const start = addDays(requireDate('2026-01-01'), startOffset);
+          const noneDate = addDays(start, noneOffset);
+          const assumedToday = addDays(noneDate, 1);
+          const expectedAssumedDays = Array.from({ length: noneOffset - 1 }, (_, index) =>
+            addDays(start, index + 1),
+          );
+          const ended = deriveEpisodes(
+            syntheticInput(String(assumedToday), {
+              typicalPeriodLength: 5,
+              dayLogs: [
+                { localDate: String(start), flow: 'medium' },
+                { localDate: String(noneDate), flow: 'none' },
+              ],
+            }),
+          );
+
+          expect(ended).toHaveLength(1);
+          expect(ended[0]).toMatchObject({
+            start,
+            end: start,
+            bleedingDays: 1,
+            assumedDays: expectedAssumedDays,
+          });
+
+          const laterFlowDate = addDays(start, 2);
+          const continued = deriveEpisodes(
+            syntheticInput(String(addDays(start, 3)), {
+              typicalPeriodLength: 5,
+              dayLogs: [
+                { localDate: String(start), flow: 'medium' },
+                { localDate: String(addDays(start, 1)), flow: 'none' },
+                { localDate: String(laterFlowDate), flow: 'light' },
+              ],
+            }),
+          );
+
+          expect(continued).toHaveLength(1);
+          expect(continued[0]).toMatchObject({
+            start,
+            end: laterFlowDate,
+            bleedingDays: 2,
+            assumedDays: [],
+          });
+        },
+      ),
+      { seed: 20261032, numRuns: 1_000, endOnFailure: true },
+    );
+  });
+
   it('does not assume an explicitly logged spotting day, but does not end later assumptions (D6)', () => {
     const input = syntheticInput('2026-01-03', {
       dayLogs: [

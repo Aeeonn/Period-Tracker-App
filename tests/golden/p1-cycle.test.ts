@@ -145,6 +145,23 @@ describe('P1 cycle golden vectors', () => {
     ]);
   });
 
+  it('keeps golden vector assertions under expected', () => {
+    for (const vector of fixture.vectors) {
+      expect(Object.keys(vector).sort()).toEqual(['expected', 'id', 'scenario']);
+    }
+    const expectedFor = (id: string): ExpectedVector => {
+      const vector = fixture.vectors.find((candidate) => candidate.id === id);
+      if (vector === undefined) throw new Error(`Missing golden vector ${id}`);
+      return vector.expected;
+    };
+
+    expect(expectedFor('TV-P6').cycleRows).toBeDefined();
+    expect(expectedFor('TV-P3').explanationIncludes).toBeDefined();
+    expect(expectedFor('TV-P4').explanationIncludes).toBeDefined();
+    expect(expectedFor('TV-F1').chanceDays).toBeDefined();
+    expect(expectedFor('A16-copper-IUD').explanationIncludes).toBeDefined();
+  });
+
   it.each(fixture.vectors)('$id matches its specified engine result', (vector) => {
     const scenario = fixture.scenarios[vector.scenario];
     if (scenario === undefined) throw new Error(`Missing scenario ${vector.scenario}`);

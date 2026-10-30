@@ -275,9 +275,9 @@
           "cyclesUsed": 1,
           "halfWidth": 3,
           "expectedPeriodLength": 5
-        }
-      },
-      "cycleRows": [{ "start": "2026-08-01", "nextStart": "2026-08-31", "length": 30 }]
+        },
+        "cycleRows": [{ "start": "2026-08-01", "nextStart": "2026-08-31", "length": 30 }]
+      }
     },
     {
       "id": "TV-P2",
@@ -310,9 +310,9 @@
           "halfWidth": 2,
           "variability": "regular",
           "expectedPeriodLength": 5
-        }
-      },
-      "explanationIncludes": ["last cycle was shorter than usual"]
+        },
+        "explanationIncludes": ["last cycle was shorter than usual"]
+      }
     },
     {
       "id": "TV-P4",
@@ -328,9 +328,9 @@
           "halfWidth": 6,
           "variability": "regular",
           "expectedPeriodLength": 5
-        }
-      },
-      "explanationIncludes": ["recently changed", "wider while they settle"]
+        },
+        "explanationIncludes": ["recently changed", "wider while they settle"]
+      }
     },
     {
       "id": "TV-P7",
@@ -400,14 +400,14 @@
           "higherDays": { "start": "2026-08-29", "end": "2026-08-31" },
           "markersDisagree": false,
           "methodDoesNotChangeOvulation": false
+        },
+        "chanceDays": {
+          "2026-08-30": "HIGHER",
+          "2026-08-27": "MEDIUM",
+          "2026-08-23": "MEDIUM",
+          "2026-09-07": "LOWER",
+          "2026-09-14": "LOWER"
         }
-      },
-      "chanceDays": {
-        "2026-08-30": "HIGHER",
-        "2026-08-27": "MEDIUM",
-        "2026-08-23": "MEDIUM",
-        "2026-09-07": "LOWER",
-        "2026-09-14": "LOWER"
       }
     },
     {
@@ -530,9 +530,9 @@
           "higherDays": { "start": "2026-08-29", "end": "2026-08-31" },
           "markersDisagree": false,
           "methodDoesNotChangeOvulation": true
-        }
-      },
-      "explanationIncludes": ["does not change ovulation"]
+        },
+        "explanationIncludes": ["does not change ovulation"]
+      }
     },
     {
       "id": "A16-hormonal-3",
