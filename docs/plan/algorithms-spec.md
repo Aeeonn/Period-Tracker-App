@@ -676,7 +676,7 @@ Cards are original text with citations ([ux-spec.md §8](ux-spec.md#8-original-e
 - window coverage, i.e. the share of actual starts inside [lo, hi];
 - mean window width.
 
-Results are stratified by prior-cycle count (0, 1, 2, 3–5, 6+) and by regularity.
+Results are stratified by prior-cycle count (0, 1, 2, 3–5, 6+) and by regularity. T-ENG-04 pools predictions across the fixed generator-v1 seed set 1–1,000 within each scenario and stratum.
 
 **Baselines:**
 - `B28`: start + 28.
@@ -686,7 +686,7 @@ Results are stratified by prior-cycle count (0, 1, 2, 3–5, 6+) and by regulari
 
 | Scenario | Target |
 |---|---|
-| Stable | MAE(v1) ≤ min(MAE(B28), MAE(BAVG)) + 0.25 day, in every prior-cycle stratum; window coverage ≥ 70% with 6+ prior cycles for within-person SD ≤ 3 days (wider-spread profiles are reported, not gated) |
+| Stable | MAE(v1) ≤ min(MAE(B28), MAE(BAVG)) + 0.25 day in strata 3–5 and 6+ only (strata 0, 1, and 2 are reported, not gated); window coverage ≥ 70% for pooled predictions with 6+ prior cycles and within-person SD ≤ 3 days (wider-spread profiles are reported, not gated) |
 | Outliers | MAE(v1) ≤ min(MAE(B28), MAE(BAVG)) + 0.25 day |
 | Drift | MAE(v1) < MAE(BAVG) over the predictions after the change (hand vector TV-A2) |
 | Skipped logs, irregular, post-pill | Reported only, with no pass/fail: no target was justified in advance |

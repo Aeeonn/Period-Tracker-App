@@ -16,3 +16,4 @@ ADRs 0001–0009 are **Proposed**, recorded during Stage C planning on 2026-10-0
 | [0010](0010-lock-service-key-lifecycle.md)                     | Lock service key lifecycle, passphrase change and recovery-code confirmation | Proposed                                |
 | [0011](0011-vscode-copilot-orchestration.md)                   | Orchestration on VS Code Copilot agents (replaces Pi, Herdr and tasks-axi)   | Accepted (2026-10-28)                   |
 | [0012](0012-lighter-review-and-testing.md)                     | Lighter review and testing                                                   | Accepted (2026-10-30)                   |
+| [0013](0013-pooled-backtest-gating.md)                         | Pooled synthetic backtest gating                                             | Accepted (2026-10-30)                   |
