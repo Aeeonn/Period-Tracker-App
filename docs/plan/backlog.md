@@ -2555,4 +2555,5 @@
 - route: rule 4 -> flo-builder; verify required
 - record: `~/firstmate/data/p1-cycle-engine-followups/`
 - since: 2026-10-30
-- notes: Report: ~/firstmate/data/p1-cycle-engine-verify/report.md. F2/F3/F4 need captain/spec decisions before build; F5-F7 spec interpretations; F1/F8 test hardening.
+- notes: Report: ~/firstmate/data/p1-cycle-engine-verify/report.md. Captain 2026-10-30: F3 yes (an explicit none log ends the remaining assumed period days); F2 (pregnancy/postpartum prediction pause) and F4 (pregnancy without LMP) deferred, out of scope for this build. F5-F7 spec interpretations; F1/F8 test hardening.
+- updated: 2026-10-30
