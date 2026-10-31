@@ -3,7 +3,8 @@ import type { DeviceId } from '../../src/contracts/brand.ts';
 import type { LocalDate } from '../../src/contracts/localdate.ts';
 import { addDays, parse } from '../../src/lib/localdate/index.ts';
 
-export const GENERATOR_VERSION = 1 as const;
+export const GENERATOR_VERSION = 2 as const;
+const MINIMUM_CYCLE_LENGTH_DAYS = 1;
 const parsedStartDate = parse('2020-01-01');
 if (parsedStartDate === null) throw new Error('The fixed synthetic date anchor must be valid.');
 export const DEFAULT_START_DATE: LocalDate = parsedStartDate;
@@ -96,6 +97,19 @@ function gaussian(random: RandomSource, mean: number, standardDeviation: number)
   return Math.round(mean + standardDeviation * standardNormal);
 }
 
+/** Redraw only invalid rounded values; valid values keep their original sequence. */
+function gaussianCycleLength(
+  random: RandomSource,
+  mean: number,
+  standardDeviation: number,
+): number {
+  let length = gaussian(random, mean, standardDeviation);
+  while (length < MINIMUM_CYCLE_LENGTH_DAYS) {
+    length = gaussian(random, mean, standardDeviation);
+  }
+  return length;
+}
+
 function drawStableProfile(random: RandomSource): {
   readonly meanCycleLengthDays: number;
   readonly withinPersonSdDays: number;
@@ -112,7 +126,7 @@ function startsFromLengths(startDate: LocalDate, lengths: readonly number[]): Lo
   const starts = [startDate];
   let current = startDate;
   for (const length of lengths) {
-    if (!Number.isSafeInteger(length) || length <= 0)
+    if (!Number.isSafeInteger(length) || length < MINIMUM_CYCLE_LENGTH_DAYS)
       throw new RangeError(`A generated cycle length cannot advance LocalDate: ${String(length)}`);
     current = addDays(current, length);
     starts.push(current);
@@ -194,7 +208,7 @@ export function generateScenario(
     case 'stable':
       profile = drawStableProfile(random);
       cycleLengthsDays = Array.from({ length: STABLE_CYCLE_COUNT }, () =>
-        gaussian(random, profile.meanCycleLengthDays, profile.withinPersonSdDays),
+        gaussianCycleLength(random, profile.meanCycleLengthDays, profile.withinPersonSdDays),
       );
       cyclePhases = cycleLengthsDays.map(() => 'stable');
       break;
@@ -204,15 +218,15 @@ export function generateScenario(
         withinPersonSdDays: 1,
       };
       cycleLengthsDays = [
-        ...Array.from({ length: 8 }, () => gaussian(random, DEFAULT_DRIFT_MEAN, 1)),
-        ...Array.from({ length: 6 }, () => gaussian(random, DEFAULT_DRIFT_MEAN - 4, 1)),
+        ...Array.from({ length: 8 }, () => gaussianCycleLength(random, DEFAULT_DRIFT_MEAN, 1)),
+        ...Array.from({ length: 6 }, () => gaussianCycleLength(random, DEFAULT_DRIFT_MEAN - 4, 1)),
       ];
       cyclePhases = cycleLengthsDays.map((_, index) => (index < 8 ? 'before-step' : 'after-step'));
       break;
     case 'outliers':
       profile = drawStableProfile(random);
       cycleLengthsDays = Array.from({ length: STABLE_CYCLE_COUNT }, () => {
-        const baseLength = gaussian(
+        const baseLength = gaussianCycleLength(
           random,
           profile.meanCycleLengthDays,
           profile.withinPersonSdDays,
@@ -224,7 +238,7 @@ export function generateScenario(
     case 'skipped-logs':
       profile = drawStableProfile(random);
       cycleLengthsDays = Array.from({ length: STABLE_CYCLE_COUNT }, () =>
-        gaussian(random, profile.meanCycleLengthDays, profile.withinPersonSdDays),
+        gaussianCycleLength(random, profile.meanCycleLengthDays, profile.withinPersonSdDays),
       );
       cyclePhases = cycleLengthsDays.map(() => 'stable');
       break;
@@ -236,7 +250,7 @@ export function generateScenario(
         withinPersonSdDays: irregularSd,
       };
       cycleLengthsDays = Array.from({ length: STABLE_CYCLE_COUNT }, () =>
-        gaussian(random, meanCycleLengthDays, irregularSd),
+        gaussianCycleLength(random, meanCycleLengthDays, irregularSd),
       );
       cyclePhases = cycleLengthsDays.map(() => 'stable');
       break;
@@ -245,10 +259,10 @@ export function generateScenario(
       profile = drawStableProfile(random);
       cycleLengthsDays = [
         ...Array.from({ length: POST_PILL_CYCLES }, () =>
-          gaussian(random, profile.meanCycleLengthDays + 5, 5),
+          gaussianCycleLength(random, profile.meanCycleLengthDays + 5, 5),
         ),
         ...Array.from({ length: STABLE_CYCLE_COUNT }, () =>
-          gaussian(random, profile.meanCycleLengthDays, profile.withinPersonSdDays),
+          gaussianCycleLength(random, profile.meanCycleLengthDays, profile.withinPersonSdDays),
         ),
       ];
       cyclePhases = cycleLengthsDays.map((_, index) =>

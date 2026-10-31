@@ -55,7 +55,7 @@ function driftVector(): SyntheticScenarioOutput {
   return {
     synthetic: true,
     provenance: 'Synthetic hand-computed TV-A2 history; no real records.',
-    generatorVersion: 1,
+    generatorVersion: 2,
     scenario: 'drift',
     seed: 42,
     profile: { meanCycleLengthDays: 28, withinPersonSdDays: 1 },
@@ -207,11 +207,13 @@ describe('T-ENG-04 pooled aggregation and gate vectors', () => {
     expect(drift.targets[0]?.status).toBe('met');
   });
 
-  it('skips only generator-v1 irregular seed 338 and preserves pooled comparison', () => {
-    const crashedSeed = runPooledBacktest(338, 338);
-    expect(crashedSeed.skippedScenarios).toEqual([{ seed: 338, scenario: 'irregular' }]);
+  it('includes repaired generator-v2 irregular seed 338 and preserves pooled comparison', () => {
+    const repairedSeed = runPooledBacktest(338, 338);
+    expect(repairedSeed.generatorVersion).toBe(2);
+    expect(repairedSeed.provenance).toContain('generator v2');
+    expect(repairedSeed.skippedScenarios).toEqual([]);
     expect(
-      crashedSeed.scenarios.map(
+      repairedSeed.scenarios.map(
         ({ scenario, variant }) => `${scenario}${variant ? `/${variant}` : ''}`,
       ),
     ).toEqual([
@@ -220,12 +222,13 @@ describe('T-ENG-04 pooled aggregation and gate vectors', () => {
       'outliers',
       'skipped-logs/unlogged-0.1',
       'skipped-logs/unlogged-0.2',
+      'irregular',
       'post-pill',
     ]);
-    expect(crashedSeed.scenarios.every(({ participantCount }) => participantCount === 1)).toBe(
+    expect(repairedSeed.scenarios.every(({ participantCount }) => participantCount === 1)).toBe(
       true,
     );
-    expect(runBacktest(338).skippedScenarios).toEqual([{ seed: 338, scenario: 'irregular' }]);
+    expect(runBacktest(338).skippedScenarios).toBeUndefined();
 
     const reference = runPooledBacktest(1, 2);
     const candidate = {

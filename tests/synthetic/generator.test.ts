@@ -16,7 +16,7 @@ const EXPECTED_LABELS = [
 const START_DATE = parse('2024-01-01');
 if (START_DATE === null) throw new Error('Synthetic test date must parse.');
 
-describe('synthetic generator v1', () => {
+describe('synthetic generator v2', () => {
   it('produces byte-identical preview data for seed 42', () => {
     const first = JSON.stringify(generatePreviewData(42));
     const second = JSON.stringify(generatePreviewData(42));
@@ -28,7 +28,7 @@ describe('synthetic generator v1', () => {
     const preview = generatePreviewData(42);
 
     expect(preview.synthetic).toBe(true);
-    expect(preview.generatorVersion).toBe(1);
+    expect(preview.generatorVersion).toBe(2);
     expect(preview.scenarios).toHaveLength(7);
     for (const scenario of preview.scenarios) {
       expect(scenario.synthetic).toBe(true);
@@ -98,9 +98,22 @@ describe('synthetic generator v1', () => {
     expect(postPill.history.cyclePhases.slice(0, 2)).toEqual(['post-pill', 'post-pill']);
   });
 
+  it('redraws invalid cycle lengths for the four known irregular seeds', () => {
+    for (const seed of [338, 341, 937, 991]) {
+      const first = generateScenario('irregular', { seed });
+      const second = generateScenario('irregular', { seed });
+
+      expect(first.generatorVersion).toBe(2);
+      expect(first).toEqual(second);
+      expect(first.history.cycleLengthsDays).toHaveLength(12);
+      expect(first.history.cycleLengthsDays.every((length) => length >= 1)).toBe(true);
+      expect(first.history.trueStarts).toHaveLength(13);
+    }
+  });
+
   it('freezes the A18 scenario values and source/DESIGN labels', () => {
     expect(scenariosFile.synthetic).toBe(true);
-    expect(scenariosFile.generatorVersion).toBe(1);
+    expect(scenariosFile.generatorVersion).toBe(2);
     expect(scenariosFile.scenarios.map(({ id }) => id)).toEqual([
       'stable',
       'drift',

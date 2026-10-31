@@ -1,6 +1,6 @@
 {
   "synthetic": true,
-  "generatorVersion": 1,
+  "generatorVersion": 2,
   "scenarios": [
     {
       "id": "stable",

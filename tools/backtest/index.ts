@@ -18,7 +18,7 @@ export const POOLED_SEED_SET = { start: 1, end: 1000, count: 1000 } as const;
 const KNOWN_IRREGULAR_CRASH_SEEDS = new Set([338, 341, 937, 991]);
 const GENERATOR_CYCLE_LENGTH_ERROR = 'A generated cycle length cannot advance LocalDate:';
 const SYNTHETIC_PROVENANCE =
-  'Seeded tools/synthetic generator v1 only; synthetic results show neither real-world nor Flo-equivalent accuracy.';
+  'Seeded tools/synthetic generator v2 only; synthetic results show neither real-world nor Flo-equivalent accuracy.';
 
 const STRATA = [
   { name: '0', min: 0, max: 0 },
@@ -98,7 +98,7 @@ export interface SingleSeedBacktestReport {
   readonly formatVersion: typeof FORMAT_VERSION;
   readonly provenance: typeof SYNTHETIC_PROVENANCE;
   readonly seed: number;
-  readonly generatorVersion: 1;
+  readonly generatorVersion: typeof GENERATOR_VERSION;
   readonly engine: { readonly version: string; readonly paramsHash: string };
   readonly scenarios: readonly ScenarioReport[];
   readonly skippedScenarios?: readonly SkippedScenario[];
@@ -110,7 +110,7 @@ export interface PooledBacktestReport {
   readonly mode: 'pooled';
   readonly provenance: typeof SYNTHETIC_PROVENANCE;
   readonly seedSet: PooledSeedSet;
-  readonly generatorVersion: 1;
+  readonly generatorVersion: typeof GENERATOR_VERSION;
   readonly engine: { readonly version: string; readonly paramsHash: string };
   readonly scenarios: readonly ScenarioReport[];
   readonly skippedScenarios: readonly SkippedScenario[];
@@ -131,7 +131,7 @@ export interface EngineVersionComparison {
   readonly seed?: number;
   readonly seedSet?: PooledSeedSet;
   readonly skippedScenarios?: readonly SkippedScenario[];
-  readonly generatorVersion: 1;
+  readonly generatorVersion: typeof GENERATOR_VERSION;
   readonly referenceEngine: BacktestReport['engine'];
   readonly candidateEngine: BacktestReport['engine'];
   readonly scenarios: readonly {
