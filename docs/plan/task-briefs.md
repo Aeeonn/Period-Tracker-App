@@ -1,6 +1,6 @@
-# Task briefs — P0–P2 (Step 9/10)
+# Task briefs — P0–P2.5 (Step 9/10)
 
-**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)); common sections updated 2026-10-28 for VS Code Copilot orchestration ([ADR-0011](../adr/0011-vscode-copilot-orchestration.md)). These briefs are written for the work *after* approval. Each one is self-contained by reference: it points to plan files by path rather than pasting them. The orchestrator turns each into a launch brief from the [`task-brief`](../../.agents/skills/task-brief/SKILL.md) templates, which add the worktree-isolation assertion, the status protocol and the Definition of Done. Task-specific text below that mentions Pi, `pi --list-models` or Firstmate scripts describes completed Phase 0 work and is kept as history.
+**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)); common sections updated 2026-10-28 for VS Code Copilot orchestration ([ADR-0011](../adr/0011-vscode-copilot-orchestration.md)). These briefs are written for the work _after_ approval. Each one is self-contained by reference: it points to plan files by path rather than pasting them. The orchestrator turns each into a launch brief from the [`task-brief`](../../.agents/skills/task-brief/SKILL.md) templates, which add the worktree-isolation assertion, the status protocol and the Definition of Done. Task-specific text below that mentions Pi, `pi --list-models` or Firstmate scripts describes completed Phase 0 work and is kept as history.
 
 ## Common sections (apply to every brief below)
 
@@ -18,7 +18,7 @@
   - verifiers run the brief's commands themselves; no sandbox exists, so every report says "isolation not enforced" ([agent-operating-model.md §6](agent-operating-model.md#6-verifier-safeguards)). The orchestrator never runs these commands on a verifier's behalf;
   - source writes, commits and branch moves are forbidden by the brief (not by enforcement);
   - **this review is a mandatory independent gate.** The implementation cannot merge without a PASS for this exact revision. Changed source needs a renewed review.
-  - Algorithm auditors write down expected vector results from the spec *before* reading the code.
+  - Algorithm auditors write down expected vector results from the spec _before_ reading the code.
 
 ## P0
 
@@ -34,7 +34,7 @@
   - AP-16: the verifier-sandbox prerequisites (bubblewrap system package, sandbox extension npm dependency) and, if FB-08 stands, the interim verification option;
   - AP-28: the pinned npm dependency set;
   - AP-12: the fallback transport if Cloudflare fails.
-  The repository mode is not asked: `local-only` is settled (AP-17).
+    The repository mode is not asked: `local-only` is settled (AP-17).
 - **Acceptance (Given/When/Then):**
   - Given the approval list in plan.md §18 B is answered, When the captain replies to this hold, Then the first mate records each approval or refusal in this item's note, and the next integration task copies them into the progress log
   - Given any item is refused, When dependent tasks are evaluated, Then they stay blocked and the documented fallback path (storage-sync-decision.md §3) is scheduled instead
@@ -686,15 +686,15 @@
 
 ### p1-log-forms
 
-**Log detail forms for every P1 tracker and tracker customization** · ship / feature · phase P1 · wave P1-W3 · risk **medium** · features F-009, F-010, F-011, F-012, F-013, F-014, F-105
+**Sex/desire forms first, then remaining P1 log forms and tracker customization** · ship / feature · phase P1 · wave P1-W3 · risk **medium** · features F-012, F-105 (logging inputs), F-009, F-010, F-011, F-013, F-014
 
 - **Route:** rule 5 (bounded routine/low-risk) → `github-copilot/gpt-6-luna`, effort high. Prior failed fix rounds: 0.
 - **Depends on:** p1-log-repo-verify
-- **Goal:** Forms per architecture.md §5.2 for flow (+heavy detail), period pain, discharge, symptoms, mood, energy, stress, desire, sex (private), tests, weight, water, sleep, activity, alcohol, notes; pin/hide/reorder trackers.
+- **Goal:** Prioritize F-012/F-105 sex and desire logging before the remaining forms: record a sex event, libido, protection used, comfort/pain and satisfaction; then build the other forms per architecture.md §5.2 and pin/hide/reorder trackers. P1 logs stay private; a logged desire or sex event is never consent and never alters fertility outputs.
 - **Owns:** `src/ui/screens/log/**`
 - **Acceptance (Given/When/Then):**
   - Given heavy flow selected, When the form renders, Then heavy-detail options appear
-  - Given the sex form, When rendered, Then the 'Private. There's no way to share this' note is present
+  - Given the sex/desire form, When saved, Then the F-012 event/libido and F-105 protection/comfort/pain/satisfaction inputs are recorded without changing F-007/F-008 fertility outputs (T-CON-15); logging itself never opts into sharing or implies consent
   - Given a note containing `<script>` and `onerror=` payloads, When saved and shown again, Then it renders as text and nothing executes (T-SEC-06, notes)
   - Given all forms, When axe runs, Then 0 serious issues
 - **Commands:** `npm run check`; `npm run e2e -- --grep @log`
@@ -1558,3 +1558,37 @@
 - **Acceptance (Given/When/Then):**
   - Given the demo package and two-phone smoke results, When the captain replies 'continue', Then approval is recorded and P3 task writing begins
 - **Constitution/sections:** Section 3 approval checkpoint 6
+
+## P2.5 — Original intimacy content
+
+### p2-5-intimacy-content
+
+**Original intimacy conversation prompts and sexual-wellness lessons** · ship / feature · phase P2.5 · wave P2.5-W1 · risk **high** · features F-104, F-053
+
+- **Route:** rule 4 (bounded high-risk implementation with approved design + tests) → `github-copilot/gpt-6-luna`, effort high; required independent medical-content verify `p2-5-intimacy-content-verify` before release. Prior failed fix rounds: 0.
+- **Depends on:** gate-phase-2
+- **Goal:** Deliver original F-104 discussion prompts (no matching or consent inference) and the original five-step F-053 sexual-wellness content. Align the sexual-wellbeing phase row in ux-spec.md §8 from P5 to P2.5; retain its distinct P1 consent slice. Cite and date every medical claim; use only approved sources; no stereotypes or Flo wording. Fertility is never contraception.
+- **Owns:** `src/content/cards/intimacy/**`, `src/ui/screens/intimacy/**`, `tests/content/intimacy/**`, `docs/plan/ux-spec.md`
+- **Acceptance (Given/When/Then):**
+  - Given each lesson and prompt, When T-CONTENT-01 and the independent review run, Then wording is original, claims have current citations, and the reviewer records PASS before display
+  - Given sexual-wellness copy, When the copy lint and review run, Then it never calls a day safe, presents fertility as contraception, infers consent, or uses stereotypes (T-CON-14, T-UX-03)
+  - Given a prompt, When read without partner context, Then it asks no matching question and cannot be read as permission or obligation
+- **Commands:** `npm run test`; `npm run check`
+- **Tests:** T-CONTENT-01, T-CON-14, T-UX-03 ([test-strategy.md §2](test-strategy.md#2-test-catalogue-ids-referenced-by-the-plan))
+- **Constitution/sections:** 4.1, 4.4, 4.5, 4.7
+
+### p2-5-intimacy-content-verify
+
+**Independent medical-content review of intimacy prompts and lessons** · scout / verify · phase P2.5 · wave P2.5-W2 · risk **high** · features F-104, F-053
+
+- **Route:** rule 1 (medical-content independent verification) → `github-copilot/claude-opus-5.5`, effort high. Prior failed fix rounds: 0.
+- **Depends on:** p2-5-intimacy-content
+- **Goal:** Review the exact candidate revision. Verify source currency and every medical claim, original wording, safety and non-contraception framing, plus the prompts' consent and stereotype boundaries. PASS is required before display.
+- **Owns:** no repository files. Its report goes to `~/firstmate/data/<id>/report.md`
+- **Verifier types:** medical-content fact-checker, consent/tone reviewer. **Spec:** ux-spec.md §§7–8, security-privacy.md §2
+- **Acceptance (Given/When/Then):**
+  - Given the exact candidate revision, When the verifier runs the listed commands and checks every claim against the cited source, Then the report records evidence and PASS only if the task acceptance holds
+  - Given any source change after this review, When re-submitted, Then a renewed review is required
+- **Commands:** `npm run test`; `npm run check`
+- **Tests:** T-CONTENT-01, T-CON-14, T-UX-03 ([test-strategy.md §2](test-strategy.md#2-test-catalogue-ids-referenced-by-the-plan))
+- **Constitution/sections:** 4.1, 4.4, 4.5, 4.7

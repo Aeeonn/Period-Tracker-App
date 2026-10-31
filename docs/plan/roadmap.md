@@ -1,8 +1,8 @@
 # Roadmap, phases and gates (Step 10)
 
-**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)).
+**Status:** Stage E baseline, with the proposed intimacy-track sequencing in [ADR-0014](../adr/0014-intimacy-track.md) (2026-10-30); Stage C was corrected after the Stage D critique (see [stage-e-resolution.md](stage-e-resolution.md)).
 
-- Detailed tasks exist for **P0–P2** only: see [task-briefs.md](task-briefs.md) and [backlog-import.md](backlog-import.md).
+- Detailed tasks exist for **P0–P2** plus the P2.5 intimacy-content wave: see [task-briefs.md](task-briefs.md) and [backlog-import.md](backlog-import.md).
 - P3–P7 list their feature IDs, exit criteria and demo contents. Their tasks are written at the gate before each of those phases, using what was learned by then.
 - Every phase ends with a phase verification report (`pN-phase-verify`), a demo package, the real-iPhone smoke checklist and a captain-held `gate-phase-N`.
 - Every demo runs on a **synthetic-data preview** produced by a backlog item (`p0-probe-deploy`, `pN-demo-deploy`, `p2-preview-relay-deploy`) after the AP-10/AP-18 approvals. Real day-to-day use begins only after the production deploy in P6, which needs its own concrete approval (AP-29).
@@ -13,7 +13,7 @@ flowchart LR
   A[flo-plan-approval<br/>Stage F] --> P0[P0 Foundation] --> G0{gate-phase-0}
   G0 --> P1[P1 Core tracking] --> G1{gate-phase-1}
   G1 --> P2[P2 Couple features] --> G2{gate-phase-2}
-  G2 --> P3[P3 Cycle intelligence] --> G3{gate-phase-3}
+  G2 --> P25[P2.5 Original intimacy content] --> P3[P3 Cycle intelligence] --> G3{gate-phase-3}
   G3 --> P4[P4 Contraception & life stages] --> G4{gate-phase-4}
   G4 --> P5[P5 Premium equivalents & Beyond-Flo] --> G5{gate-phase-5}
   G5 --> P6[P6 Hardening & launch] --> G6{gate-phase-6}
@@ -46,7 +46,7 @@ flowchart LR
 ## P1 — Core tracking (her)
 
 - **Goal.** Her day-to-day tracker on one phone, with no partner yet.
-- **Features.** F-001–F-015, F-017, F-019–F-023, F-033 (v1), F-071, F-072. Also the P1 core education cards (F-035 subset) and desire/comfort logging (F-105 input).
+- **Features.** F-001–F-015, F-017, F-019–F-023, F-033 (v1), F-071, F-072, and the P1 core education cards (F-035 subset). Within `p1-log-forms`, F-012 sex-event/desire logs and F-105 inputs (protection used, comfort/pain, satisfaction) are the first forms delivered; remaining tracker forms follow.
 - **Exit criteria:**
   - three-tap logging passes;
   - the engine v1 golden vectors and properties pass;
@@ -58,10 +58,15 @@ flowchart LR
   - smoke test on both phones (his phone for install and lock only).
 - **Demo.** Onboarding without an account. Log a synthetic period and symptoms in ≤3 taps. Calendar and Today with prediction windows and the "no safe days" line. A heavy-bleeding warning card on synthetic data. Export JSON/CSV and import it back. Delete all data.
 
+### Intimacy insight timing
+
+The requested P1.5 delivery is not an honest feature slot under the current A12 contract. F-105 trends, F-106 and F-118 stay at the earliest honest implementation slot, P3: A12 and its null-calibration test T-ENG-05 are explicitly P3 in [algorithms-spec.md](algorithms-spec.md#a12-personal-tendencies-desire-mood-energy-comfort-symptoms-p3-logging-from-p1) and [test-strategy.md](test-strategy.md#2-test-catalogue-ids-referenced-by-the-plan). P1 logs begin first and accumulate after gate-phase-1; no output may claim a pattern until A12 has enough completed eligible cycles (at least 3 cycles with a logged value per metric; each candidate bin needs at least 6 logged days across at least 3 contributing cycles) and passes the chance check. Below those design thresholds, show A12 `INSUFFICIENT` rather than a guessed pattern; the thresholds are not clinically validated. A12 v1 does not analyze satisfaction, so satisfaction remains logged but has no scheduled trend.
+
 ## P2 — Couple features
 
 - **Goal.** Consent-centred sharing between the two phones, encrypted end to end, plus the couple space, backup and generic notifications.
-- **Features.** F-018, F-022 (relay part), F-024 (passkey, if FB-07 passed), F-025, F-055–F-060, F-061 (support-card tips only), F-101, F-102, F-113, F-114, F-115, F-117, F-119.
+- **Features.** F-115 and F-117 lead the couple-space work, alongside F-018, F-022 (relay part), F-024 (passkey, if FB-07 passed), F-025, F-055–F-060, F-061 (support-card tips only), F-101, F-102, F-113, F-114 and F-119.
+- **Sequence.** The first couple-space wave is `p2-couple-space` (F-115/F-117), after `p2-transport-verify` and `p2-pairing-verify`; it cannot precede the encrypted, authenticated partner link and consent controls.
 - **Exit criteria:**
   - every T-CON test passes;
   - two-device sync, conflict, pairing, revocation and unpair tests pass;
@@ -77,9 +82,16 @@ flowchart LR
   5. Back up, wipe and restore.
   6. Unpair from his side.
 
+## P2.5 — Original intimacy content (after gate-phase-2)
+
+- **Features.** F-104 original intimacy-preference conversation prompts and F-053 original sexual-wellness lessons, pulled forward from P5.
+- **Dependency.** Start after `gate-phase-2`; F-104 can then use the couple space, while F-053 itself does not depend on partner linking.
+- **Exit criteria.** The five-step F-053 content and F-104 prompts are original, stereotype-free and independently reviewed before display. Every medical claim has a current cited source; content never presents fertility as contraception, says a day is safe, or implies consent. The review covers medical safety for lessons and consent/tone for prompts.
+- **Demo.** Review the original lessons and conversation prompts using synthetic examples only.
+
 ## P3 — Cycle intelligence (later detail)
 
-- **Features.** F-003 (irregular-cycle refinements), F-027–F-032, F-033 (full), F-034, F-035, F-073, F-105, F-106, F-118, and the prediction track record (A18).
+- **Features.** F-003 (irregular-cycle refinements), F-027–F-032, F-033 (full), F-034, F-035, F-073, F-105 desire/comfort trends (A12-supported; satisfaction is not analyzed by A12 v1), F-106, F-118, and the prediction track record (A18).
 - **Exit criteria:**
   - A6–A9, A12 and A13 vectors pass, with an Opus algorithm audit;
   - the tendencies engine shows the INSUFFICIENT, NO_CLEAR_PATTERN and RECENTLY_CHANGED states on synthetic data, and the T-ENG-05 null calibration meets its ≤5% target (with power reported);
@@ -102,13 +114,12 @@ flowchart LR
 
 ## P5 — Premium equivalents and Beyond-Flo additions (later detail)
 
-- **Features.** F-047, F-049–F-054, F-061–F-063, F-103. Backlog review of F-104, F-107 and F-116.
+- **Features.** F-047, F-049–F-052, F-054, F-061–F-063 and F-103. Backlog review of F-107 and F-116; F-104 and F-053 are in P2.5.
 - **Exit criteria:**
   - the symptom checker (A15) has explainable outputs with sources and passes a medical-safety audit;
   - the local assistant answers a fixed question set with reasoning and citations, with no network use;
-  - the lesson library is fact-checked;
   - couple quizzes reveal only after both submit.
-- **Demo.** The checker on synthetic PCOS-pattern data. The assistant explaining a late period. Lessons with sources. A check-in and quiz reveal.
+- **Demo.** The checker on synthetic PCOS-pattern data. The assistant explaining a late period. A check-in and quiz reveal.
 
 ## P6 — Hardening and launch (later detail)
 
@@ -134,6 +145,7 @@ flowchart LR
 ## Phase gate procedure (all phases)
 
 `pN-phase-verify` (Opus spec/acceptance verifier) runs the gate commands on the landed `main` revision, re-checks the phase's preview deploy record and writes the phase verification report. The gate is held only **when** it becomes actionable, never at import (only `p0-approvals` is held at import; [backlog-import.md](backlog-import.md#import-procedure-first-mate-after-approval)). The first mate then:
+
 1. assembles the demo package, with the preview URL from `docs/deploy/pN-demo.md`;
 2. sets `gate-phase-N` as a captain hold;
 3. waits for "continue";
