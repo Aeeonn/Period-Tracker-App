@@ -23,6 +23,7 @@ import {
 import './settings.css';
 import { DELETE_ALL_REQUEST_EVENT } from '../../../../data/wipe/index.ts';
 import { DeleteAllScreen } from '../delete/delete-screen.tsx';
+import { PortableDataScreen } from '../../../../backup/portable/portable-screen.tsx';
 
 export const DEFAULT_SETTINGS_PROFILE: Profile = {
   goal: 'track',
@@ -80,6 +81,7 @@ export function SettingsScreen({
   const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
   const [showDeleteScreen, setShowDeleteScreen] = useState(false);
+  const [showPortableData, setShowPortableData] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -119,6 +121,10 @@ export function SettingsScreen({
       setSaving(false);
     }
   };
+
+  if (showPortableData) {
+    return <PortableDataScreen onBack={() => setShowPortableData(false)} />;
+  }
 
   const customizableTrackers = TRACKERS.filter((tracker) => tracker !== 'heavy_detail');
   const profileControlsDisabled = loading || loadError !== null || saving;
@@ -347,6 +353,12 @@ export function SettingsScreen({
           ) : null}
         </Card>
 
+        <Card class="settings-card" heading="Your data">
+          <p>Keep a copy of your information or bring an export back to this device.</p>
+          <Button variant="secondary" onClick={() => setShowPortableData(true)}>
+            Export / import my data
+          </Button>
+        </Card>
         <Card class="settings-card" heading="About this app">
           <dl class="settings-about-list">
             <div>

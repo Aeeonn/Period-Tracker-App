@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { createServer, type ViteDevServer } from 'vite';
@@ -109,4 +110,82 @@ test('Settings @settings keeps deletion cancellable and persists profile choices
   await page.getByText('Sources for educational content').click();
   expect(await page.locator('.settings-sources a').count()).toBeGreaterThan(0);
   await expectSettingsAccessible(page);
+});
+
+test('Portable export and import @export offers a dry-run before applying a file', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await page.goto(`${origin}/?today=synthetic`);
+  await configureApp(page);
+  await page.getByRole('link', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'Export / import my data' }).click();
+  await expect(page.getByRole('heading', { name: 'Export / import my data' })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download JSON export' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('data-export.json');
+
+  const input = page.locator('#portable-import-file');
+  await input.setInputFiles({
+    name: 'synthetic-malformed.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('not a JSON export'),
+  });
+  await expect(page.getByRole('alert')).toHaveText(
+    'This file is not a valid data export. Nothing was imported.',
+  );
+
+  const validFile = {
+    format: 'flo-portable-data',
+    schemaVersion: 1,
+    engineVersion: 'cycle-engine/synthetic',
+    records: [
+      {
+        entity: 'Profile',
+        logicalId: 'profile',
+        authorDevice: 'synthetic-export-device',
+        hlc: { wallMs: 100, counter: 0, deviceId: 'synthetic-export-device' },
+        deleted: false,
+        body: {
+          goal: 'track',
+          lifeStage: 'cycle',
+          units: { temp: 'celsius', weight: 'kg' },
+          weekStart: 1,
+          theme: 'light',
+          lockTimeoutSec: 300,
+          quickHideEnabled: false,
+        },
+      },
+    ],
+  };
+  const newerFile = { ...validFile, schemaVersion: validFile.schemaVersion + 1 };
+  await input.setInputFiles({
+    name: 'synthetic-newer-version.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(newerFile)),
+  });
+  await expect(page.getByRole('alert')).toHaveText(
+    'This file was created by a newer app version. Update the app before trying again. Nothing was imported.',
+  );
+
+  await input.setInputFiles({
+    name: 'synthetic-valid.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(validFile)),
+  });
+  await expect(page.getByRole('heading', { name: 'Dry-run summary' })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('No data has been changed.');
+  await expect(page.getByRole('button', { name: 'Import these records' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Import these records' }).click();
+  await expect(page.getByRole('status')).toContainText('Your data was imported.');
+  const accessibility = await new AxeBuilder({ page })
+    .include('.portable-data')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
+  expect(
+    accessibility.violations.filter(
+      (violation) => violation.impact === 'serious' || violation.impact === 'critical',
+    ),
+  ).toEqual([]);
 });

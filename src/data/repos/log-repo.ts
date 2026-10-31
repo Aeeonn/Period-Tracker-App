@@ -10,7 +10,14 @@ import type {
 import type { LocalDate, LocalDateRange } from '../../contracts/localdate.ts';
 import type { Tracker } from '../../contracts/enums.ts';
 import type { LogChange, LogRepo, LogicalRecord, RecordStore } from '../../contracts/store.ts';
-import { logicalId, putEntity, repositoryClock, type RepositoryOptions } from './common.ts';
+import {
+  listPortableRecords,
+  logicalId,
+  putEntity,
+  repositoryClock,
+  type PortableExportReader,
+  type RepositoryOptions,
+} from './common.ts';
 import type { HlcClock } from './hlc.ts';
 
 function overrideId(override: PeriodOverride) {
@@ -23,7 +30,10 @@ function contradictoryKind(kind: PeriodOverride['kind']): PeriodOverride['kind']
   return undefined;
 }
 
-export function createLogRepo(store: RecordStore, options: RepositoryOptions): LogRepo {
+export function createLogRepo(
+  store: RecordStore,
+  options: RepositoryOptions,
+): LogRepo {
   const deviceId: DeviceId = options.deviceId;
   const clock: HlcClock = repositoryClock(options);
   const listeners = new Set<(change: LogChange) => void>();
@@ -60,7 +70,7 @@ export function createLogRepo(store: RecordStore, options: RepositoryOptions): L
     publish(localDate);
   }
 
-  return {
+  const repository: LogRepo & PortableExportReader = {
     async getDay(localDate) {
       const record = await store.get('DayBundle', logicalId(localDate));
       return record && !record.deleted ? record.body : undefined;
@@ -154,9 +164,14 @@ export function createLogRepo(store: RecordStore, options: RepositoryOptions): L
       publish(override.localDate);
     },
 
+    listPortableRecords() {
+      return listPortableRecords(store);
+    },
+
     onChange(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
   };
+  return repository;
 }

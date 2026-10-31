@@ -1,7 +1,15 @@
 import type { DeviceId, LogicalId } from '../../contracts/brand.ts';
 import type { BackupMeta, ContraceptionState, DeviceIdentity, EntityMap, EntityName } from '../../contracts/entities.ts';
 import type { SettingsRepo, RecordStore } from '../../contracts/store.ts';
-import { liveBody, logicalId, putEntity, repositoryClock, type RepositoryOptions } from './common.ts';
+import {
+  liveBody,
+  logicalId,
+  mergePortableRecords,
+  putEntity,
+  repositoryClock,
+  type PortableImportWriter,
+  type RepositoryOptions,
+} from './common.ts';
 import type { HlcClock } from './hlc.ts';
 
 const PROFILE_ID = logicalId('profile');
@@ -12,7 +20,10 @@ function contraceptionId(state: ContraceptionState): LogicalId {
   return logicalId(JSON.stringify([state.startDate, state.method]));
 }
 
-export function createSettingsRepo(store: RecordStore, options: RepositoryOptions): SettingsRepo {
+export function createSettingsRepo(
+  store: RecordStore,
+  options: RepositoryOptions,
+): SettingsRepo {
   const deviceId: DeviceId = options.deviceId;
   const clock: HlcClock = repositoryClock(options);
 
@@ -24,7 +35,7 @@ export function createSettingsRepo(store: RecordStore, options: RepositoryOption
     await store.transaction((tx) => putEntity(tx, entity, id, body, deviceId, clock));
   }
 
-  return {
+  const repository: SettingsRepo & PortableImportWriter = {
     async getProfile() {
       return liveBody(store, 'Profile', PROFILE_ID);
     },
@@ -79,5 +90,10 @@ export function createSettingsRepo(store: RecordStore, options: RepositoryOption
     async getDeviceIdentity(): Promise<DeviceIdentity | undefined> {
       return liveBody(store, 'DeviceIdentity', logicalId(deviceId));
     },
+
+    mergePortableRecords(records, mergeOptions) {
+      return mergePortableRecords(store, records, mergeOptions);
+    },
   };
+  return repository;
 }
