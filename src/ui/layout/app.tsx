@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { LocalTime } from '../../contracts/localdate.ts';
 import { todayLocal } from '../../lib/localdate/index.ts';
 import { Button, Card } from '../components/base';
@@ -8,8 +8,9 @@ import type { TodayScreenProps } from '../screens/today';
 import { createTodayScreenProps } from '../screens/today/live-data.ts';
 import { RepositoriesContext, type Repositories, useRepositories } from './repositories.tsx';
 import { LogScreen } from '../screens/log';
+import { applyThemePreference, SettingsScreen } from '../screens/settings/main/index.ts';
 import { DEFAULT_PINNED_TRACKERS } from '../screens/log/types.ts';
-import type { Tracker } from '../../contracts/enums.ts';
+import type { Theme, Tracker } from '../../contracts/enums.ts';
 import type { UpdateReadyNotice } from '../../sw/client.ts';
 import {
   OnboardingIntro,
@@ -18,7 +19,7 @@ import {
 } from '../screens/onboarding/index.ts';
 
 type Role = OnboardingRole;
-type TabId = 'today' | 'calendar' | 'log' | 'insights' | 'us';
+type TabId = 'today' | 'calendar' | 'log' | 'insights' | 'us' | 'settings';
 type IconName = 'today' | 'calendar' | 'log' | 'insights' | 'us';
 
 interface Tab {
@@ -51,6 +52,8 @@ const PARTNER_TABS: readonly Tab[] = [
   { id: 'us', label: 'Us', icon: 'us' },
 ];
 
+const SETTINGS_TAB = { id: 'settings', label: 'Settings' } as const;
+
 const SCREEN_COPY: Record<TabId, string> = {
   today:
     'This is a static placeholder. Cycle tracking, predictions, and health features are not connected.',
@@ -58,6 +61,7 @@ const SCREEN_COPY: Record<TabId, string> = {
   log: 'Logging is not implemented in this shell.',
   insights: 'Insights and personal patterns are not implemented in this shell.',
   us: 'The shared space is not available in this shell. No accounts, pairing, or sharing are connected.',
+  settings: 'Settings are not available in this shell.',
 };
 
 function selectedRole(): Role {
@@ -82,6 +86,7 @@ function localClockSnapshot() {
 
 function tabFromLocation(tabs: readonly Tab[]): TabId {
   const target = window.location.hash.slice(1);
+  if (target === 'settings') return 'settings';
   return tabs.find((tab) => tab.id === target)?.id ?? 'today';
 }
 
@@ -216,13 +221,36 @@ export function AppShell({
   const [pinnedTrackers, setPinnedTrackers] = useState<readonly Tracker[]>(() => [
     ...DEFAULT_PINNED_TRACKERS,
   ]);
-  const selectedTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const selectedTab =
+    activeTab === 'settings' ? SETTINGS_TAB : (tabs.find((tab) => tab.id === activeTab) ?? tabs[0]);
   const syntheticPreview = new URLSearchParams(window.location.search).get('today') === 'synthetic';
   const [onboardingStatus, setOnboardingStatus] = useState<
     'checking' | 'required' | 'complete' | 'error'
   >(() => (syntheticPreview || sessionOnboardingComplete ? 'complete' : 'checking'));
   const [todayProps, setTodayProps] = useState<TodayScreenProps | null>(null);
   const [todayLoadFailed, setTodayLoadFailed] = useState(false);
+  const themeRevision = useRef(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const revision = themeRevision.current;
+    void repositories.settingsRepo
+      .getProfile()
+      .then((profile) => {
+        if (mounted && themeRevision.current === revision) {
+          applyThemePreference(profile?.theme ?? 'system');
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, [repositories]);
+
+  const handleThemeChange = (theme: Theme) => {
+    themeRevision.current += 1;
+    applyThemePreference(theme);
+  };
 
   useEffect(() => {
     const onLocationChange = () => setActiveTab(tabFromLocation(tabs));
@@ -353,6 +381,34 @@ export function AppShell({
           </div>
         </div>
         <span class="shell-role">{roleLabel}</span>
+        <a
+          class="ui-button ui-button--quiet shell-settings-link"
+          href="#settings"
+          aria-label="Settings"
+          aria-current={activeTab === 'settings' ? 'page' : undefined}
+          onClick={() => setActiveTab('settings')}
+        >
+          <svg
+            aria-hidden="true"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            focusable="false"
+          >
+            <path
+              d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
+            <path
+              d="m19.4 13.5 1.1.85-1.6 2.77-1.31-.53a7.6 7.6 0 0 1-1.52.88l-.22 1.39h-3.2l-.22-1.39a7.6 7.6 0 0 1-1.52-.88l-1.31.53-1.6-2.77 1.1-.85a7.4 7.4 0 0 1 0-1.76l-1.1-.85 1.6-2.77 1.31.53a7.6 7.6 0 0 1 1.52-.88l.22-1.39h3.2l.22 1.39a7.6 7.6 0 0 1 1.52.88l1.31-.53 1.6 2.77-1.1.85a7.4 7.4 0 0 1 0 1.76Z"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </a>
       </header>
 
       <RepositoriesContext.Provider value={repositories}>
@@ -377,7 +433,13 @@ export function AppShell({
               </Card>
             </div>
           ) : null}
-          {role === 'owner' && selectedTab.id === 'log' ? (
+          {selectedTab.id === 'settings' ? (
+            <SettingsScreen
+              pinnedTrackers={pinnedTrackers}
+              onPinnedTrackersChange={setPinnedTrackers}
+              onThemeChange={handleThemeChange}
+            />
+          ) : role === 'owner' && selectedTab.id === 'log' ? (
             <RepositoryLogScreen
               pinnedTrackers={pinnedTrackers}
               onPinnedTrackersChange={setPinnedTrackers}
