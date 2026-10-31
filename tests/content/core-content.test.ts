@@ -97,6 +97,41 @@ describe('P1 core content acceptance', () => {
     }
   });
 
+  it('keeps content follow-ups localized, clear, and source-backed', () => {
+    const periodPain = contentIndex.get(contentCardId('period-pain-when-to-get-help'));
+    expect(periodPain?.body).toContain(
+      'See a family doctor or nurse practitioner if period pain stops your usual activities.',
+    );
+    expect(periodPain?.body.join(' ')).not.toMatch(/\bGP\b/i);
+
+    const spotting = contentIndex.get(contentCardId('spotting-vs-period'));
+    expect(spotting?.body).toContain(
+      'For tracking, note your bleeding type: light, medium, heavy, or spotting.',
+    );
+    expect(spotting?.body).toContain(
+      'Bleeding or spotting between periods, or after sex, is considered abnormal uterine bleeding.',
+    );
+    expect(spotting?.body).toContain(
+      'Talk with a clinician about bleeding or spotting between periods or after sex.',
+    );
+    expect(spotting?.body.join(' ')).not.toMatch(/\bACOG\b|like this/i);
+
+    const heavy = contentIndex.get(contentCardId('heavy-bleeding-when-to-get-help'));
+    const heavyEvidence = coreCardEvidence.find(
+      (entry) => entry.id === contentCardId('heavy-bleeding-when-to-get-help'),
+    );
+    expect(heavy?.body[0]).toContain('anemia');
+    expect(heavy?.body[0]).not.toContain('anaemia');
+    expect(heavy?.sources.map((source) => source.url)).toContain(
+      contentSourcesById['NHS_HEAVY_PERIODS']?.url,
+    );
+    expect(heavyEvidence?.claims[0]?.sourceIds).toContain('NHS_HEAVY_PERIODS');
+    expect(heavyEvidence?.claims[1]?.text).toBe(
+      'Tiredness or shortness of breath can occur with heavy periods.',
+    );
+    expect(heavyEvidence?.claims[1]?.sourceIds).toContain('NHS_HEAVY_PERIODS');
+  });
+
   it('T-CON-14: desire patterns are explicitly separate from consent', () => {
     const desireCard = contentIndex.get(contentCardId('desire-varies'));
     expect(desireCard?.body.join(' ')).toMatch(/desire pattern does not communicate consent/i);

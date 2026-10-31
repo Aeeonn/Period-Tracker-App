@@ -5,12 +5,12 @@ const card = {
   title: 'When heavy bleeding needs attention',
   claims: [
     {
-      text: 'Heavy menstrual bleeding can affect daily life and can lead to anaemia.',
-      sourceIds: ['SOGC_HEAVY_PERIODS'],
+      text: 'Heavy menstrual bleeding can affect daily life and can lead to anemia.',
+      sourceIds: ['SOGC_HEAVY_PERIODS', 'NHS_HEAVY_PERIODS'],
     },
     {
-      text: 'Tiredness, dizziness, or feeling light-headed can occur with heavy menstrual bleeding.',
-      sourceIds: ['SOGC_HEAVY_PERIODS'],
+      text: 'Tiredness or shortness of breath can occur with heavy periods.',
+      sourceIds: ['NHS_HEAVY_PERIODS'],
     },
     {
       text: 'If the amount of bleeding is hard to cope with, the SOGC advises seeing a doctor.',

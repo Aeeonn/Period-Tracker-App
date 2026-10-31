@@ -288,7 +288,7 @@ Automated checks: axe in Playwright. Manual checks: VoiceOver smoke tests on the
 
 **Rules:**
 - Original wording only. **No Flo text, structure, images or video** (constitution rule 5).
-- Approved sources: ACOG, NHS, NICE, CDC, WHO, ASRM, ESHRE, peer-reviewed literature.
+- Approved sources: ACOG, NHS, NICE, CDC, WHO, ASRM, ESHRE, peer-reviewed literature, and Canadian authorities: Society of Obstetricians and Gynaecologists of Canada (SOGC), Department of Justice Canada, Office of the Privacy Commissioner of Canada, Government of Canada, and 9-8-8: Suicide Crisis Helpline (Centre for Addiction and Mental Health).
 
 **Fact-check process (required):**
 1. A Luna writer drafts the card, with the sources attached.

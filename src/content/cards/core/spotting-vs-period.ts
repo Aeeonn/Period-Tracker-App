@@ -5,11 +5,11 @@ const card = {
   title: 'Spotting and period changes',
   claims: [
     {
-      text: 'When tracking bleeding, ACOG lists spotting as its own type, next to light, medium, and heavy.',
+      text: 'For tracking, note your bleeding type: light, medium, heavy, or spotting.',
       sourceIds: ['ACOG_ABNORMAL_BLEEDING'],
     },
     {
-      text: 'ACOG counts bleeding or spotting between periods, or after sex, as abnormal uterine bleeding.',
+      text: 'Bleeding or spotting between periods, or after sex, is considered abnormal uterine bleeding.',
       sourceIds: ['ACOG_ABNORMAL_BLEEDING'],
     },
     {
@@ -17,7 +17,7 @@ const card = {
       sourceIds: ['ACOG_ABNORMAL_BLEEDING'],
     },
     {
-      text: 'Talk with a clinician about any bleeding or spotting like this.',
+      text: 'Talk with a clinician about bleeding or spotting between periods or after sex.',
       sourceIds: ['ACOG_ABNORMAL_BLEEDING'],
     },
   ],

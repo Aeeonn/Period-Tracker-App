@@ -5,7 +5,7 @@ const card = {
   title: 'When period pain needs attention',
   claims: [
     {
-      text: 'See a GP if period pain stops your usual activities.',
+      text: 'See a family doctor or nurse practitioner if period pain stops your usual activities.',
       sourceIds: ['NHS_PERIOD_PAIN'],
     },
     {
