@@ -1,0 +1,63 @@
+.delete-screen {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 46rem;
+  padding-block: var(--space-5);
+}
+
+.delete-screen > p,
+.delete-screen__limits p {
+  margin: 0;
+}
+
+.delete-screen__label {
+  font-weight: 700;
+}
+
+.delete-screen__input {
+  min-block-size: 3rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+  letter-spacing: 0.08em;
+}
+
+.delete-screen__input:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.delete-screen__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.delete-screen__confirm {
+  border-color: var(--color-danger, #84283b);
+  background: var(--color-danger, #84283b);
+  color: #fff;
+}
+
+.delete-screen__failure,
+.delete-screen__limits {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.delete-screen__failure h2,
+.delete-screen__limits h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.delete-screen__failure ul,
+.delete-screen__limits ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: var(--space-5);
+}

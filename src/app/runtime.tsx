@@ -8,6 +8,11 @@ import { createMigrationRunner } from '../data/migrations/index.ts';
 import { MIGRATIONS, SCHEMA_VERSION } from '../data/migrations/registry.ts';
 import { openRecordStore, type OpenRecordStore } from '../data/store/store.ts';
 import { DATABASE_NAME } from '../data/store/schema.ts';
+import {
+  DELETE_ALL_REQUEST_EVENT,
+  runLocalDataWipe,
+  type LocalWipeResult,
+} from '../data/wipe/index.ts';
 import type { LockStoreLifecycle } from '../lock/core/store-lifecycle.ts';
 import {
   attachAutoLock,
@@ -19,12 +24,21 @@ import { registerServiceWorker, type UpdateReadyNotice } from '../sw/client.ts';
 import { AppShell } from '../ui/layout/app.tsx';
 import { LockScreen } from '../ui/screens/lock/core/lock-screen.tsx';
 import { OnboardingIntro, type OnboardingRole } from '../ui/screens/onboarding/index.ts';
+import { DeleteResultScreen } from '../ui/screens/settings/delete/delete-screen.tsx';
 import { createAppUpdateCoordinator, type AppUpdateCoordinator } from './update-coordinator.ts';
 
 export const APP_AUTO_LOCK_TIMEOUT_MS = 60_000;
 
 type RuntimeState =
-  'starting' | 'onboarding' | 'onboarding-lock' | 'locked' | 'opening' | 'ready' | 'error';
+  | 'starting'
+  | 'onboarding'
+  | 'onboarding-lock'
+  | 'locked'
+  | 'opening'
+  | 'ready'
+  | 'deleting'
+  | 'delete-result'
+  | 'error';
 
 interface AppUpdateApi {
   beginWrite(): () => void;
@@ -58,6 +72,9 @@ export function AppRuntime() {
   const [onboardingRole, setOnboardingRole] = useState<OnboardingRole | null>(null);
   const [sessionOnboardingComplete, setSessionOnboardingComplete] = useState(false);
   const resourcesRef = useRef<AppRuntimeResources | null>(null);
+  const deleteInProgress = useRef(false);
+  const deleteRequest = useRef<() => void>(() => undefined);
+  const [deleteResult, setDeleteResult] = useState<LocalWipeResult | null>(null);
   const syntheticPreview = new URLSearchParams(window.location.search).get('today') === 'synthetic';
 
   useEffect(() => {
@@ -97,6 +114,9 @@ export function AppRuntime() {
         coordinator.dispose();
       };
     }
+
+    const handleDeleteRequest = () => deleteRequest.current();
+    window.addEventListener(DELETE_ALL_REQUEST_EVENT, handleDeleteRequest);
 
     const lifecycle = createLockStoreLifecycle(service, async (keys) => {
       const crypto = createCryptoApi();
@@ -164,6 +184,7 @@ export function AppRuntime() {
     return () => {
       mounted = false;
       windowReady = false;
+      window.removeEventListener(DELETE_ALL_REQUEST_EVENT, handleDeleteRequest);
       stopAutoLock();
       if (window.floAppUpdate?.beginWrite === coordinator.beginWrite) {
         delete window.floAppUpdate;
@@ -211,6 +232,41 @@ export function AppRuntime() {
     setOnboardingRole(role);
     setRuntimeState('onboarding-lock');
   };
+
+  const deleteAll = async () => {
+    if (deleteInProgress.current) return;
+    deleteInProgress.current = true;
+    const resources = resourcesRef.current;
+    resources?.lifecycle.close();
+    if (resources) resources.repositories = null;
+    setRuntimeError(null);
+    service.lock('manual');
+    setRuntimeState('deleting');
+
+    const result = await runLocalDataWipe();
+    setDeleteResult(result);
+    setRuntimeState('delete-result');
+  };
+
+  deleteRequest.current = () => {
+    void deleteAll();
+  };
+
+  const continueToFreshSetup = () => {
+    window.location.replace(window.location.pathname);
+  };
+
+  if (runtimeState === 'deleting') {
+    return (
+      <main class="app-runtime-message">
+        <p role="status">Removing local data from this device...</p>
+      </main>
+    );
+  }
+
+  if (runtimeState === 'delete-result' && deleteResult !== null) {
+    return <DeleteResultScreen result={deleteResult} onContinue={continueToFreshSetup} />;
+  }
 
   if (runtimeState === 'ready') {
     const resources = resourcesRef.current;

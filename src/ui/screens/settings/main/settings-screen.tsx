@@ -21,6 +21,8 @@ import {
   togglePinnedTracker,
 } from './preferences.ts';
 import './settings.css';
+import { DELETE_ALL_REQUEST_EVENT } from '../../../../data/wipe/index.ts';
+import { DeleteAllScreen } from '../delete/delete-screen.tsx';
 
 export const DEFAULT_SETTINGS_PROFILE: Profile = {
   goal: 'track',
@@ -77,6 +79,7 @@ export function SettingsScreen({
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [showDeleteScreen, setShowDeleteScreen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -119,6 +122,17 @@ export function SettingsScreen({
 
   const customizableTrackers = TRACKERS.filter((tracker) => tracker !== 'heavy_detail');
   const profileControlsDisabled = loading || loadError !== null || saving;
+
+  if (showDeleteScreen) {
+    return (
+      <DeleteAllScreen
+        onCancel={() => setShowDeleteScreen(false)}
+        onConfirm={() => {
+          window.dispatchEvent(new Event(DELETE_ALL_REQUEST_EVENT));
+        }}
+      />
+    );
+  }
 
   return (
     <section class="settings-screen shell-screen" aria-labelledby="settings-title">
@@ -359,7 +373,10 @@ export function SettingsScreen({
         </Card>
 
         <Card class="settings-card settings-delete-placeholder" heading="Delete all my data">
-          <p>This action is not available yet. This placeholder does not delete anything.</p>
+          <p>This removes data held by this app on this device. You will be asked to confirm.</p>
+          <Button variant="secondary" onClick={() => setShowDeleteScreen(true)}>
+            Delete all my data
+          </Button>
         </Card>
       </div>
     </section>

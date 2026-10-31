@@ -66,14 +66,20 @@ test.afterAll(async () => {
   vite = undefined;
 });
 
-test('Settings @settings persists profile choices and keeps deletion inert', async ({ page }) => {
+test('Settings @settings keeps deletion cancellable and persists profile choices', async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.goto(`${origin}/?today=synthetic`);
   await configureApp(page);
   await page.getByRole('link', { name: 'Settings' }).click();
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Delete all my data' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Delete all my data/i })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Delete all my data', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Delete all my data?' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Delete everything' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await expect(page.getByTestId('temperature-preview')).toHaveText('20.0 \u00b0C');
   await expect(page.locator('.settings-screen')).toHaveCSS('animation-name', 'none');
   await expectSettingsAccessible(page);
