@@ -56,6 +56,9 @@ const HORMONAL_METHODS = new Set([
   'injection',
 ]);
 
+// Product default, changeable by the captain: evidence through age 183 days inclusive counts.
+const WARNING_EVIDENCE_WINDOW_DAYS = 183;
+
 function uniqueSortedDates(dates: readonly LocalDate[]): LocalDate[] {
   return [...new Set(dates)].sort(compare);
 }
@@ -82,6 +85,11 @@ function orderedLogs(input: EngineInput): DayLog[] {
     .filter((log) => compare(log.localDate, input.today) <= 0)
     .slice()
     .sort((left, right) => compare(left.localDate, right.localDate));
+}
+
+function isRecentWarningEvidence(date: LocalDate, today: LocalDate): boolean {
+  const ageDays = diffDays(date, today);
+  return ageDays >= 0 && ageDays <= WARNING_EVIDENCE_WINDOW_DAYS;
 }
 
 function orderedEpisodes(episodes: readonly Episode[]): Episode[] {
@@ -134,11 +142,13 @@ function w02Warning(
   logs: readonly DayLog[],
   periodEpisodes: readonly Episode[],
   w01Days: ReadonlySet<LocalDate>,
+  today: LocalDate,
 ): A11Warning | undefined {
   // A11 W-02: heavy-detail items are restricted to the latest current period episode.
   const current = periodEpisodes.at(-1);
   if (current === undefined) return undefined;
-  const itemDates = logs.flatMap((log) => {
+  const recentLogs = logs.filter((log) => isRecentWarningEvidence(log.localDate, today));
+  const itemDates = recentLogs.flatMap((log) => {
     if (!episodeContainsDate(current, log.localDate)) return [];
     return activeW02Items(log, w01Days).length > 0 ? [log.localDate] : [];
   });
@@ -146,7 +156,7 @@ function w02Warning(
   if (dates.length === 0) return undefined;
 
   const uniqueItems = new Set(
-    logs
+    recentLogs
       .filter((log) => dates.includes(log.localDate))
       .flatMap((log) => activeW02Items(log, w01Days)),
   );
@@ -229,13 +239,17 @@ function w05Warning(
   if (recent.length < 2) return undefined;
   const lengths = recent.map((cycle) => cycle.length);
   const spread = Math.max(...lengths) - Math.min(...lengths);
-  // A11 W-05: unknown/18-25 uses >9; 26-41 uses >7; unspecified age bands do not trigger this rule.
+  // A11/R3 W-05: unknown/18-25 and 42-45 use >9; 26-41 uses >7.
   const age =
     input.profile.birthYear === undefined
       ? undefined
       : Number(input.today.slice(0, 4)) - input.profile.birthYear;
   const threshold =
-    age === undefined || (age >= 18 && age <= 25) ? 9 : age >= 26 && age <= 41 ? 7 : undefined;
+    age === undefined || (age >= 18 && age <= 25) || (age >= 42 && age <= 45)
+      ? 9
+      : age >= 26 && age <= 41
+        ? 7
+        : undefined;
   if (threshold === undefined || spread <= threshold) return undefined;
 
   const minLength = Math.min(...lengths);
@@ -291,16 +305,21 @@ function hormonalMethodWithinFirstThreeMonths(input: EngineInput, date: LocalDat
 function intermenstrualEvents(
   logs: readonly DayLog[],
   cycleEpisodes: readonly Episode[],
+  lochiaEpisodes: readonly Episode[],
 ): readonly { readonly date: LocalDate; readonly cycleStart: LocalDate }[] {
-  // A11 W-07: only flow outside an A1 episode and outside its attached spotting is intermenstrual.
+  // A1 labels lochia as a separate episode, never a period; neither its flow nor attached spotting is intermenstrual.
   const events: { readonly date: LocalDate; readonly cycleStart: LocalDate }[] = [];
   for (const log of logs) {
     if (log.flow === undefined || log.flow === 'none') continue;
-    const belongsToEpisode = cycleEpisodes.some(
+    const belongsToCycleEpisode = cycleEpisodes.some(
       (episode) =>
         episodeContainsDate(episode, log.localDate) || episode.spottingDays.includes(log.localDate),
     );
-    if (belongsToEpisode) continue;
+    const belongsToLochiaEpisode = lochiaEpisodes.some(
+      (episode) =>
+        episodeContainsDate(episode, log.localDate) || episode.spottingDays.includes(log.localDate),
+    );
+    if (belongsToCycleEpisode || belongsToLochiaEpisode) continue;
     const cycleStart = cycleAnchorForDate(log.localDate, cycleEpisodes);
     if (cycleStart !== undefined) events.push({ date: log.localDate, cycleStart });
   }
@@ -311,23 +330,23 @@ function w07Warning(
   input: EngineInput,
   logs: readonly DayLog[],
   cycleEpisodes: readonly Episode[],
+  lochiaEpisodes: readonly Episode[],
 ): A11Warning | undefined {
-  // A11 W-07(a): any logged sex entry with bleeding_after=yes triggers DISCUSS.
-  const sexBleedingDates = logs
+  const recentLogs = logs.filter((log) => isRecentWarningEvidence(log.localDate, input.today));
+  // A11 W-07(a): any recent logged sex entry with bleeding_after=yes triggers DISCUSS.
+  const sexBleedingDates = recentLogs
     .filter((log) => log.sex?.some((entry) => entry.bleeding_after === 'yes') === true)
     .map((log) => log.localDate);
-  // A11 W-07(b): count distinct cycles containing unassigned flow/spotting.
-  const spotting = intermenstrualEvents(logs, cycleEpisodes);
+  // A11 W-07(b): count recent distinct cycles containing unassigned flow/spotting.
+  const spotting = intermenstrualEvents(recentLogs, cycleEpisodes, lochiaEpisodes);
   if (sexBleedingDates.length === 0 && spotting.length === 0) return undefined;
 
-  const spottingCycles = new Set(spotting.map((event) => event.cycleStart));
-  const latestSpotting = spotting.at(-1);
-  // A11 W-07(b): first-three-month method spotting is INFO even when it spans two cycles.
-  const newMethodWindow =
-    latestSpotting !== undefined &&
-    hormonalMethodWithinFirstThreeMonths(input, latestSpotting.date);
-  const spottingSeverity: WarningSeverity =
-    spottingCycles.size >= 2 && !newMethodWindow ? 'DISCUSS' : 'INFO';
+  const spottingOutsideMethodWindow = spotting.filter(
+    (event) => !hormonalMethodWithinFirstThreeMonths(input, event.date),
+  );
+  const spottingCycles = new Set(spottingOutsideMethodWindow.map((event) => event.cycleStart));
+  // The method exception applies only to evidence inside that method's first-three-month window.
+  const spottingSeverity: WarningSeverity = spottingCycles.size >= 2 ? 'DISCUSS' : 'INFO';
   // A11 W-07(a) DISCUSS remains stronger than the W-07(b) method-window INFO override.
   const severity: WarningSeverity =
     sexBleedingDates.length > 0 || spottingSeverity === 'DISCUSS' ? 'DISCUSS' : 'INFO';
@@ -364,6 +383,7 @@ export function calculateWarnings(
   const logs = orderedLogs(input);
   const ordered = orderedEpisodes(episodes);
   const periodEpisodes = ordered.filter((episode) => episode.kind === 'period');
+  const lochiaEpisodes = ordered.filter((episode) => episode.kind === 'postpartum_lochia');
   const cycleEpisodes = ordered.filter((episode) => episode.kind !== 'postpartum_lochia');
   const result: A11Warning[] = [];
 
@@ -379,7 +399,7 @@ export function calculateWarnings(
       ),
     );
   }
-  const w02 = w02Warning(logs, periodEpisodes, new Set(allW01Days));
+  const w02 = w02Warning(logs, periodEpisodes, new Set(allW01Days), input.today);
   if (w02 !== undefined) result.push(w02);
   const w03 = w03Warning(logs, periodEpisodes);
   if (w03 !== undefined) result.push(w03);
@@ -389,7 +409,7 @@ export function calculateWarnings(
   if (w05 !== undefined) result.push(w05);
   const w06 = w06Warning(input, ordered);
   if (w06 !== undefined) result.push(w06);
-  const w07 = w07Warning(input, logs, cycleEpisodes);
+  const w07 = w07Warning(input, logs, cycleEpisodes, lochiaEpisodes);
   if (w07 !== undefined) result.push(w07);
   const w11 = w11Warning(input, logs);
   if (w11 !== undefined) result.push(w11);

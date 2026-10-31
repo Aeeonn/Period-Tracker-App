@@ -13,6 +13,7 @@ import { addDays, parse } from '../../src/lib/localdate/index.ts';
 interface RawDayLog {
   readonly localDate: string;
   readonly flow?: string;
+  readonly lochia?: string;
   readonly heavy_detail?: readonly string[];
   readonly symptoms_body?: readonly string[];
   readonly mood?: readonly string[];
@@ -144,6 +145,19 @@ describe('P1 A11 warning golden vectors', () => {
       'CAP-W01-D+1',
       'CAP-W01-D+2',
       'CAP-W01-old-only',
+      'CAP-W05-age42-over',
+      'CAP-W05-age42-boundary',
+      'CAP-W05-age45-over',
+      'CAP-W02-window-183',
+      'CAP-W02-window-184',
+      'CAP-W07-sex-window-183',
+      'CAP-W07-sex-window-184',
+      'CAP-W07-spotting-window-183',
+      'CAP-W07-spotting-window-184',
+      'CAP-W07-lochia-excluded',
+      'CAP-W07-method-only-scoped',
+      'CAP-W01-expired-symptoms-excluded',
+      'CAP-W01-expired-soaking-only',
     ]);
   });
 

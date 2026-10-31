@@ -186,7 +186,7 @@ describe('A11 warning rule boundaries', () => {
         { localDate: '2026-11-02', flow: 'spotting' },
       ],
     });
-    expect(warningFor(boundary, 'W-07')?.severity).toBe('DISCUSS');
+    expect(warningFor(boundary, 'W-07')?.severity).toBe('INFO');
   });
 
   it('W-11 remains non-dismissible through yesterday and expires after that', () => {
