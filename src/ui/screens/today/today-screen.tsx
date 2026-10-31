@@ -1,9 +1,11 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
+import type { DueReminder } from '../../../contracts/reminders.ts';
 import type { EngineOutput } from '../../../contracts/engine-api.ts';
 import type { ChanceCategory, WarningSeverity } from '../../../contracts/enums.ts';
 import type { LocalDate, LocalDateRange } from '../../../contracts/localdate.ts';
 import { addDays, compare, diffDays, epochDay } from '../../../lib/localdate/index.ts';
 import { Button, Card, Sheet, Toast } from '../../components/base';
+import { ReminderBanner } from '../../components/reminder-banner/index.tsx';
 import './today.css';
 
 export interface TodayContentSlot {
@@ -19,6 +21,8 @@ export interface TodayScreenProps {
   readonly stillBleeding: boolean;
   readonly contentSlot: TodayContentSlot;
   readonly loggedToday: readonly string[];
+  readonly reminders?: readonly DueReminder[];
+  readonly onLogFirstPeriod?: () => void;
 }
 
 type WhyTopic = 'prediction' | 'chance';
@@ -462,6 +466,8 @@ export function TodayScreen({
   loggedToday,
   stillBleeding,
   today,
+  reminders = [],
+  onLogFirstPeriod,
 }: TodayScreenProps) {
   const [whyTopic, setWhyTopic] = useState<WhyTopic | null>(null);
   const [logOpen, setLogOpen] = useState(false);
@@ -474,7 +480,14 @@ export function TodayScreen({
   const [showStillBleeding, setShowStillBleeding] = useState(stillBleeding);
   const [bleedingAnswer, setBleedingAnswer] = useState<string | null>(null);
 
+  useEffect(() => {
+    setVisibleLoggedToday(loggedToday);
+    setCurrentCycleDay(cycleDay);
+    setShowStillBleeding(stillBleeding);
+  }, [loggedToday, cycleDay, stillBleeding]);
+
   const prediction = engineOutput.prediction;
+  const noLoggedData = prediction.kind === 'suppressed' && prediction.reason === 'no_data';
   const predictionExplanation = explanationText(engineOutput);
   const predictionBasis = explanationBasis(engineOutput);
   const chanceCategory = engineOutput.chanceByDay[today] ?? 'NO_DATA_YET';
@@ -538,12 +551,24 @@ export function TodayScreen({
         </section>
       ) : null}
 
+      <ReminderBanner reminders={reminders} />
+
       <CycleRing
         cycleDay={currentCycleDay}
         engineOutput={engineOutput}
         stillBleeding={showStillBleeding}
         today={today}
       />
+
+      {noLoggedData ? (
+        <Card class="today-empty-state" heading="No cycle logs yet">
+          <p>
+            Log your first period to start building your cycle view. Predictions will only appear
+            when there is enough information.
+          </p>
+          <Button onClick={onLogFirstPeriod ?? (() => setLogOpen(true))}>Log first period</Button>
+        </Card>
+      ) : null}
 
       <div class="today-stat-grid" aria-label="Cycle details">
         <Card class="today-stat today-stat--period" heading="Next period">

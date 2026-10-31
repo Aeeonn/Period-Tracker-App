@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
+import type { LocalTime } from '../../contracts/localdate.ts';
+import { todayLocal } from '../../lib/localdate/index.ts';
 import { Button, Card } from '../components/base';
 import { TODAY_PREVIEW_FIXTURE, TodayScreen } from '../screens/today';
 import { CALENDAR_PREVIEW_FIXTURE, CalendarScreen } from '../screens/calendar';
+import type { TodayScreenProps } from '../screens/today';
+import { createTodayScreenProps } from '../screens/today/live-data.ts';
+import { RepositoriesContext, type Repositories } from './repositories.tsx';
 import type { UpdateReadyNotice } from '../../sw/client.ts';
 
 type Role = 'owner' | 'partner';
@@ -15,6 +20,7 @@ interface Tab {
 }
 
 export interface AppShellProps {
+  readonly repositories: Repositories;
   readonly updateNotice: UpdateReadyNotice | null;
   readonly restartStatus: 'ready' | 'saving' | 'restarting';
   readonly cancelRestart: () => void | Promise<void>;
@@ -47,6 +53,20 @@ function selectedRole(): Role {
   return new URLSearchParams(window.location.search).get('role') === 'partner'
     ? 'partner'
     : 'owner';
+}
+
+function localClockSnapshot() {
+  const nowMs = Date.now();
+  const fields = new Intl.DateTimeFormat('en-CA', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(nowMs));
+  const hour = fields.find((part) => part.type === 'hour')?.value;
+  const minute = fields.find((part) => part.type === 'minute')?.value;
+  const localTime = `${hour}:${minute}`;
+  if (!/^\d{2}:\d{2}$/u.test(localTime)) throw new RangeError('The local clock time is invalid.');
+  return { today: todayLocal({ nowMs }), now: localTime as LocalTime };
 }
 
 function tabFromLocation(tabs: readonly Tab[]): TabId {
@@ -150,17 +170,59 @@ function PlaceholderScreen({ role, tab }: { role: Role; tab: Tab }) {
   );
 }
 
-export function AppShell({ updateNotice, restartStatus, cancelRestart }: AppShellProps) {
+export function AppShell({
+  repositories,
+  updateNotice,
+  restartStatus,
+  cancelRestart,
+}: AppShellProps) {
   const role = selectedRole();
   const tabs = role === 'owner' ? OWNER_TABS : PARTNER_TABS;
   const [activeTab, setActiveTab] = useState<TabId>(() => tabFromLocation(tabs));
   const selectedTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const syntheticPreview = new URLSearchParams(window.location.search).get('today') === 'synthetic';
+  const [todayProps, setTodayProps] = useState<TodayScreenProps | null>(null);
+  const [todayLoadFailed, setTodayLoadFailed] = useState(false);
 
   useEffect(() => {
     const onLocationChange = () => setActiveTab(tabFromLocation(tabs));
     window.addEventListener('hashchange', onLocationChange);
     return () => window.removeEventListener('hashchange', onLocationChange);
   }, [tabs]);
+
+  useEffect(() => {
+    if (role !== 'owner' || selectedTab?.id !== 'today') return;
+    let mounted = true;
+    const refreshToday = async () => {
+      try {
+        const props = syntheticPreview
+          ? TODAY_PREVIEW_FIXTURE
+          : await createTodayScreenProps(repositories, localClockSnapshot());
+        if (mounted) {
+          setTodayProps(props);
+          setTodayLoadFailed(false);
+        }
+      } catch {
+        if (mounted) {
+          setTodayProps(null);
+          setTodayLoadFailed(true);
+        }
+      }
+    };
+    const unsubscribe = repositories.logRepo.onChange(() => void refreshToday());
+    window.addEventListener('focus', refreshToday);
+    void refreshToday();
+    return () => {
+      mounted = false;
+      unsubscribe();
+      window.removeEventListener('focus', refreshToday);
+    };
+  }, [repositories, role, selectedTab?.id, syntheticPreview]);
+
+  const openLogTab = () => {
+    setActiveTab('log');
+    window.location.hash = 'log';
+  };
 
   const restartNow = () => {
     if (!updateNotice || restartStatus !== 'ready') return;
@@ -195,35 +257,43 @@ export function AppShell({ updateNotice, restartStatus, cancelRestart }: AppShel
         <span class="shell-role">{roleLabel}</span>
       </header>
 
-      <main class="shell-main shell-container" tabIndex={0}>
-        <div class="shell-preview-banner" role="note">
-          <span class="shell-preview-banner__dot" aria-hidden="true" />
-          Preview — synthetic data only
-        </div>
-        {updateNotice ? (
-          <div role="status" aria-live="polite">
-            <Card class="shell-update" heading="Update ready">
-              <p>
-                {restartStatus === 'saving'
-                  ? 'Saving your changes before restarting.'
-                  : restartStatus === 'restarting'
-                    ? 'Restarting the app.'
-                    : updateNotice.message}
-              </p>
-              <Button onClick={restartNow} disabled={restartStatus !== 'ready'}>
-                Restart now
-              </Button>
-            </Card>
+      <RepositoriesContext.Provider value={repositories}>
+        <main class="shell-main shell-container" tabIndex={0}>
+          <div class="shell-preview-banner" role="note">
+            <span class="shell-preview-banner__dot" aria-hidden="true" />
+            Preview — synthetic data only
           </div>
-        ) : null}
-        {role === 'owner' && selectedTab.id === 'today' ? (
-          <TodayScreen {...TODAY_PREVIEW_FIXTURE} />
-        ) : role === 'owner' && selectedTab.id === 'calendar' ? (
-          <CalendarScreen {...CALENDAR_PREVIEW_FIXTURE} />
-        ) : (
-          <PlaceholderScreen role={role} tab={selectedTab} />
-        )}
-      </main>
+          {updateNotice ? (
+            <div role="status" aria-live="polite">
+              <Card class="shell-update" heading="Update ready">
+                <p>
+                  {restartStatus === 'saving'
+                    ? 'Saving your changes before restarting.'
+                    : restartStatus === 'restarting'
+                      ? 'Restarting the app.'
+                      : updateNotice.message}
+                </p>
+                <Button onClick={restartNow} disabled={restartStatus !== 'ready'}>
+                  Restart now
+                </Button>
+              </Card>
+            </div>
+          ) : null}
+          {role === 'owner' && selectedTab.id === 'today' ? (
+            todayProps ? (
+              <TodayScreen {...todayProps} onLogFirstPeriod={openLogTab} />
+            ) : todayLoadFailed ? (
+              <p role="alert">Today's data could not be loaded. Try reopening the app.</p>
+            ) : (
+              <p role="status">Loading today's cycle data...</p>
+            )
+          ) : role === 'owner' && selectedTab.id === 'calendar' ? (
+            <CalendarScreen {...CALENDAR_PREVIEW_FIXTURE} />
+          ) : (
+            <PlaceholderScreen role={role} tab={selectedTab} />
+          )}
+        </main>
+      </RepositoriesContext.Provider>
 
       <nav class="shell-tabbar" aria-label={`${roleLabel} navigation`}>
         <div class="shell-tabbar__inner shell-container">

@@ -103,12 +103,25 @@ test('T-UX-02 @today every prediction surface has a window and a Why sheet', asy
 test('T-UX-02 @today suppressed output still explains the paused prediction', async ({ page }) => {
   await openFixture(page, '?suppression=no_data');
   await expect(page.getByText('Log your period to start predictions.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No cycle logs yet' })).toBeVisible();
+  await page.getByRole('button', { name: 'Log first period', exact: true }).click();
+  const logDialog = page.getByRole('dialog', { name: 'Log today' });
+  await expect(logDialog).toBeVisible();
+  await logDialog.getByRole('button', { name: 'Close' }).click();
   const whyButtons = page.getByRole('button', { name: 'Why?', exact: true });
   await expect(whyButtons).toHaveCount(2);
   await whyButtons.first().click();
   await expect(page.getByRole('dialog', { name: 'Why?' })).toContainText(
     'Log your period to start predictions.',
   );
+});
+
+test('T-REM-01 @today evaluates configured in-app reminders into the accessible banner', async ({
+  page,
+}) => {
+  await openFixture(page, '?fixture=reminder');
+  const banner = page.getByRole('status', { name: 'In-app reminders' });
+  await expect(banner).toContainText('Time for your check-in.');
 });
 
 test('T-UX-04 @today keeps uncertainty and no-safe-days copy for every A5 suppression category', async ({
@@ -230,15 +243,28 @@ test('T-UX-02 @today visual contrast meets WCAG AA in light and dark themes', as
   }
 });
 
-test('Today @today is registered in the existing owner app shell', async ({ page }) => {
-  await page.goto(`${origin}/`);
+test('Today @today keeps selectable synthetic data in the preview app shell', async ({ page }) => {
+  await page.goto(`${origin}/?today=synthetic`);
   await setupOrUnlockApp(page);
   await expect(page.getByRole('navigation', { name: 'Cycle owner navigation' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+  await expect(page.locator('.shell-preview-banner')).toContainText('synthetic data only');
   await expect(page.getByText('Next period: around Nov 8')).toBeVisible();
   await expect(
     page.getByText('A reviewed education card will appear here when available.'),
   ).toBeVisible();
+});
+
+test('Today @today shows a friendly live empty state when no repository data is logged', async ({
+  page,
+}) => {
+  await page.goto(`${origin}/`);
+  await setupOrUnlockApp(page);
+  await expect(page.getByRole('heading', { name: 'No cycle logs yet' })).toBeVisible();
+  await expect(
+    page.getByText('Log your first period to start building your cycle view.'),
+  ).toBeVisible();
+  await expect(page.getByText('Next period: around Nov 8')).toHaveCount(0);
 });
 
 test('Today @today buttons provide pressed feedback on the WebKit iPhone preview', async ({

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { LockService } from '../contracts/lock.ts';
 import { createCryptoApi } from '../crypto/primitives/index.ts';
+import { createLogRepo, createSettingsRepo, createHlcClock } from '../data/repos/index.ts';
+import { ensureDeviceIdentity } from './device-identity.ts';
+import type { Repositories } from '../ui/layout/repositories.tsx';
 import { createMigrationRunner } from '../data/migrations/index.ts';
 import { MIGRATIONS, SCHEMA_VERSION } from '../data/migrations/registry.ts';
 import { openRecordStore, type OpenRecordStore } from '../data/store/store.ts';
@@ -28,6 +31,7 @@ interface AppUpdateApi {
 interface AppRuntimeResources {
   readonly coordinator: AppUpdateCoordinator;
   readonly lifecycle: LockStoreLifecycle<OpenRecordStore>;
+  repositories: Repositories | null;
 }
 
 declare global {
@@ -68,7 +72,9 @@ export function AppRuntime() {
       },
     });
     const unsubscribe = service.onLock(() => {
-      resourcesRef.current?.lifecycle.close();
+      const resources = resourcesRef.current;
+      resources?.lifecycle.close();
+      if (resources) resources.repositories = null;
       if (mounted && windowReady) {
         setRuntimeError(null);
         setRuntimeState('locked');
@@ -121,7 +127,7 @@ export function AppRuntime() {
       }
       return store;
     });
-    const resources: AppRuntimeResources = { coordinator, lifecycle };
+    const resources: AppRuntimeResources = { coordinator, lifecycle, repositories: null };
     resourcesRef.current = resources;
 
     void coordinator
@@ -168,10 +174,21 @@ export function AppRuntime() {
     setRuntimeState('opening');
     void resources.lifecycle
       .open()
-      .then(() => {
-        if (resourcesRef.current === resources && service.isUnlocked()) {
-          setRuntimeState('ready');
+      .then(async (store) => {
+        const deviceId = await ensureDeviceIdentity(store);
+        if (
+          resourcesRef.current !== resources ||
+          !service.isUnlocked() ||
+          resources.lifecycle.current !== store
+        ) {
+          return;
         }
+        const hlcClock = createHlcClock(deviceId);
+        resources.repositories = {
+          logRepo: createLogRepo(store, { deviceId, hlcClock }),
+          settingsRepo: createSettingsRepo(store, { deviceId, hlcClock }),
+        };
+        setRuntimeState('ready');
       })
       .catch(() => {
         if (!service.isUnlocked()) return;
@@ -183,9 +200,10 @@ export function AppRuntime() {
 
   if (runtimeState === 'ready') {
     const resources = resourcesRef.current;
-    if (!resources) return null;
+    if (!resources || resources.repositories === null) return null;
     return (
       <AppShell
+        repositories={resources.repositories}
         updateNotice={updateNotice}
         restartStatus={restartStatus}
         cancelRestart={() => resources.coordinator.cancelRestart()}
