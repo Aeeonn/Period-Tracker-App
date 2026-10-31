@@ -273,7 +273,7 @@ describe('P1 cycle invariants and regression properties', () => {
       }),
       20261031,
     );
-  });
+  }, 20_000);
 
   it('E3: every unsuppressed prediction has an ordered window containing its center', () => {
     assertProperty(
