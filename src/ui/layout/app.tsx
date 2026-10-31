@@ -446,7 +446,12 @@ export function AppShell({
             />
           ) : role === 'owner' && selectedTab.id === 'today' ? (
             todayProps ? (
-              <TodayScreen {...todayProps} pinnedTrackers={pinnedTrackers} onOpenLog={openLogTab} />
+              <TodayScreen
+                {...todayProps}
+                logRepo={syntheticPreview ? null : undefined}
+                pinnedTrackers={pinnedTrackers}
+                onOpenLog={openLogTab}
+              />
             ) : todayLoadFailed ? (
               <p role="alert">Today's data could not be loaded. Try reopening the app.</p>
             ) : (

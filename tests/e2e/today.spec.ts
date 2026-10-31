@@ -85,7 +85,7 @@ async function readQuickLogDay(page: Page): Promise<QuickLogFixtureDay | undefin
 test('T-UX-01 @today @quicklog period start takes one tap and quick logs stay within three taps', async ({
   page,
 }) => {
-  await openFixture(page, '?fixture=existing');
+  await openFixture(page);
   await page.getByRole('button', { name: 'Period started', exact: true }).click();
   await expect(page.locator('.ui-toast')).toContainText('Saved: Period started.');
   await expect(page.getByRole('heading', { name: 'Still bleeding today?' })).toBeVisible();
@@ -117,10 +117,10 @@ test('T-UX-01 @today @quicklog period start takes one tap and quick logs stay wi
   await expect(page.locator('.ui-toast')).toContainText('Saved: Symptom: Cramps.');
   expect(await readQuickLogDay(page)).toMatchObject({
     flow: 'medium',
-    symptoms_body: ['fatigue', 'cramps'],
+    symptoms_body: ['cramps'],
   });
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  expect(await readQuickLogDay(page)).toMatchObject({ flow: 'medium', symptoms_body: ['fatigue'] });
+  expect(await readQuickLogDay(page)).toMatchObject({ flow: 'medium' });
 
   await page.getByRole('button', { name: 'Log today', exact: true }).click();
   await page

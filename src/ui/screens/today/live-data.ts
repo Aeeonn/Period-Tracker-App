@@ -1,6 +1,7 @@
 import type { DayLog } from '../../../contracts/entities.ts';
 import type { DueReminder } from '../../../contracts/reminders.ts';
 import type { LogRepo, SettingsRepo } from '../../../contracts/store.ts';
+import type { Flow } from '../../../contracts/enums.ts';
 import type { LocalDate, LocalTime } from '../../../contracts/localdate.ts';
 import { evaluateReminders } from '../../../reminders/inapp/index.ts';
 import { runEngine } from '../../../engine/index.ts';
@@ -42,14 +43,14 @@ function loggedTodaySummary(dayLog: DayLog | undefined): readonly string[] {
   if (!dayLog) return [];
   const summary: string[] = [];
   if (dayLog.flow !== undefined) summary.push(`Flow: ${displayValue(dayLog.flow)}`);
-  if (dayLog.symptoms_body !== undefined) {
-    summary.push(...dayLog.symptoms_body.map(displayValue));
+  if (dayLog.symptoms_body !== undefined && dayLog.symptoms_body.length > 0) {
+    summary.push(`Symptoms: ${[...new Set(dayLog.symptoms_body)].map(displayValue).join(', ')}`);
   }
-  if (dayLog.mood !== undefined) {
-    summary.push(`Mood: ${dayLog.mood.map(displayValue).join(', ')}`);
+  if (dayLog.mood !== undefined && dayLog.mood.length > 0) {
+    summary.push(`Mood: ${[...new Set(dayLog.mood)].map(displayValue).join(', ')}`);
   }
   if (dayLog.energy !== undefined) summary.push(`Energy: ${dayLog.energy}`);
-  return summary;
+  return [...new Set(summary)];
 }
 
 function latestPeriodStart(
@@ -128,6 +129,7 @@ async function loadTodayScreenProps(
     stillBleeding: currentEpisode && todayLog?.flow !== 'none',
     contentSlot: CONTENT_SLOT,
     loggedToday: loggedTodaySummary(todayLog),
+    ...(todayLog?.flow === undefined ? {} : { flowToday: todayLog.flow as Flow }),
     reminders,
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useContext, useEffect, useState } from 'preact/hooks';
 import type { DayBundle, SexEvent } from '../../../contracts/entities.ts';
 import {
   DESIRE,
@@ -22,7 +22,7 @@ import {
 } from '../../../contracts/enums.ts';
 import type { LocalDate } from '../../../contracts/localdate.ts';
 import { Button, Chip, Sheet, Toast } from '../../components/base';
-import { useRepositories } from '../../layout/repositories.tsx';
+import { RepositoriesContext } from '../../layout/repositories.tsx';
 import {
   DEFAULT_PINNED_TRACKERS,
   optionLabel,
@@ -41,6 +41,8 @@ interface ChoiceGridProps<Value extends string | number> {
   readonly legend: string;
   readonly values: readonly Value[];
   readonly disabled: boolean;
+  readonly selectedValue?: Value | undefined;
+  readonly selectedValues?: readonly Value[] | undefined;
   readonly labelFor?: (value: Value) => string;
   readonly onChoose: (value: Value) => void;
 }
@@ -50,6 +52,8 @@ function ChoiceGrid<Value extends string | number>({
   labelFor,
   legend,
   onChoose,
+  selectedValue,
+  selectedValues,
   values,
 }: ChoiceGridProps<Value>) {
   return (
@@ -64,7 +68,7 @@ function ChoiceGrid<Value extends string | number>({
             <Chip
               key={String(value)}
               aria-label={label}
-              pressed={false}
+              pressed={selectedValue === value || selectedValues?.includes(value) === true}
               onPressedChange={() => onChoose(value)}
             >
               {label}
@@ -129,8 +133,10 @@ export function QuickLogSheet({
   open,
   pinnedTrackers = DEFAULT_PINNED_TRACKERS,
 }: QuickLogSheetProps) {
-  const repositories = useRepositories();
-  const logRepo = logRepoOverride === undefined ? repositories.logRepo : logRepoOverride;
+  const repositories = useContext(RepositoriesContext);
+  const logRepo = logRepoOverride === undefined ? (repositories?.logRepo ?? null) : logRepoOverride;
+  const [todayLog, setTodayLog] = useState<DayBundle | undefined>();
+  const [loadingDay, setLoadingDay] = useState(false);
   const [saving, setSaving] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -146,6 +152,30 @@ export function QuickLogSheet({
       pinnedTrackers.includes('symptoms_body') ? 'symptoms_body' : (pinnedTrackers[0] ?? null),
     );
   }, [open, pinnedTrackers]);
+
+  useEffect(() => {
+    if (!open || !logRepo) {
+      setTodayLog(undefined);
+      setLoadingDay(false);
+      return;
+    }
+    let mounted = true;
+    setLoadingDay(true);
+    void logRepo
+      .getDay(localDate)
+      .then((day) => {
+        if (mounted) setTodayLog(day);
+      })
+      .catch(() => {
+        if (mounted) setTodayLog(undefined);
+      })
+      .finally(() => {
+        if (mounted) setLoadingDay(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [open, localDate, logRepo]);
 
   const activeTracker =
     selectedTracker !== null && pinnedTrackers.includes(selectedTracker)
@@ -244,7 +274,8 @@ export function QuickLogSheet({
             key={tracker}
             legend="Flow level"
             values={FLOW}
-            disabled={!logRepo || saving}
+            disabled={!logRepo || saving || loadingDay}
+            selectedValue={todayLog?.flow}
             onChoose={(value: FlowValue) => void saveSimple('flow', value, optionLabel(value))}
           />
         );
@@ -254,7 +285,8 @@ export function QuickLogSheet({
             key={tracker}
             legend="Symptoms"
             values={SYMPTOMS_BODY}
-            disabled={!logRepo || saving}
+            disabled={!logRepo || saving || loadingDay}
+            selectedValues={todayLog?.symptoms_body}
             onChoose={(value: SymptomBody) => void saveSymptom(value)}
           />
         );
@@ -264,7 +296,8 @@ export function QuickLogSheet({
             key={tracker}
             legend="Mood"
             values={MOOD}
-            disabled={!logRepo || saving}
+            disabled={!logRepo || saving || loadingDay}
+            selectedValues={todayLog?.mood}
             onChoose={(value: MoodValue) => void saveMood(value)}
           />
         );
@@ -274,7 +307,8 @@ export function QuickLogSheet({
             <ChoiceGrid
               legend="Desire"
               values={DESIRE}
-              disabled={!logRepo || saving}
+              disabled={!logRepo || saving || loadingDay}
+              selectedValue={todayLog?.desire}
               onChoose={(value: Desire) => void saveSimple('desire', value, optionLabel(value))}
             />
             <p class="quick-log__helper">Just for you, to notice your own patterns.</p>
@@ -300,7 +334,8 @@ export function QuickLogSheet({
             key={tracker}
             legend="Discharge"
             values={DISCHARGE}
-            disabled={!logRepo || saving}
+            disabled={!logRepo || saving || loadingDay}
+            selectedValue={todayLog?.discharge}
             onChoose={(value: Discharge) => void saveSimple('discharge', value, optionLabel(value))}
           />
         );
@@ -310,7 +345,8 @@ export function QuickLogSheet({
             key={tracker}
             legend="Energy"
             values={ENERGY}
-            disabled={!logRepo || saving}
+            disabled={!logRepo || saving || loadingDay}
+            selectedValue={todayLog?.energy}
             onChoose={(value: (typeof ENERGY)[number]) => void saveEnergy(value)}
           />
         );

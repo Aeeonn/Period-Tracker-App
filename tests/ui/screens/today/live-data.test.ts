@@ -67,7 +67,23 @@ describe('live Today data', () => {
 
     expect(result.engineOutput.prediction).toEqual({ kind: 'suppressed', reason: 'no_data' });
     expect(result.cycleDay).toBeNull();
-    expect(result.loggedToday).toEqual(['Cramps']);
+    expect(result.loggedToday).toEqual(['Symptoms: Cramps']);
+  });
+
+  it('deduplicates values and keeps one summary entry per tracker', async () => {
+    const result = await createTodayScreenProps(
+      repositories([
+        day('2026-04-02', {
+          flow: 'medium',
+          symptoms_body: ['cramps', 'cramps', 'fatigue'],
+          mood: ['calm', 'calm'],
+        }),
+      ]),
+      clock,
+    );
+
+    expect(result.loggedToday).toEqual(['Flow: Medium', 'Symptoms: Cramps, Fatigue', 'Mood: Calm']);
+    expect(result.flowToday).toBe('medium');
   });
 
   it('computes the current cycle and reminder banner inputs from repository data', async () => {
@@ -96,7 +112,7 @@ describe('live Today data', () => {
     expect(result.engineOutput.prediction.kind).toBe('prediction');
     expect(result.cycleDay).toBe(5);
     expect(result.stillBleeding).toBe(true);
-    expect(result.loggedToday).toEqual(['Flow: Medium', 'Cramps']);
+    expect(result.loggedToday).toEqual(['Flow: Medium', 'Symptoms: Cramps']);
     expect(result.reminders).toEqual([{ ruleId: rule.id, kind: 'custom' }]);
   });
 });

@@ -48,6 +48,12 @@
   color: var(--color-accent);
 }
 
+.quick-log__choices .ui-chip[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
 .quick-log__groups {
   display: grid;
   gap: var(--space-3);

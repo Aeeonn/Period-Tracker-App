@@ -1,13 +1,25 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import type { DueReminder } from '../../../contracts/reminders.ts';
 import type { EngineOutput } from '../../../contracts/engine-api.ts';
-import type { ChanceCategory, Tracker, WarningSeverity } from '../../../contracts/enums.ts';
+import type { ChanceCategory, Flow, Tracker, WarningSeverity } from '../../../contracts/enums.ts';
 import type { LocalDate, LocalDateRange } from '../../../contracts/localdate.ts';
 import { addDays, compare, diffDays, epochDay } from '../../../lib/localdate/index.ts';
 import { Button, Card, Sheet, Toast } from '../../components/base';
+import { RepositoriesContext } from '../../layout/repositories.tsx';
 import { ReminderBanner } from '../../components/reminder-banner/index.tsx';
 import { QuickLogSheet } from '../quicklog';
-import { DEFAULT_PINNED_TRACKERS } from '../log/types.ts';
+import {
+  saveQuickLogEntry,
+  undoQuickLogEntry,
+  type QuickLogUndoReceipt,
+} from '../quicklog/quick-log-model.ts';
+import { DEFAULT_PINNED_TRACKERS, type LogRepo } from '../log/types.ts';
+import {
+  flowForBleedingAnswer,
+  isPeriodStartedFlow,
+  loggedTodayWithFlow,
+  STILL_BLEEDING_ANSWERS,
+} from './today-log-model.ts';
 import './today.css';
 
 export interface TodayContentSlot {
@@ -21,6 +33,8 @@ export interface TodayScreenProps {
   readonly today: LocalDate;
   readonly cycleDay: number | null;
   readonly stillBleeding: boolean;
+  readonly flowToday?: Flow;
+  readonly logRepo?: LogRepo | null | undefined;
   readonly contentSlot: TodayContentSlot;
   readonly loggedToday: readonly string[];
   readonly reminders?: readonly DueReminder[];
@@ -468,27 +482,45 @@ export function TodayScreen({
   engineOutput,
   loggedToday,
   stillBleeding,
+  flowToday,
+  logRepo: logRepoOverride,
   today,
   reminders = [],
   pinnedTrackers = DEFAULT_PINNED_TRACKERS,
   onOpenLog,
 }: TodayScreenProps) {
+  const repositories = useContext(RepositoriesContext);
+  const logRepo = logRepoOverride === undefined ? (repositories?.logRepo ?? null) : logRepoOverride;
   const [whyTopic, setWhyTopic] = useState<WhyTopic | null>(null);
   const [logOpen, setLogOpen] = useState(false);
-  const [visibleLoggedToday, setVisibleLoggedToday] = useState<readonly string[]>(loggedToday);
   const [currentCycleDay, setCurrentCycleDay] = useState<number | null>(cycleDay);
-  const [lastAddedLog, setLastAddedLog] = useState<string | null>(null);
+  const [flowOverride, setFlowOverride] = useState<{ readonly value: Flow | undefined } | null>(
+    null,
+  );
+  const [undoReceipt, setUndoReceipt] = useState<QuickLogUndoReceipt | null>(null);
+  const [localFlowUndo, setLocalFlowUndo] = useState<{
+    readonly previous: Flow | undefined;
+    readonly saved: Flow;
+  } | null>(null);
+  const [flowSaving, setFlowSaving] = useState(false);
+  const [flowErrorMessage, setFlowErrorMessage] = useState('');
+  const flowSaveLock = useRef(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastOpen, setToastOpen] = useState(false);
   const [dismissedWarnings, setDismissedWarnings] = useState<ReadonlySet<string>>(() => new Set());
   const [showStillBleeding, setShowStillBleeding] = useState(stillBleeding);
-  const [bleedingAnswer, setBleedingAnswer] = useState<string | null>(null);
+  const currentFlow = flowOverride === null ? flowToday : flowOverride.value;
+  const visibleLoggedToday = loggedTodayWithFlow(
+    loggedToday,
+    currentFlow,
+    flowOverride !== null || flowToday !== undefined,
+  );
 
   useEffect(() => {
-    setVisibleLoggedToday(loggedToday);
+    setFlowOverride(null);
     setCurrentCycleDay(cycleDay);
     setShowStillBleeding(stillBleeding);
-  }, [loggedToday, cycleDay, stillBleeding]);
+  }, [flowToday, loggedToday, cycleDay, stillBleeding]);
 
   const prediction = engineOutput.prediction;
   const noLoggedData = prediction.kind === 'suppressed' && prediction.reason === 'no_data';
@@ -503,12 +535,96 @@ export function TodayScreen({
     (warning) => !dismissedWarnings.has(`${warning.ruleId}:${warning.scopeStart}`),
   );
 
-  const saveLog = (entry: string) => {
-    setVisibleLoggedToday((current) => [...current, entry]);
-    setLastAddedLog(entry);
-    setToastMessage(`Saved: ${entry}.`);
-    setToastOpen(true);
-    setLogOpen(false);
+  const saveFlow = async (value: Flow, label: string, periodStart = false) => {
+    if (flowSaveLock.current) return;
+    flowSaveLock.current = true;
+    setFlowSaving(true);
+    setFlowErrorMessage('');
+    try {
+      let previousFlow = currentFlow;
+      if (logRepo) {
+        const existingDay = await logRepo.getDay(today);
+        previousFlow = existingDay?.flow;
+        if (periodStart && previousFlow !== undefined && previousFlow !== 'none') {
+          setFlowOverride({ value: previousFlow });
+          return;
+        }
+        if (!periodStart && previousFlow === value) {
+          setFlowOverride({ value });
+          setShowStillBleeding(value !== 'none');
+          return;
+        }
+        const receipt = await saveQuickLogEntry(logRepo, today, () => ({ tracker: 'flow', value }));
+        setUndoReceipt(receipt);
+        setLocalFlowUndo(null);
+      } else {
+        if (periodStart && previousFlow !== undefined && previousFlow !== 'none') return;
+        if (!periodStart && previousFlow === value) {
+          setShowStillBleeding(value !== 'none');
+          return;
+        }
+        setLocalFlowUndo({ previous: previousFlow, saved: value });
+        setUndoReceipt(null);
+      }
+      setFlowOverride({ value });
+      if (periodStart) setCurrentCycleDay(1);
+      setShowStillBleeding(value !== 'none');
+      setToastMessage(`Saved: ${label}.`);
+      setToastOpen(true);
+      setLogOpen(false);
+    } catch {
+      setFlowErrorMessage('That entry could not be saved. Please try again.');
+    } finally {
+      flowSaveLock.current = false;
+      setFlowSaving(false);
+    }
+  };
+
+  const clearTodayFlow = async () => {
+    if (currentFlow === undefined || flowSaveLock.current) return;
+    flowSaveLock.current = true;
+    setFlowSaving(true);
+    setFlowErrorMessage('');
+    try {
+      if (logRepo) await logRepo.clearTracker(today, 'flow');
+      setFlowOverride({ value: undefined });
+      setUndoReceipt(null);
+      setLocalFlowUndo(null);
+      setToastOpen(false);
+      setCurrentCycleDay(cycleDay);
+      setShowStillBleeding(false);
+    } catch {
+      setFlowErrorMessage('That entry could not be removed. Please try again.');
+    } finally {
+      flowSaveLock.current = false;
+      setFlowSaving(false);
+    }
+  };
+
+  const undoLastFlowEntry = async () => {
+    try {
+      if (logRepo && undoReceipt) {
+        const undone = await undoQuickLogEntry(logRepo, today, undoReceipt);
+        if (!undone) {
+          setFlowErrorMessage('This entry changed, so it could not be undone.');
+          setToastOpen(false);
+          return;
+        }
+        setFlowOverride({ value: undoReceipt.previousValue as Flow | undefined });
+      } else if (localFlowUndo) {
+        setFlowOverride({ value: localFlowUndo.previous });
+      } else {
+        return;
+      }
+      setCurrentCycleDay(cycleDay);
+      setShowStillBleeding(stillBleeding);
+      setUndoReceipt(null);
+      setLocalFlowUndo(null);
+      setToastOpen(false);
+    } catch {
+      setFlowErrorMessage('Undo could not be completed. Please try again.');
+      setToastOpen(false);
+    }
   };
 
   const dismissWarning = (warning: EngineOutput['warnings'][number]) => {
@@ -521,10 +637,8 @@ export function TodayScreen({
     });
   };
 
-  const answerStillBleeding = (answer: string) => {
-    setBleedingAnswer(answer);
-    if (answer === 'Stopped') setShowStillBleeding(false);
-    saveLog(`Bleeding: ${answer}`);
+  const answerStillBleeding = (answer: (typeof STILL_BLEEDING_ANSWERS)[number]) => {
+    void saveFlow(flowForBleedingAnswer(answer), `Bleeding: ${answer}`);
   };
 
   const whyText =
@@ -615,16 +729,31 @@ export function TodayScreen({
       </div>
 
       <div class="today-actions" role="group" aria-label="Log today">
-        <Button
-          onClick={() => {
-            setCurrentCycleDay(1);
-            setBleedingAnswer(null);
-            setShowStillBleeding(true);
-            saveLog('Period started');
-          }}
-        >
-          Period started
-        </Button>
+        <div class="today-actions__period">
+          <Button
+            class={
+              isPeriodStartedFlow(currentFlow)
+                ? 'today-flow-choice today-flow-choice--selected'
+                : 'today-flow-choice'
+            }
+            aria-pressed={isPeriodStartedFlow(currentFlow)}
+            disabled={flowSaving}
+            onClick={() => void saveFlow('medium', 'Period started', true)}
+          >
+            {isPeriodStartedFlow(currentFlow) ? 'Period started ✓' : 'Period started'}
+          </Button>
+          {isPeriodStartedFlow(currentFlow) ? (
+            <Button
+              class="today-flow-remove"
+              aria-label="Remove today's period entry"
+              disabled={flowSaving}
+              onClick={() => void clearTodayFlow()}
+              variant="quiet"
+            >
+              ✕
+            </Button>
+          ) : null}
+        </div>
         <Button onClick={() => setLogOpen(true)} variant="secondary">
           Log today
         </Button>
@@ -634,17 +763,48 @@ export function TodayScreen({
         <strong>Logged today:</strong>{' '}
         {visibleLoggedToday.length > 0 ? visibleLoggedToday.join(' · ') : 'Nothing yet'}
       </p>
+      {flowErrorMessage ? (
+        <p class="today-flow-error" role="alert">
+          {flowErrorMessage}
+        </p>
+      ) : null}
 
-      {showStillBleeding ? (
+      {showStillBleeding || currentFlow !== undefined ? (
         <Card class="today-bleeding-prompt" heading="Still bleeding today?">
           <div class="today-bleeding-prompt__choices">
-            {['Yes, light', 'Yes, medium', 'Yes, heavy', 'Stopped'].map((answer) => (
-              <Button key={answer} onClick={() => answerStillBleeding(answer)} variant="secondary">
-                {answer}
-              </Button>
-            ))}
+            {STILL_BLEEDING_ANSWERS.map((answer) => {
+              const selected = currentFlow === flowForBleedingAnswer(answer);
+              return (
+                <div class="today-bleeding-prompt__choice" key={answer}>
+                  <Button
+                    class={
+                      selected
+                        ? 'today-flow-choice today-flow-choice--selected'
+                        : 'today-flow-choice'
+                    }
+                    aria-pressed={selected}
+                    disabled={flowSaving}
+                    onClick={() => answerStillBleeding(answer)}
+                    variant="secondary"
+                  >
+                    {answer}
+                    {selected ? ' ✓' : ''}
+                  </Button>
+                  {selected ? (
+                    <Button
+                      class="today-flow-remove"
+                      aria-label="Remove today's flow entry"
+                      disabled={flowSaving}
+                      onClick={() => void clearTodayFlow()}
+                      variant="quiet"
+                    >
+                      ✕
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-          {bleedingAnswer ? <p role="status">Logged: {bleedingAnswer}</p> : null}
         </Card>
       ) : null}
 
@@ -672,6 +832,7 @@ export function TodayScreen({
         open={logOpen}
         onOpenChange={setLogOpen}
         localDate={today}
+        logRepo={logRepo}
         pinnedTrackers={pinnedTrackers}
         onOpenLog={onOpenLog}
       />
@@ -679,19 +840,7 @@ export function TodayScreen({
       <Toast
         actionLabel="Undo"
         durationMs={5000}
-        onAction={() => {
-          if (lastAddedLog === null) return;
-          if (lastAddedLog === 'Period started') {
-            setCurrentCycleDay(cycleDay);
-            setShowStillBleeding(stillBleeding);
-            setBleedingAnswer(null);
-          } else if (lastAddedLog.startsWith('Bleeding:')) {
-            setShowStillBleeding(true);
-            setBleedingAnswer(null);
-          }
-          setVisibleLoggedToday((current) => current.slice(0, -1));
-          setLastAddedLog(null);
-        }}
+        onAction={() => void undoLastFlowEntry()}
         onDismiss={() => setToastOpen(false)}
         open={toastOpen}
       >
