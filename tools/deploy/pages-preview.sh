@@ -6,7 +6,7 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo"
 
 usage() {
-  printf 'Usage: %s <probe|app> [--push-url <https URL> --vapid-public-key <base64url>]\n' "${0##*/}" >&2
+  printf 'Usage: %s <probe|app> [--branch <alias>] [--push-url <https URL> --vapid-public-key <base64url>]\n' "${0##*/}" >&2
 }
 
 redact_wrangler_output() {
@@ -23,6 +23,31 @@ load_cloudflare_credentials() {
   set -a
   . "$HOME/.config/flo-deploy/cloudflare.env"
   set +a
+}
+
+validate_pages_branch() {
+  local branch="$1"
+  if [[ "$branch" == main || ! "$branch" =~ ^[a-z0-9][a-z0-9-]{0,27}$ ]]; then
+    printf 'Pages branch must be a lowercase alias of 1-28 letters, digits, or hyphens and must not be main.\n' >&2
+    return 2
+  fi
+  printf '%s' "$branch"
+}
+
+self_check_pages_branch() {
+  local candidate max_length
+  [[ "$(validate_pages_branch app)" == app ]] || return 1
+  [[ "$(validate_pages_branch a)" == a ]] || return 1
+  max_length=1234567890123456789012345678
+  [[ "$(validate_pages_branch "$max_length")" == "$max_length" ]] || return 1
+
+  for candidate in main Main APP -app 'app/preview' 12345678901234567890123456789; do
+    if validate_pages_branch "$candidate" >/dev/null 2>&1; then
+      printf 'Pages branch validation unexpectedly accepted %s.\n' "$candidate" >&2
+      return 1
+    fi
+  done
+  printf 'Pages branch validation: PASS (valid aliases and unsafe boundaries).\n'
 }
 
 parse_project_list() {
@@ -145,6 +170,10 @@ process.stdout.write(url.origin);
 NODE
 }
 
+if [[ "$#" -eq 1 && "$1" == --self-check-branch ]]; then
+  self_check_pages_branch
+  exit $?
+fi
 if [[ "$#" -eq 1 && "$1" == --self-check-project-parser ]]; then
   self_check_project_parser
   exit $?
@@ -172,10 +201,23 @@ esac
 
 push_url=''
 vapid_public_key=''
+pages_branch=main
+pages_branch_seen=false
 push_url_seen=false
 vapid_key_seen=false
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
+    --branch)
+      if [[ "$pages_branch_seen" == true || "$#" -lt 2 ]]; then
+        printf 'Provide --branch exactly once with a valid Pages alias.\n' >&2
+        exit 2
+      fi
+      if ! pages_branch="$(validate_pages_branch "$2")"; then
+        exit 2
+      fi
+      pages_branch_seen=true
+      shift 2
+      ;;
     --push-url)
       if [[ "$push_url_seen" == true || "$#" -lt 2 ]]; then
         printf 'Provide --push-url exactly once with an HTTPS URL.\n' >&2
@@ -295,4 +337,4 @@ else
   printf 'Pages project %s already exists; skipping creation.\n' "$project_name"
 fi
 
-run_wrangler pages deploy "$out_dir" --project-name "$project_name" --branch main --commit-dirty=false
+run_wrangler pages deploy "$out_dir" --project-name "$project_name" --branch "$pages_branch" --commit-dirty=false
