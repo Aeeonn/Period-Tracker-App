@@ -11,8 +11,13 @@ import { LogScreen } from '../screens/log';
 import { DEFAULT_PINNED_TRACKERS } from '../screens/log/types.ts';
 import type { Tracker } from '../../contracts/enums.ts';
 import type { UpdateReadyNotice } from '../../sw/client.ts';
+import {
+  OnboardingIntro,
+  OnboardingScreen,
+  type OnboardingRole,
+} from '../screens/onboarding/index.ts';
 
-type Role = 'owner' | 'partner';
+type Role = OnboardingRole;
 type TabId = 'today' | 'calendar' | 'log' | 'insights' | 'us';
 type IconName = 'today' | 'calendar' | 'log' | 'insights' | 'us';
 
@@ -27,6 +32,9 @@ export interface AppShellProps {
   readonly updateNotice: UpdateReadyNotice | null;
   readonly restartStatus: 'ready' | 'saving' | 'restarting';
   readonly cancelRestart: () => void | Promise<void>;
+  readonly initialOnboardingRole?: OnboardingRole;
+  readonly sessionOnboardingComplete?: boolean;
+  readonly onOnboardingComplete?: () => void;
 }
 
 const OWNER_TABS: readonly Tab[] = [
@@ -195,8 +203,14 @@ export function AppShell({
   updateNotice,
   restartStatus,
   cancelRestart,
+  initialOnboardingRole,
+  sessionOnboardingComplete = false,
+  onOnboardingComplete,
 }: AppShellProps) {
-  const role = selectedRole();
+  const [sessionOnboardingRole, setSessionOnboardingRole] = useState<OnboardingRole | null>(
+    () => initialOnboardingRole ?? null,
+  );
+  const role = sessionOnboardingRole ?? selectedRole();
   const tabs = role === 'owner' ? OWNER_TABS : PARTNER_TABS;
   const [activeTab, setActiveTab] = useState<TabId>(() => tabFromLocation(tabs));
   const [pinnedTrackers, setPinnedTrackers] = useState<readonly Tracker[]>(() => [
@@ -204,6 +218,9 @@ export function AppShell({
   ]);
   const selectedTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const syntheticPreview = new URLSearchParams(window.location.search).get('today') === 'synthetic';
+  const [onboardingStatus, setOnboardingStatus] = useState<
+    'checking' | 'required' | 'complete' | 'error'
+  >(() => (syntheticPreview || sessionOnboardingComplete ? 'complete' : 'checking'));
   const [todayProps, setTodayProps] = useState<TodayScreenProps | null>(null);
   const [todayLoadFailed, setTodayLoadFailed] = useState(false);
 
@@ -214,7 +231,32 @@ export function AppShell({
   }, [tabs]);
 
   useEffect(() => {
-    if (role !== 'owner' || selectedTab?.id !== 'today') return;
+    if (syntheticPreview || sessionOnboardingComplete) {
+      setOnboardingStatus('complete');
+      return;
+    }
+    if (initialOnboardingRole === 'partner') {
+      setOnboardingStatus('required');
+      return;
+    }
+
+    let mounted = true;
+    setOnboardingStatus('checking');
+    void repositories.settingsRepo
+      .getProfile()
+      .then((profile) => {
+        if (mounted) setOnboardingStatus(profile === undefined ? 'required' : 'complete');
+      })
+      .catch(() => {
+        if (mounted) setOnboardingStatus('error');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [initialOnboardingRole, repositories, role, sessionOnboardingComplete, syntheticPreview]);
+
+  useEffect(() => {
+    if (onboardingStatus !== 'complete' || role !== 'owner' || selectedTab?.id !== 'today') return;
     let mounted = true;
     const refreshToday = async () => {
       try {
@@ -240,7 +282,7 @@ export function AppShell({
       unsubscribe();
       window.removeEventListener('focus', refreshToday);
     };
-  }, [repositories, role, selectedTab?.id, syntheticPreview]);
+  }, [repositories, role, selectedTab?.id, syntheticPreview, onboardingStatus]);
 
   const openLogTab = () => {
     setActiveTab('log');
@@ -255,6 +297,39 @@ export function AppShell({
   };
 
   if (!selectedTab) return null;
+
+  if (onboardingStatus === 'checking') {
+    return (
+      <main class="onboarding-root">
+        <p role="status">Checking this device’s profile…</p>
+      </main>
+    );
+  }
+  if (onboardingStatus === 'error') {
+    return (
+      <main class="onboarding-root">
+        <p role="alert">This device’s profile could not be opened safely. Try reopening the app.</p>
+      </main>
+    );
+  }
+  if (onboardingStatus === 'required') {
+    const hasRoleInRoute = new URLSearchParams(window.location.search).has('role');
+    return (
+      <RepositoriesContext.Provider value={repositories}>
+        {sessionOnboardingRole === null && !hasRoleInRoute ? (
+          <OnboardingIntro onRoleSelected={setSessionOnboardingRole} />
+        ) : (
+          <OnboardingScreen
+            role={role}
+            onComplete={() => {
+              setOnboardingStatus('complete');
+              onOnboardingComplete?.();
+            }}
+          />
+        )}
+      </RepositoriesContext.Provider>
+    );
+  }
 
   const roleLabel = role === 'owner' ? 'Cycle owner' : 'Partner';
 

@@ -18,11 +18,13 @@ import {
 import { registerServiceWorker, type UpdateReadyNotice } from '../sw/client.ts';
 import { AppShell } from '../ui/layout/app.tsx';
 import { LockScreen } from '../ui/screens/lock/core/lock-screen.tsx';
+import { OnboardingIntro, type OnboardingRole } from '../ui/screens/onboarding/index.ts';
 import { createAppUpdateCoordinator, type AppUpdateCoordinator } from './update-coordinator.ts';
 
 export const APP_AUTO_LOCK_TIMEOUT_MS = 60_000;
 
-type RuntimeState = 'starting' | 'locked' | 'opening' | 'ready' | 'error';
+type RuntimeState =
+  'starting' | 'onboarding' | 'onboarding-lock' | 'locked' | 'opening' | 'ready' | 'error';
 
 interface AppUpdateApi {
   beginWrite(): () => void;
@@ -53,7 +55,10 @@ export function AppRuntime() {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [updateNotice, setUpdateNotice] = useState<UpdateReadyNotice | null>(null);
   const [restartStatus, setRestartStatus] = useState<'ready' | 'saving' | 'restarting'>('ready');
+  const [onboardingRole, setOnboardingRole] = useState<OnboardingRole | null>(null);
+  const [sessionOnboardingComplete, setSessionOnboardingComplete] = useState(false);
   const resourcesRef = useRef<AppRuntimeResources | null>(null);
+  const syntheticPreview = new URLSearchParams(window.location.search).get('today') === 'synthetic';
 
   useEffect(() => {
     let mounted = true;
@@ -132,11 +137,15 @@ export function AppRuntime() {
 
     void coordinator
       .start()
-      .then(() => {
+      .then(async () => {
+        if (!mounted) return;
+        const setupState = await service.setupState();
         if (!mounted) return;
         windowReady = true;
         window.floAppUpdate = { beginWrite: coordinator.beginWrite };
-        setRuntimeState('locked');
+        setRuntimeState(
+          setupState === 'not_configured' && !syntheticPreview ? 'onboarding' : 'locked',
+        );
         void registerServiceWorker({
           writeCoordinator: coordinator,
           onUpdateReady: (notice) => {
@@ -198,17 +207,29 @@ export function AppRuntime() {
       });
   };
 
+  const beginLockSetup = (role: OnboardingRole) => {
+    setOnboardingRole(role);
+    setRuntimeState('onboarding-lock');
+  };
+
   if (runtimeState === 'ready') {
     const resources = resourcesRef.current;
     if (!resources || resources.repositories === null) return null;
     return (
       <AppShell
         repositories={resources.repositories}
+        {...(onboardingRole === null ? {} : { initialOnboardingRole: onboardingRole })}
+        sessionOnboardingComplete={sessionOnboardingComplete}
+        onOnboardingComplete={() => setSessionOnboardingComplete(true)}
         updateNotice={updateNotice}
         restartStatus={restartStatus}
         cancelRestart={() => resources.coordinator.cancelRestart()}
       />
     );
+  }
+
+  if (runtimeState === 'onboarding') {
+    return <OnboardingIntro onRoleSelected={beginLockSetup} />;
   }
 
   if (runtimeState === 'error') {

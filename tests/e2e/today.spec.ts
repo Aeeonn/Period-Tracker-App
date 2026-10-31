@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createServer, type ViteDevServer } from 'vite';
 import { resolve } from 'node:path';
-import { setupOrUnlockApp } from './helpers/lock.ts';
+import { configureThroughUi, fillConfirmation, setupOrUnlockApp } from './helpers/lock.ts';
 
 let vite: ViteDevServer | undefined;
 let origin = '';
@@ -16,6 +16,25 @@ async function openFixture(page: Page, query = ''): Promise<void> {
 async function dismissToast(page: Page): Promise<void> {
   const dismiss = page.getByRole('button', { name: 'Dismiss', exact: true });
   if (await dismiss.isVisible()) await dismiss.click();
+}
+
+async function completeFreshOwnerOnboarding(page: Page): Promise<void> {
+  await expect(
+    page.getByRole('heading', { name: 'Welcome to your cycle companion' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
+  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
+  const { code, positions } = await configureThroughUi(page);
+  await fillConfirmation(page, code, positions);
+  await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gentle reminders' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Who runs the app’s servers?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  await expect(page.getByRole('navigation', { name: 'Cycle owner navigation' })).toBeVisible();
 }
 
 test.beforeEach(({ page }) => {
@@ -328,7 +347,7 @@ test('Today @today shows a friendly live empty state when no repository data is 
   page,
 }) => {
   await page.goto(`${origin}/`);
-  await setupOrUnlockApp(page);
+  await completeFreshOwnerOnboarding(page);
   await expect(page.getByRole('heading', { name: 'No cycle logs yet' })).toBeVisible();
   await expect(
     page.getByText('Log your first period to start building your cycle view.'),
@@ -340,7 +359,7 @@ test('Today @today buttons provide pressed feedback on the WebKit iPhone preview
   page,
 }) => {
   await page.goto(`${origin}/`);
-  await setupOrUnlockApp(page);
+  await completeFreshOwnerOnboarding(page);
   const button = page.getByRole('button', { name: 'Log today', exact: true });
   await button.scrollIntoViewIfNeeded();
   const box = await button.boundingBox();
