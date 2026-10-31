@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createServer, type ViteDevServer } from 'vite';
 import { resolve } from 'node:path';
+import { setupOrUnlockApp } from './helpers/lock.ts';
 
 let vite: ViteDevServer | undefined;
 let origin = '';
@@ -148,6 +149,7 @@ test('T-UX-04 @today an EMERGENCY warning fixture cannot be dismissed while acti
 
 test('Today @today is registered in the existing owner app shell', async ({ page }) => {
   await page.goto(`${origin}/`);
+  await setupOrUnlockApp(page);
   await expect(page.getByRole('navigation', { name: 'Cycle owner navigation' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(page.getByText('Next period: around Nov 8')).toBeVisible();

@@ -1,3 +1,28 @@
+.app-runtime-message {
+  display: grid;
+  min-block-size: 100svh;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-family-body);
+  text-align: center;
+}
+
+.app-runtime-error {
+  position: fixed;
+  z-index: 2;
+  inset-block-start: max(var(--space-2), env(safe-area-inset-top));
+  inset-inline: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: center;
+}
+
 .shell-root {
   display: flex;
   block-size: 100svh;

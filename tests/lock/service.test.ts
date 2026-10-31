@@ -75,6 +75,25 @@ describe('LockService setup and recovery', () => {
     expect(JSON.stringify(persistence.configuration)).not.toContain(setup.code.replaceAll('-', ''));
   });
 
+  it('waits for a committing setup before allowing a competing setup', async () => {
+    const persistence = new DeferredLockPersistence();
+    const service = createMemoryService(persistence);
+    const first = await beginSetup(service);
+    const deferred = persistence.deferNextCommit();
+    const confirmation = service.confirmSetup(first.confirmation);
+
+    await deferred.started;
+    await deferred.committing;
+    const competingSetup = service.setup('synthetic maple river lantern 31');
+    await Promise.resolve();
+    deferred.finish();
+
+    await expect(confirmation).resolves.toEqual({ ok: true });
+    await expect(competingSetup).rejects.toThrow('Lock setup is already confirmed on this device');
+    expect(await service.setupState()).toBe('configured');
+    expect(persistence.commitCount).toBe(1);
+  });
+
   it('canonicalizes passphrases to NFC and recovery codes by case and grouping only', async () => {
     const persistence = new MemoryLockPersistence();
     const service = createMemoryService(persistence);
@@ -143,7 +162,7 @@ describe('LockService setup and recovery', () => {
     });
   });
 
-  it('requires 10 non-whitespace code points for setup and passphrase changes', async () => {
+  it('requires 10 code points after trimming, counting inner whitespace for setup and changes', async () => {
     const service = createMemoryService();
     expect(isPassphraseLengthAllowed('1 2 3 4')).toBe(false);
     expect(isPassphraseLengthAllowed('a b c d')).toBe(false);

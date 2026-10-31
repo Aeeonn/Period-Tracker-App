@@ -8,8 +8,10 @@ export interface RestartReadiness {
 /**
  * The app adapter must atomically stop new writes, drain its write queue, wait for
  * every storage transaction to finish, and lock the app before returning ready.
- * If other app windows share the same store, the app adapter must include their
- * writes too. Keep writes blocked until the page is replaced by the activated worker.
+ * The app adapter must coordinate every same-origin app window: each window
+ * drains its writes and locks before activation. A gate that covers only the
+ * requesting window is insufficient. Keep writes blocked in all windows until
+ * activation replaces their pages with the new worker.
  */
 export interface UpdateWriteCoordinator {
   prepareForRestart(): Promise<RestartReadiness | null>;

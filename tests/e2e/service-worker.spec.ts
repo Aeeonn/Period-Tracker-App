@@ -4,6 +4,7 @@ import { extname, join, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { expect, test, type Page } from '@playwright/test';
 import { writePrecacheWorker } from '../../tools/build-precache';
+import { setupOrUnlockApp } from './helpers/lock.ts';
 
 interface SyntheticWriteFixture {
   synthetic: true;
@@ -240,7 +241,8 @@ test('T-SW-01 @sw cold navigation renders the installed shell after the origin g
   }, TRACE_KEY);
 
   await page.goto(appOrigin);
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await setupOrUnlockApp(page);
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await waitForAppController(page);
   const v1Cache = await page.evaluate(
     async () => (await caches.keys()).find((name) => name.startsWith('flo-static-')) ?? null,
@@ -251,7 +253,8 @@ test('T-SW-01 @sw cold navigation renders the installed shell after the origin g
   await page.close();
   const coldPage = await context.newPage();
   await coldPage.goto(appOrigin);
-  await expect(coldPage.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await setupOrUnlockApp(coldPage);
+  await expect(coldPage.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(coldPage.getByText('Static preview · synthetic placeholder content')).toBeVisible();
 });
 
@@ -275,7 +278,8 @@ test('T-SW-02 @sw waits for the pending app write before activating v2 and prese
   }, TRACE_KEY);
 
   await page.goto(appOrigin);
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await setupOrUnlockApp(page);
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await waitForAppController(page);
   await openSyntheticStore(page);
 
@@ -391,7 +395,8 @@ test('T-SW-02 @sw waits for the pending app write before activating v2 and prese
     window.__releaseSyntheticWrite?.();
   });
   await reload;
-  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+  await setupOrUnlockApp(page);
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   expect(await readSyntheticRecord(page, pendingWrite.id)).toEqual(pendingWrite);
   await expectOnlyOwnedCacheWasDeleted(page, oldCacheName ?? '');
 

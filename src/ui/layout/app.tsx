@@ -1,12 +1,7 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { Button, Card } from '../components/base';
 import { TODAY_PREVIEW_FIXTURE, TodayScreen } from '../screens/today';
-import {
-  createUpdateWriteGate,
-  registerServiceWorker,
-  type UpdateReadyNotice,
-  type UpdateWriteGate,
-} from '../../sw/client';
+import type { UpdateReadyNotice } from '../../sw/client.ts';
 
 type Role = 'owner' | 'partner';
 type TabId = 'today' | 'calendar' | 'log' | 'insights' | 'us';
@@ -18,14 +13,10 @@ interface Tab {
   icon: IconName;
 }
 
-interface AppUpdateApi {
-  beginWrite(): () => void;
-}
-
-declare global {
-  interface Window {
-    floAppUpdate?: AppUpdateApi;
-  }
+export interface AppShellProps {
+  readonly updateNotice: UpdateReadyNotice | null;
+  readonly restartStatus: 'ready' | 'saving' | 'restarting';
+  readonly cancelRestart: () => void | Promise<void>;
 }
 
 const OWNER_TABS: readonly Tab[] = [
@@ -158,7 +149,7 @@ function PlaceholderScreen({ role, tab }: { role: Role; tab: Tab }) {
   );
 }
 
-export function App() {
+export function AppShell({ updateNotice, restartStatus, cancelRestart }: AppShellProps) {
   const role = selectedRole();
   const tabs = role === 'owner' ? OWNER_TABS : PARTNER_TABS;
   const [activeTab, setActiveTab] = useState<TabId>(() => tabFromLocation(tabs));
@@ -170,41 +161,10 @@ export function App() {
     return () => window.removeEventListener('hashchange', onLocationChange);
   }, [tabs]);
 
-  const [updateNotice, setUpdateNotice] = useState<UpdateReadyNotice | null>(null);
-  const [restartStatus, setRestartStatus] = useState<'ready' | 'saving' | 'restarting'>('ready');
-  const writeGate = useRef<UpdateWriteGate | null>(null);
-  if (writeGate.current === null) {
-    writeGate.current = createUpdateWriteGate({
-      onPreparing: () => setRestartStatus('saving'),
-      onLocked: () => setRestartStatus('restarting'),
-      onCancelled: () => setRestartStatus('ready'),
-    });
-  }
-
-  useEffect(() => {
-    const gate = writeGate.current;
-    if (!gate) return;
-
-    window.floAppUpdate = { beginWrite: gate.beginWrite };
-    void registerServiceWorker({
-      onUpdateReady: (notice) => {
-        setUpdateNotice(notice);
-        setRestartStatus('ready');
-      },
-      writeCoordinator: gate,
-    }).catch(() => undefined);
-
-    return () => {
-      if (window.floAppUpdate?.beginWrite === gate.beginWrite) {
-        delete window.floAppUpdate;
-      }
-    };
-  }, []);
-
   const restartNow = () => {
     if (!updateNotice || restartStatus !== 'ready') return;
     void updateNotice.restartNow().then((restarted) => {
-      if (!restarted) writeGate.current?.cancelRestart();
+      if (!restarted) void cancelRestart();
     });
   };
 

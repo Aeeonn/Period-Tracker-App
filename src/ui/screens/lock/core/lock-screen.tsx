@@ -14,6 +14,17 @@ type SecretKind = 'passphrase' | 'recovery_code';
 
 export interface LockScreenProps {
   readonly service: LockService;
+  readonly autoLockTimeoutMs?: number;
+  readonly onUnlocked?: () => void;
+}
+
+function timeoutDescription(timeoutMs: number): string {
+  const seconds = timeoutMs / 1000;
+  const defaultSuffix = timeoutMs === 60_000 ? ' by default' : '';
+  if (Number.isInteger(seconds)) {
+    return `${seconds} ${seconds === 1 ? 'second' : 'seconds'}${defaultSuffix}`;
+  }
+  return `${timeoutMs} milliseconds${defaultSuffix}`;
 }
 
 const emptyConfirmation = (): [string, string, string, string] => ['', '', '', ''];
@@ -66,7 +77,8 @@ function screenForState(state: LockSetupState): ScreenMode {
   return state === 'configured' ? 'locked' : 'setup';
 }
 
-export function LockScreen({ service }: LockScreenProps) {
+export function LockScreen({ autoLockTimeoutMs = 60_000, onUnlocked, service }: LockScreenProps) {
+  const timeoutCopy = timeoutDescription(autoLockTimeoutMs);
   const [mode, setMode] = useState<ScreenMode>('loading');
   const [setupState, setSetupState] = useState<LockSetupState>('not_configured');
   const [setupPassphrase, setSetupPassphrase] = useState('');
@@ -171,7 +183,9 @@ export function LockScreen({ service }: LockScreenProps) {
       if (currentView !== viewGeneration.current) {
         const state = await service.setupState();
         setSetupState(state);
-        setMode(service.isUnlocked() ? 'unlocked' : screenForState(state));
+        const unlocked = service.isUnlocked();
+        setMode(unlocked ? 'unlocked' : screenForState(state));
+        if (unlocked) onUnlocked?.();
         return;
       }
       if (!result.ok) {
@@ -191,6 +205,7 @@ export function LockScreen({ service }: LockScreenProps) {
       setSetupState('configured');
       setMode('unlocked');
       setNotice('Lock setup is complete.');
+      onUnlocked?.();
     } catch {
       if (currentView === viewGeneration.current) {
         setError('Setup could not be saved. Your code is still available to retry.');
@@ -239,6 +254,7 @@ export function LockScreen({ service }: LockScreenProps) {
       } else {
         recoveryAuthorization.current = null;
         setNotice('Unlocked');
+        onUnlocked?.();
       }
     } catch {
       if (currentView === viewGeneration.current) {
@@ -279,6 +295,7 @@ export function LockScreen({ service }: LockScreenProps) {
       }
       closeChangeFlow(false);
       setNotice('Passphrase changed. Your records were not re-encrypted.');
+      onUnlocked?.();
     } catch {
       if (currentView === viewGeneration.current) {
         setError('The passphrase could not be changed. Nothing was changed.');
@@ -340,6 +357,7 @@ export function LockScreen({ service }: LockScreenProps) {
             <form class="lock-screen__form" onSubmit={startSetup}>
               <label for="lock-setup-passphrase">Passphrase</label>
               <input
+                aria-describedby="lock-setup-passphrase-hint"
                 autoComplete="new-password"
                 id="lock-setup-passphrase"
                 onInput={(event) => setSetupPassphrase(event.currentTarget.value)}
@@ -347,8 +365,9 @@ export function LockScreen({ service }: LockScreenProps) {
                 type="password"
                 value={setupPassphrase}
               />
-              <p class="lock-screen__hint">
-                Your passphrase never leaves this device and isn't stored.
+              <p class="lock-screen__hint" id="lock-setup-passphrase-hint">
+                Use at least 10 characters. Your passphrase never leaves this device and isn't
+                stored.
               </p>
               {error ? (
                 <p class="lock-screen__error" role="alert">
@@ -378,8 +397,8 @@ export function LockScreen({ service }: LockScreenProps) {
               </output>
               <p class="lock-screen__warning">
                 If the app locks before you confirm, this code is discarded. Leaving the app longer
-                than your lock timeout (60 seconds by default) locks it and discards this code.
-                Start setup again and replace any saved copy with the new code.
+                than your lock timeout ({timeoutCopy}) locks it and discards this code. Start setup
+                again and replace any saved copy with the new code.
               </p>
               <form
                 class="lock-screen__form"
@@ -424,6 +443,7 @@ export function LockScreen({ service }: LockScreenProps) {
             <form class="lock-screen__form" onSubmit={restartSetup}>
               <label for="lock-resume-passphrase">Passphrase</label>
               <input
+                aria-describedby="lock-resume-passphrase-hint"
                 autoComplete="new-password"
                 id="lock-resume-passphrase"
                 onInput={(event) => setSetupPassphrase(event.currentTarget.value)}
@@ -431,6 +451,9 @@ export function LockScreen({ service }: LockScreenProps) {
                 type="password"
                 value={setupPassphrase}
               />
+              <p class="lock-screen__hint" id="lock-resume-passphrase-hint">
+                Use at least 10 characters.
+              </p>
               {error ? (
                 <p class="lock-screen__error" role="alert">
                   {error}
@@ -595,6 +618,7 @@ export function LockScreen({ service }: LockScreenProps) {
           )}
           <label for="lock-new-passphrase">New passphrase</label>
           <input
+            aria-describedby="lock-new-passphrase-hint"
             autoComplete="new-password"
             id="lock-new-passphrase"
             onInput={(event) => setNewPassphrase(event.currentTarget.value)}
@@ -602,7 +626,7 @@ export function LockScreen({ service }: LockScreenProps) {
             type="password"
             value={newPassphrase}
           />
-          <p class="lock-screen__hint">
+          <p class="lock-screen__hint" id="lock-new-passphrase-hint">
             Use at least 10 characters; a phrase of four or more words is easy to remember.
           </p>
           {error ? (

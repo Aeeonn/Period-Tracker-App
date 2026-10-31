@@ -24,6 +24,7 @@
   "include": [
     "tools/**/*.ts",
     "tests/**/*.ts",
+    "tests/**/*.tsx",
     "src/**/*.ts",
     "src/**/*.tsx",
     "vite.config.ts",

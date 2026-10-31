@@ -4,6 +4,7 @@ import { createServer, type ViteDevServer } from 'vite';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { configureThroughUi, fillConfirmation, fillConfirmationFields } from './helpers/lock.ts';
 import type { LockReason } from '../../src/contracts/lock.ts';
 import type { LogicalRecord } from '../../src/contracts/store.ts';
 import type { LockConfiguration } from '../../src/lock/core/persistence.ts';
@@ -35,35 +36,6 @@ async function openFixture(page: Page, timeoutMs = 60_000): Promise<string> {
   await page.goto(`${fixtureUrl}?db=${encodeURIComponent(databaseName)}&timeout=${timeoutMs}`);
   await page.waitForFunction(() => window.floLockDemo !== undefined);
   return databaseName;
-}
-
-async function configureThroughUi(page: Page, passphrase = 'synthetic harbor glimmer 74') {
-  await expect(page.getByRole('heading', { name: 'Create your lock' })).toBeVisible();
-  await expect(
-    page.getByText(/Your passphrase never leaves this device and isn't stored/),
-  ).toBeVisible();
-  await page.getByLabel('Passphrase', { exact: true }).fill(passphrase);
-  await page.getByRole('button', { name: 'Create passphrase' }).click();
-  const code = (await page.getByTestId('recovery-code').textContent())?.trim();
-  if (!code) throw new Error('Recovery code was not rendered');
-  const prompt = await page.getByText(/^Enter the characters at positions/).textContent();
-  const positions = prompt?.match(/\d+/gu)?.map(Number) ?? [];
-  if (positions.length !== 4) throw new Error('Recovery confirmation positions were not rendered');
-  return { code, positions };
-}
-
-async function fillConfirmationFields(page: Page, code: string, positions: readonly number[]) {
-  const canonical = code.replaceAll('-', '');
-  for (const [index, position] of positions.entries()) {
-    const input = page.getByLabel(`Character at position ${position}`, { exact: true });
-    await input.fill(canonical[position - 1]!);
-    if (index === 0) await expect(input).toBeFocused();
-  }
-}
-
-async function fillConfirmation(page: Page, code: string, positions: readonly number[]) {
-  await fillConfirmationFields(page, code, positions);
-  await page.getByRole('button', { name: 'Confirm recovery code' }).click();
 }
 
 const synthetic = JSON.parse(
@@ -250,6 +222,8 @@ test('@lock retains configuration when lock lands at real IndexedDB transaction 
 test('@lock recovery changes only the passphrase wrap and clears one-use recovery authorization', async ({
   page,
 }) => {
+  // Full WebKit load runs this multi-PBKDF2 flow beyond the default 30s cap.
+  test.setTimeout(60_000);
   await openFixture(page);
   const initialPassphrase = 'synthetic harbor glimmer 74';
   const changedPassphrase = 'synthetic cedar morning 82';

@@ -88,7 +88,7 @@ All interfaces live in `src/contracts/` (task `p0-contracts`). They are versione
 | `lib/localdate` | A0 date arithmetic | `LocalDate`, `epochDay`, `addDays`, `diffDays`, `todayLocal()` | — |
 | `crypto` | Primitives, key hierarchy, envelopes | `CryptoApi`: `deriveKek`, `wrapKey`, `unwrapKey`, `seal`, `open`, `sign`, `verify`, `ecdhWrap`, `ecdhUnwrap` | localdate |
 | `data` | Encrypted IndexedDB store, migrations, repositories | `RecordStore`: `get/put/delete/list(type)`, `transaction`; `Migrations`; `LogRepo`, `SettingsRepo` | crypto, contracts |
-| `lock` | Passphrase setup, unlock, auto-lock, passkey PRF, quick-hide | `LockService`: `setup`, `unlock`, `lock`, `isUnlocked`, `onLock` | crypto, data |
+| `lock` | Passphrase setup, unlock, auto-lock, passkey PRF, quick-hide | `LockService`: `setup`, `confirmSetup`, `cancelSetup`, `setupState`, `unlock`, `lock`, `isUnlocked`, `onLock`, `changePassphrase`, `storeKeys` ([ADR-0010](../adr/0010-lock-service-key-lifecycle.md)) | crypto, data |
 | `engine` | A0–A18 (pure) | `runEngine(input, params)` | localdate only |
 | `share` | Categories, projections, epochs, key wrapping for the partner | `ShareService`: `enable`, `pause`, `resume`, `revoke`, `preview`, `buildProjection` | crypto, data, engine output types |
 | `pairing` | QR exchange, safety code, device registration, unpair | `PairingService` | crypto, share, sync |
@@ -269,7 +269,7 @@ The IndexedDB database `app` has these stores:
 | Store | Contents | Encrypted |
 |---|---|---|
 | `meta` | Schema version, KDF params, wrapped LMK, salts, public keys, opaque ids | No (contains no health data) |
-| `records` | `{id: HMAC-SHA256(indexKey, logicalId) base64url-128bit, type: coarse ("day", "cfg", "share", "couple", "proj", "sys"), hlc, deleted, iv, ct}` | Yes. Logical ids, dates and categories are only inside the ciphertext, so the DB keys do not reveal dates |
+| `records` | `{id: base64url(first 16 bytes of HMAC-SHA-256(IDX, UTF-8(JSON.stringify([entityName, logicalId])))), type: coarse ("day", "cfg", "share", "couple", "proj", "sys"), hlc, deleted, iv, ct}` | Yes. The JSON string-array encoding domain-separates entities injectively; IDX is the only key used. Logical ids, dates and categories remain inside ciphertext, so DB keys do not reveal dates. |
 | `outbox` | Sealed envelopes waiting to sync | Yes |
 | `snapshots` | Pre-migration snapshot | Yes |
 
