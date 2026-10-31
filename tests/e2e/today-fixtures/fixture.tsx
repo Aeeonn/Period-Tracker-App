@@ -1,9 +1,11 @@
 import { render } from 'preact';
 import type { DeviceId, ReminderId } from '../../../src/contracts/brand.ts';
 import type { DayBundle, ReminderRule } from '../../../src/contracts/entities.ts';
+import type { LocalDate } from '../../../src/contracts/localdate.ts';
 import type { SuppressionReason } from '../../../src/contracts/enums.ts';
 import type { LocalTime } from '../../../src/contracts/localdate.ts';
 import { createLogRepo, createSettingsRepo } from '../../../src/data/repos/index.ts';
+import { parse } from '../../../src/lib/localdate/index.ts';
 import { evaluateReminders } from '../../../src/reminders/inapp/index.ts';
 import {
   SUPPRESSION_REASONS,
@@ -36,7 +38,7 @@ const reminderFixture = {
     recentDayLogs: [],
   }),
 };
-const props =
+const fixtureProps =
   fixture === 'reminder'
     ? reminderFixture
     : fixture === 'emergency'
@@ -44,6 +46,8 @@ const props =
       : suppression !== null && (SUPPRESSION_REASONS as readonly string[]).includes(suppression)
         ? TODAY_SUPPRESSION_FIXTURES[suppression as SuppressionReason]
         : TODAY_PREVIEW_FIXTURE;
+const props =
+  params.get('weekstart') === 'sunday' ? { ...fixtureProps, weekStart: 7 as const } : fixtureProps;
 const root = document.getElementById('today-root');
 const deviceId = 'synthetic-e2e-quicklog-device' as DeviceId;
 const store = new MemoryRecordStore();
@@ -62,9 +66,15 @@ type QuickLogTestDay = {
   readonly sex?: DayBundle['sex'] | undefined;
 };
 
+function requestedDate(value: string | undefined, fallback: LocalDate): LocalDate {
+  if (value === undefined) return fallback;
+  const parsed = parse(value);
+  return parsed ?? fallback;
+}
+
 declare global {
   interface Window {
-    __quickLogTest?: { readDay: () => Promise<QuickLogTestDay | undefined> };
+    __quickLogTest?: { readDay: (localDate?: string) => Promise<QuickLogTestDay | undefined> };
   }
 }
 
@@ -77,8 +87,8 @@ async function mountFixture(): Promise<void> {
   }
 
   window.__quickLogTest = {
-    readDay: async () => {
-      const day = await logRepo.getDay(props.today);
+    readDay: async (localDate) => {
+      const day = await logRepo.getDay(requestedDate(localDate, props.today));
       if (!day) return undefined;
       return {
         flow: day.flow,

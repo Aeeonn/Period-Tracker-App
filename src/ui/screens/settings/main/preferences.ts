@@ -4,6 +4,10 @@ export function convertTemperatureFromCelsius(celsius: number, unit: Temperature
   return unit === 'fahrenheit' ? (celsius * 9) / 5 + 32 : celsius;
 }
 
+export function convertTemperatureToCelsius(value: number, unit: TemperatureUnit): number {
+  return unit === 'fahrenheit' ? ((value - 32) * 5) / 9 : value;
+}
+
 export function formatTemperatureFromCelsius(celsius: number, unit: TemperatureUnit): string {
   const converted = convertTemperatureFromCelsius(celsius, unit);
   const symbol = unit === 'fahrenheit' ? 'F' : 'C';

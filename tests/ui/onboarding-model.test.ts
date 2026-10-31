@@ -25,6 +25,8 @@ const emptyAnswers: OnboardingAnswers = {
   typicalPeriodLength: undefined,
   goal: 'track',
   birthYear: undefined,
+  contraceptionMethod: 'prefer_not_to_say',
+  periodReminderEnabled: true,
   dailyCheckInTime: undefined,
 };
 
@@ -72,14 +74,17 @@ describe('onboarding model', () => {
 
   it('uses the same fixed operator disclosure for both roles', () => {
     expect(OPERATOR_DISCLOSURE_TEXT).toBe(
-      "This app's website and its encrypted mailbox run on a free Cloudflare account held by <the AP-10 account holder>. That person can't read your encrypted data. They can see when your phone connects and roughly where from, and they could change the app's code. The mailbox is set up to keep no logs, but its owner could turn logging back on. If you'd rather hold the account yourself, that can be arranged.",
+      "This app's website and its encrypted mailbox run on a free Cloudflare account held by the person who set up this private app. They can't read your encrypted data. They can see when your phone connects and roughly where from, and they could change the app's code. The mailbox is set up to keep no logs, but its owner could turn logging back on. If you'd rather hold the account yourself, that can be arranged.",
     );
   });
 
-  it('persists an optional start, opted-in reminder, and Profile through the repositories', async () => {
+  it('persists the selected method and reminder choices before the Profile completion marker', async () => {
     const order: string[] = [];
     const putProfile = vi.fn(async () => {
       order.push('profile');
+    });
+    const putContraception = vi.fn(async () => {
+      order.push('contraception');
     });
     const putReminder = vi.fn(async () => {
       order.push('reminder');
@@ -90,20 +95,36 @@ describe('onboarding model', () => {
 
     await persistOwnerOnboarding(
       {
-        settingsRepo: { putProfile, putReminder },
+        settingsRepo: { putProfile, putReminder, putContraception },
         logRepo: { putOverride },
       },
       {
         ...emptyAnswers,
         lastPeriodStart: date('2026-10-01'),
         typicalCycleLength: 28,
+        contraceptionMethod: 'combined_pill',
+        periodReminderEnabled: true,
         dailyCheckInTime: '08:05' as LocalTime,
       },
+      date('2026-10-31'),
     );
 
     expect(putOverride).toHaveBeenCalledWith({
       localDate: date('2026-10-01'),
       kind: 'start',
+    });
+    expect(putContraception).toHaveBeenCalledWith({
+      method: 'combined_pill',
+      startDate: date('2026-10-31'),
+      regimen: { activeDays: 0, breakDays: 0, continuous: false },
+    });
+    expect(putReminder).toHaveBeenCalledWith({
+      id: 'onboarding-period-reminder',
+      kind: 'still_bleeding',
+      localTime: '00:00',
+      days: [1, 2, 3, 4, 5, 6, 7],
+      condition: 'during_bleeding',
+      enabled: true,
     });
     expect(putReminder).toHaveBeenCalledWith({
       id: 'onboarding-daily-check-in',
@@ -114,24 +135,30 @@ describe('onboarding model', () => {
       enabled: true,
     });
     expect(putProfile).toHaveBeenCalledOnce();
-    expect(order).toEqual(['override', 'reminder', 'profile']);
+    expect(order).toEqual(['override', 'contraception', 'reminder', 'reminder', 'profile']);
   });
 
-  it('writes a Profile without an override or reminder for not-sure choices', async () => {
+  it('persists a disabled period reminder when the user turns it off', async () => {
     const putProfile = vi.fn(async () => undefined);
     const putReminder = vi.fn(async () => undefined);
+    const putContraception = vi.fn(async () => undefined);
     const putOverride = vi.fn(async () => undefined);
 
     await persistOwnerOnboarding(
       {
-        settingsRepo: { putProfile, putReminder },
+        settingsRepo: { putProfile, putReminder, putContraception },
         logRepo: { putOverride },
       },
-      emptyAnswers,
+      { ...emptyAnswers, periodReminderEnabled: false },
+      date('2026-10-31'),
     );
 
     expect(putProfile).toHaveBeenCalledOnce();
     expect(putOverride).not.toHaveBeenCalled();
-    expect(putReminder).not.toHaveBeenCalled();
+    expect(putContraception).toHaveBeenCalledOnce();
+    expect(putReminder).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'onboarding-period-reminder', enabled: false }),
+    );
+    expect(putReminder).toHaveBeenCalledTimes(1);
   });
 });

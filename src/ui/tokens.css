@@ -16,8 +16,8 @@
   --gradient-accent: linear-gradient(135deg, #5d3b88, #854b7b);
   --color-accent-subtle: #efe7f8;
   --color-focus: #5d3b88;
-  --color-period: #843c67;
-  --color-fertility: #4d6493;
+  --color-period: #a33d6d;
+  --color-fertility: #6a4d9a;
   --color-today: #67429b;
   --color-ring-track: #e3d9eb;
 
@@ -71,7 +71,7 @@
   --color-accent-subtle: #3a2f47;
   --color-focus: #e5cfff;
   --color-period: #f3add0;
-  --color-fertility: #b4c9f3;
+  --color-fertility: #d7b6f6;
   --color-today: #dfc5ff;
   --color-ring-track: #51425e;
 
@@ -99,7 +99,7 @@
     --color-accent-subtle: #3a2f47;
     --color-focus: #e5cfff;
     --color-period: #f3add0;
-    --color-fertility: #b4c9f3;
+    --color-fertility: #d7b6f6;
     --color-today: #dfc5ff;
     --color-ring-track: #51425e;
 

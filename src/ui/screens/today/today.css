@@ -97,6 +97,24 @@
 .today-cycle-overview {
   display: grid;
   gap: var(--space-4);
+  grid-template-areas:
+    'ring'
+    'actions'
+    'week';
+}
+
+.today-ring-card {
+  grid-area: ring;
+}
+
+.today-primary-actions {
+  display: grid;
+  grid-area: actions;
+  gap: var(--space-2);
+}
+
+.today-week {
+  grid-area: week;
 }
 
 .today-ring-card {
@@ -579,6 +597,9 @@
 
   .today-cycle-overview {
     grid-template-columns: minmax(0, 1.25fr) minmax(17rem, 0.75fr);
+    grid-template-areas:
+      'ring week'
+      'actions week';
     align-items: stretch;
   }
 

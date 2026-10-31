@@ -39,6 +39,7 @@ import {
   type PillIntake,
   type Stress,
   type SymptomBody,
+  type TemperatureUnit,
   type Tracker,
   type ZeroToThree,
 } from '../../../contracts/enums.ts';
@@ -55,11 +56,23 @@ import type {
 import type { LocalTime } from '../../../contracts/localdate.ts';
 import { Button, Chip } from '../../components/base';
 import { optionLabel, TRACKER_LABELS, type LogEntry } from './types.ts';
+import {
+  convertTemperatureFromCelsius,
+  convertTemperatureToCelsius,
+} from '../settings/main/preferences.ts';
+
+const ENERGY_LABELS: Readonly<Record<Energy, string>> = {
+  0: 'Drained',
+  1: 'Low',
+  2: 'OK',
+  3: 'Energised',
+};
 
 interface TrackerEditorProps {
   readonly tracker: Tracker;
   readonly day?: DayBundle | undefined;
   readonly disabled: boolean;
+  readonly temperatureUnit?: TemperatureUnit | undefined;
   readonly onSave: (entries: readonly LogEntry[]) => void;
   readonly onClear: () => void;
   readonly onDraftChange: (tracker: Tracker, entries: readonly LogEntry[], dirty: boolean) => void;
@@ -71,6 +84,7 @@ interface ChoiceGroupProps<T extends string> {
   readonly value: T | undefined;
   readonly onChange: (value: T | undefined) => void;
   readonly disabled: boolean;
+  readonly labelFor?: ((value: T) => string) | undefined;
 }
 
 interface MultiChoiceGroupProps<T extends string> {
@@ -88,6 +102,7 @@ function ChoiceGroup<T extends string>({
   value,
   onChange,
   disabled,
+  labelFor,
 }: ChoiceGroupProps<T>) {
   return (
     <fieldset class="log-choice-group" disabled={disabled}>
@@ -99,7 +114,7 @@ function ChoiceGroup<T extends string>({
             pressed={value === item}
             onPressedChange={(pressed) => onChange(pressed ? item : undefined)}
           >
-            {optionLabel(item)}
+            {labelFor?.(item) ?? optionLabel(item)}
           </Chip>
         ))}
       </div>
@@ -262,6 +277,7 @@ export function TrackerEditor({
   tracker,
   day,
   disabled,
+  temperatureUnit = 'celsius',
   onSave,
   onClear,
   onDraftChange,
@@ -448,6 +464,7 @@ export function TrackerEditor({
             onChange={(value) =>
               setEnergy(value === undefined ? undefined : (Number(value) as Energy))
             }
+            labelFor={(value) => ENERGY_LABELS[Number(value) as Energy] ?? 'Energy'}
             disabled={disabled}
           />
           {saveBar(
@@ -625,7 +642,10 @@ export function TrackerEditor({
     }
     case 'bbt': {
       const timeIsValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(bbtTime);
-      const canSave = bbtTemp !== undefined && timeIsValid;
+      const temperatureIsValid = bbtTemp !== undefined && bbtTemp >= 35 && bbtTemp <= 42;
+      const displayTemperature =
+        bbtTemp === undefined ? undefined : convertTemperatureFromCelsius(bbtTemp, temperatureUnit);
+      const canSave = temperatureIsValid && timeIsValid;
       const reading: BbtReading = {
         valueC: bbtTemp === undefined ? 0 : Number(bbtTemp.toFixed(2)),
         measuredAt: bbtTime as LocalTime,
@@ -635,12 +655,25 @@ export function TrackerEditor({
         <>
           <NumberField
             label="Temperature"
-            value={bbtTemp}
-            step={0.01}
-            unit="C"
+            value={displayTemperature}
+            min={convertTemperatureFromCelsius(35, temperatureUnit)}
+            max={convertTemperatureFromCelsius(42, temperatureUnit)}
+            step={temperatureUnit === 'fahrenheit' ? 0.1 : 0.01}
+            unit={temperatureUnit === 'fahrenheit' ? '°F' : '°C'}
             disabled={disabled}
-            onChange={setBbtTemp}
+            onChange={(value) =>
+              setBbtTemp(
+                value === undefined
+                  ? undefined
+                  : convertTemperatureToCelsius(value, temperatureUnit),
+              )
+            }
           />
+          {bbtTemp !== undefined && !temperatureIsValid ? (
+            <p class="log-editor__hint" role="alert">
+              Enter a temperature between 35 and 42 °C (95 to 107.6 °F).
+            </p>
+          ) : null}
           <TextField
             label="Measured at"
             type="time"

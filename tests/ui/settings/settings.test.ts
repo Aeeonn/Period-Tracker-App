@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Tracker } from '../../../src/contracts/enums.ts';
 import {
   convertTemperatureFromCelsius,
+  convertTemperatureToCelsius,
   formatTemperatureFromCelsius,
   movePinnedTracker,
   togglePinnedTracker,
@@ -22,6 +23,13 @@ describe('settings display preferences', () => {
     expect(convertTemperatureFromCelsius(0, 'fahrenheit')).toBe(32);
     expect(convertTemperatureFromCelsius(100, 'fahrenheit')).toBe(212);
     expect(convertTemperatureFromCelsius(-40, 'fahrenheit')).toBe(-40);
+  });
+
+  it('converts Fahrenheit entry back to canonical Celsius for storage', () => {
+    expect(convertTemperatureToCelsius(95, 'fahrenheit')).toBe(35);
+    expect(convertTemperatureToCelsius(107.6, 'fahrenheit')).toBeCloseTo(42, 10);
+    expect(convertTemperatureToCelsius(98.2, 'fahrenheit')).toBeCloseTo(36.7777778, 6);
+    expect(convertTemperatureToCelsius(36.55, 'celsius')).toBe(36.55);
   });
 
   it('toggles a tracker without changing the prior array', () => {

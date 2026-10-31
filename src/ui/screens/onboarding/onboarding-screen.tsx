@@ -81,6 +81,8 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
         typicalPeriodLength: parseOptionalInteger(periodLengthText, 1, 90),
         goal,
         birthYear: parseOptionalInteger(birthYearText, 0, Number(today.slice(0, 4))),
+        contraceptionMethod,
+        periodReminderEnabled: true,
         dailyCheckInTime: undefined,
       };
       setAnswers(nextAnswers);
@@ -99,7 +101,7 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
         throw new RangeError('Choose a time for your daily check-in, or leave it off.');
       }
       if (answers === null) throw new Error('Your basics are not ready yet.');
-      setAnswers({ ...answers, dailyCheckInTime: time });
+      setAnswers({ ...answers, dailyCheckInTime: time, periodReminderEnabled });
       setStep('disclosure');
     } catch (reason) {
       setError(
@@ -114,7 +116,7 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
     try {
       if (role === 'owner') {
         if (answers === null) throw new Error('Your basics are not ready yet.');
-        await persistOwnerOnboarding({ logRepo, settingsRepo }, answers);
+        await persistOwnerOnboarding({ logRepo, settingsRepo }, answers, today);
       }
       onComplete();
     } catch {
@@ -127,8 +129,6 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
   const ownerStepNumber = step === 'basics' ? 1 : step === 'reminders' ? 2 : 3;
   const totalSteps = role === 'owner' ? 3 : 1;
   const currentStep = role === 'owner' ? ownerStepNumber : 1;
-  const holderMarker = '<the AP-10 account holder>';
-  const holderIndex = OPERATOR_DISCLOSURE_TEXT.indexOf(holderMarker);
   const currentYear = Number(today.slice(0, 4));
 
   return (
@@ -242,8 +242,7 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
                 ))}
               </select>
               <p class="onboarding-hint">
-                This answer stays on this screen for now; setup doesn’t ask for a method start date
-                or regimen.
+                Saved privately on this device. You can update it later in your settings.
               </p>
             </div>
 
@@ -332,8 +331,7 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
               />
             </div>
             <p class="onboarding-hint">
-              Push permission is separate. This setup won’t ask for it. The period reminder stays on
-              this screen because no reminder time is chosen here.
+              These gentle reminders appear in the app. They won’t send phone notifications.
             </p>
             {error ? (
               <p class="onboarding-error" role="alert">
@@ -362,9 +360,7 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
             </h1>
             <p class="onboarding-lead">A clear look at how the service works.</p>
             <p class="onboarding-disclosure" data-testid="operator-disclosure">
-              {OPERATOR_DISCLOSURE_TEXT.slice(0, holderIndex)}
-              <strong>{holderMarker}</strong>
-              {OPERATOR_DISCLOSURE_TEXT.slice(holderIndex + holderMarker.length)}
+              {OPERATOR_DISCLOSURE_TEXT}
             </p>
             <p class="onboarding-sharing-note">
               Pair now or later. Pairing is never required. Sharing is off until she turns

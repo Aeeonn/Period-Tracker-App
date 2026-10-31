@@ -69,7 +69,7 @@ function predictionExplanation(
     recentThree.every((cycle) => cycle.length === recentThree[0]?.length);
   let basis =
     prediction.cyclesUsed === 0
-      ? 'Using your entered typical cycle length or the 28-day default.'
+      ? 'Predictions get more personal after a few cycles. Until then the window is wider.'
       : `Based on your last ${prediction.cyclesUsed} cycles.`;
   if (repeatedChange) {
     basis += ' Your cycles recently changed; the window is wider while they settle.';

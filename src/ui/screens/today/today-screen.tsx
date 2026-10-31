@@ -1,7 +1,14 @@
+import type { ComponentChildren } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import type { DueReminder } from '../../../contracts/reminders.ts';
 import type { EngineOutput } from '../../../contracts/engine-api.ts';
-import type { ChanceCategory, Flow, Tracker, WarningSeverity } from '../../../contracts/enums.ts';
+import type {
+  ChanceCategory,
+  Flow,
+  IsoWeekday,
+  Tracker,
+  WarningSeverity,
+} from '../../../contracts/enums.ts';
 import type { LocalDate, LocalDateRange } from '../../../contracts/localdate.ts';
 import { addDays, compare, diffDays, epochDay } from '../../../lib/localdate/index.ts';
 import { Button, Card, Sheet, Toast } from '../../components/base';
@@ -39,6 +46,7 @@ export interface TodayScreenProps {
   readonly loggedToday: readonly string[];
   readonly reminders?: readonly DueReminder[];
   readonly pinnedTrackers?: readonly Tracker[];
+  readonly weekStart?: IsoWeekday;
   readonly onOpenLog?: (() => void) | undefined;
 }
 
@@ -120,9 +128,13 @@ function weekdayIndex(value: LocalDate): number {
   return (((Number(epochDay(value)) + 4) % 7) + 7) % 7;
 }
 
-function weekDates(today: LocalDate): readonly LocalDate[] {
-  const mondayOffset = (weekdayIndex(today) + 6) % 7;
-  return Array.from({ length: 7 }, (_, index) => addDays(today, index - mondayOffset));
+export function weekDates(
+  today: LocalDate,
+  weekStart: IsoWeekday = 1,
+): readonly LocalDate[] {
+  const firstWeekday = weekStart % 7;
+  const offset = (weekdayIndex(today) - firstWeekday + 7) % 7;
+  return Array.from({ length: 7 }, (_, index) => addDays(today, index - offset));
 }
 
 function dateRangeLabel(range: LocalDateRange): string {
@@ -162,15 +174,19 @@ function ringArcPath(
 }
 
 function CycleRing({
+  actions,
   cycleDay,
   engineOutput,
   stillBleeding,
   today,
+  weekStart,
 }: {
   readonly engineOutput: EngineOutput;
   readonly today: LocalDate;
   readonly cycleDay: number | null;
   readonly stillBleeding: boolean;
+  readonly weekStart: IsoWeekday;
+  readonly actions: ComponentChildren;
 }) {
   const [selectedSegment, setSelectedSegment] = useState<CycleRingSegment | null>(null);
   const prediction = engineOutput.prediction;
@@ -246,7 +262,7 @@ function CycleRing({
           ? `The marker shows today, ${formatLocalDate(today)}.`
           : 'Focus or choose a ring segment to learn what it means.';
 
-  const dateLabels = weekDates(today);
+  const dateLabels = weekDates(today, weekStart);
 
   return (
     <div class="today-cycle-overview">
@@ -386,6 +402,7 @@ function CycleRing({
           </p>
         </figure>
       </Card>
+      {actions}
       <section class="today-week" aria-labelledby="today-week-title">
         <div class="today-week__heading">
           <h2 id="today-week-title">This week</h2>
@@ -403,11 +420,14 @@ function CycleRing({
                 ? MONTH_LABELS[Number(date.slice(5, 7)) - 1]
                 : null;
             const isPeriod = predictionRange !== null && dateInRange(date, predictionRange);
-            const isFertile = fertilityRange !== null && dateInRange(date, fertilityRange);
+            const coreFertilityRange =
+              fertility.kind === 'fertility' ? fertility.coreWindow : null;
+            const isFertile =
+              coreFertilityRange !== null && dateInRange(date, coreFertilityRange);
             const ariaParts = [WEEKDAY_NAMES[dayIndex], formatLocalDate(date)];
             if (isToday) ariaParts.push('today');
             if (isPeriod) ariaParts.push('predicted period window');
-            if (isFertile) ariaParts.push('possible fertile window');
+            if (isFertile) ariaParts.push('estimated fertile day');
             return (
               <li
                 key={date}
@@ -426,7 +446,7 @@ function CycleRing({
                   <span class="today-week__tag today-week__tag--fertile">Fertile</span>
                 ) : null}
                 {!isToday && isPeriod && isFertile ? (
-                  <span class="visually-hidden">Also within possible fertile window.</span>
+                  <span class="visually-hidden">Also an estimated fertile day.</span>
                 ) : null}
               </li>
             );
@@ -487,12 +507,14 @@ export function TodayScreen({
   today,
   reminders = [],
   pinnedTrackers = DEFAULT_PINNED_TRACKERS,
+  weekStart = 1,
   onOpenLog,
 }: TodayScreenProps) {
   const repositories = useContext(RepositoriesContext);
   const logRepo = logRepoOverride === undefined ? (repositories?.logRepo ?? null) : logRepoOverride;
   const [whyTopic, setWhyTopic] = useState<WhyTopic | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  const [initialQuickLogTracker, setInitialQuickLogTracker] = useState<Tracker | undefined>();
   const [currentCycleDay, setCurrentCycleDay] = useState<number | null>(cycleDay);
   const [flowOverride, setFlowOverride] = useState<{ readonly value: Flow | undefined } | null>(
     null,
@@ -510,6 +532,14 @@ export function TodayScreen({
   const [dismissedWarnings, setDismissedWarnings] = useState<ReadonlySet<string>>(() => new Set());
   const [showStillBleeding, setShowStillBleeding] = useState(stillBleeding);
   const currentFlow = flowOverride === null ? flowToday : flowOverride.value;
+  const openQuickLog = () => {
+    setInitialQuickLogTracker(undefined);
+    setLogOpen(true);
+  };
+  const openFirstPeriodLog = () => {
+    setInitialQuickLogTracker('flow');
+    setLogOpen(true);
+  };
   const visibleLoggedToday = loggedTodayWithFlow(
     loggedToday,
     currentFlow,
@@ -527,6 +557,8 @@ export function TodayScreen({
   const predictionExplanation = explanationText(engineOutput);
   const predictionBasis = explanationBasis(engineOutput);
   const chanceCategory = engineOutput.chanceByDay[today] ?? 'NO_DATA_YET';
+  const calendarOnlyEstimate =
+    prediction.kind === 'prediction' && prediction.cyclesUsed < 3;
   const predictionText =
     prediction.kind === 'prediction'
       ? `Next period: around ${formatLocalDate(prediction.center)}`
@@ -672,10 +704,54 @@ export function TodayScreen({
       <ReminderBanner reminders={reminders} />
 
       <CycleRing
+        actions={
+          <div class="today-primary-actions">
+            <div class="today-actions" role="group" aria-label="Log today">
+              <div class="today-actions__period">
+                <Button
+                  class={
+                    isPeriodStartedFlow(currentFlow)
+                      ? 'today-flow-choice today-flow-choice--selected'
+                      : 'today-flow-choice'
+                  }
+                  aria-pressed={isPeriodStartedFlow(currentFlow)}
+                  disabled={flowSaving}
+                  onClick={() => void saveFlow('medium', 'Period started', true)}
+                >
+                  {isPeriodStartedFlow(currentFlow) ? 'Period started ✓' : 'Period started'}
+                </Button>
+                {isPeriodStartedFlow(currentFlow) ? (
+                  <Button
+                    class="today-flow-remove"
+                    aria-label="Remove today's period entry"
+                    disabled={flowSaving}
+                    onClick={() => void clearTodayFlow()}
+                    variant="quiet"
+                  >
+                    ✕
+                  </Button>
+                ) : null}
+              </div>
+              <Button onClick={openQuickLog} variant="secondary">
+                Log today
+              </Button>
+            </div>
+            <p class="today-logged-summary">
+              <strong>Logged today:</strong>{' '}
+              {visibleLoggedToday.length > 0 ? visibleLoggedToday.join(' · ') : 'Nothing yet'}
+            </p>
+            {flowErrorMessage ? (
+              <p class="today-flow-error" role="alert">
+                {flowErrorMessage}
+              </p>
+            ) : null}
+          </div>
+        }
         cycleDay={currentCycleDay}
         engineOutput={engineOutput}
         stillBleeding={showStillBleeding}
         today={today}
+        weekStart={weekStart}
       />
 
       {noLoggedData ? (
@@ -684,7 +760,7 @@ export function TodayScreen({
             Log your first period to start building your cycle view. Predictions will only appear
             when there is enough information.
           </p>
-          <Button onClick={() => setLogOpen(true)}>Log first period</Button>
+          <Button onClick={openFirstPeriodLog}>Log first period</Button>
         </Card>
       ) : null}
 
@@ -706,7 +782,10 @@ export function TodayScreen({
         <Card class="today-stat today-chance" heading="Fertile chance today">
           <p class="today-chance__value">{CHANCE_LABELS[chanceCategory]}</p>
           <p class="today-chance__uncertainty">
-            This estimate is uncertain. Pregnancy is possible any day.
+            {calendarOnlyEstimate
+              ? 'Based on the calendar only — less certain until you’ve tracked longer.'
+              : 'This estimate is uncertain.'}{' '}
+            Pregnancy is possible any day.
           </p>
           <p class="today-safety-line">No day is &quot;safe&quot; without contraception.</p>
           <Button class="today-why" onClick={() => setWhyTopic('chance')} variant="quiet">
@@ -727,47 +806,6 @@ export function TodayScreen({
           </p>
         </Card>
       </div>
-
-      <div class="today-actions" role="group" aria-label="Log today">
-        <div class="today-actions__period">
-          <Button
-            class={
-              isPeriodStartedFlow(currentFlow)
-                ? 'today-flow-choice today-flow-choice--selected'
-                : 'today-flow-choice'
-            }
-            aria-pressed={isPeriodStartedFlow(currentFlow)}
-            disabled={flowSaving}
-            onClick={() => void saveFlow('medium', 'Period started', true)}
-          >
-            {isPeriodStartedFlow(currentFlow) ? 'Period started ✓' : 'Period started'}
-          </Button>
-          {isPeriodStartedFlow(currentFlow) ? (
-            <Button
-              class="today-flow-remove"
-              aria-label="Remove today's period entry"
-              disabled={flowSaving}
-              onClick={() => void clearTodayFlow()}
-              variant="quiet"
-            >
-              ✕
-            </Button>
-          ) : null}
-        </div>
-        <Button onClick={() => setLogOpen(true)} variant="secondary">
-          Log today
-        </Button>
-      </div>
-
-      <p class="today-logged-summary">
-        <strong>Logged today:</strong>{' '}
-        {visibleLoggedToday.length > 0 ? visibleLoggedToday.join(' · ') : 'Nothing yet'}
-      </p>
-      {flowErrorMessage ? (
-        <p class="today-flow-error" role="alert">
-          {flowErrorMessage}
-        </p>
-      ) : null}
 
       {showStillBleeding || currentFlow !== undefined ? (
         <Card class="today-bleeding-prompt" heading="Still bleeding today?">
@@ -808,12 +846,16 @@ export function TodayScreen({
         </Card>
       ) : null}
 
-      <Card class="today-content-slot" heading={contentSlot.title}>
-        {contentSlot.paragraphs.map((paragraph) => (
-          <p key={paragraph}>{paragraph}</p>
-        ))}
-        <p class="today-content-slot__source">{contentSlot.sourceNote}</p>
-      </Card>
+      {contentSlot.paragraphs.length > 0 ? (
+        <Card class="today-content-slot" heading={contentSlot.title}>
+          {contentSlot.paragraphs.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+          {contentSlot.sourceNote ? (
+            <p class="today-content-slot__source">{contentSlot.sourceNote}</p>
+          ) : null}
+        </Card>
+      ) : null}
 
       <Sheet
         open={whyTopic !== null}
@@ -830,7 +872,11 @@ export function TodayScreen({
 
       <QuickLogSheet
         open={logOpen}
-        onOpenChange={setLogOpen}
+        onOpenChange={(open) => {
+          setLogOpen(open);
+          if (!open) setInitialQuickLogTracker(undefined);
+        }}
+        initialTracker={initialQuickLogTracker}
         localDate={today}
         logRepo={logRepo}
         pinnedTrackers={pinnedTrackers}

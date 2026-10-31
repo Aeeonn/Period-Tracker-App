@@ -1,3 +1,4 @@
+import type { IsoWeekday } from '../../../contracts/enums.ts';
 import type { DayBundle } from '../../../contracts/entities.ts';
 import type { LogRepo, SettingsRepo } from '../../../contracts/store.ts';
 import type { LocalDate, LocalTime } from '../../../contracts/localdate.ts';
@@ -36,9 +37,11 @@ export async function createCalendarScreenProps(
     repositories.logRepo.listDays({ start: FIRST_LOCAL_DATE, end: LAST_LOCAL_DATE }),
   ]);
   const dayLogs: readonly DayBundle[] = allDays;
+  const weekStart: IsoWeekday | undefined = todayProps.weekStart;
   return {
     engineOutput: todayProps.engineOutput,
     today: todayProps.today,
+    ...(weekStart === undefined ? {} : { weekStart }),
     logDates: dayLogs.map((dayLog) => dayLog.localDate),
     dayLogs,
   };

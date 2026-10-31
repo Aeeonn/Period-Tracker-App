@@ -15,7 +15,7 @@ import { RepositoriesContext, type Repositories, useRepositories } from './repos
 import { LogScreen } from '../screens/log';
 import { applyThemePreference, SettingsScreen } from '../screens/settings/main/index.ts';
 import { DEFAULT_PINNED_TRACKERS } from '../screens/log/types.ts';
-import type { Theme, Tracker } from '../../contracts/enums.ts';
+import type { TemperatureUnit, Theme, Tracker } from '../../contracts/enums.ts';
 import type { UpdateReadyNotice } from '../../sw/client.ts';
 import {
   OnboardingIntro,
@@ -64,8 +64,8 @@ const SCREEN_COPY: Record<TabId, string> = {
     'This is a static placeholder. Cycle tracking, predictions, and health features are not connected.',
   calendar: 'This calendar placeholder contains no dates or health records.',
   log: 'Logging is not implemented in this shell.',
-  insights: 'Insights and personal patterns are not implemented in this shell.',
-  us: 'The shared space is not available in this shell. No accounts, pairing, or sharing are connected.',
+  insights: 'Your personal patterns will show here as you log.',
+  us: 'A private shared space is on the way. Sharing stays off until you choose otherwise.',
   settings: 'Settings are not available in this shell.',
 };
 
@@ -169,6 +169,7 @@ function TabIcon({ name }: { name: IconName }) {
 }
 
 function PlaceholderScreen({ role, tab }: { role: Role; tab: Tab }) {
+  const comingSoon = tab.id === 'insights' || tab.id === 'us';
   const copy =
     tab.id === 'today' && role === 'partner'
       ? 'This partner-view placeholder contains no shared data. Sharing and health details are not connected.'
@@ -180,12 +181,14 @@ function PlaceholderScreen({ role, tab }: { role: Role; tab: Tab }) {
       <h1 class="shell-screen__title" id="shell-screen-title">
         {tab.label}
       </h1>
-      <Card class="shell-placeholder" heading="Placeholder screen">
+      <Card class="shell-placeholder" heading={comingSoon ? 'Coming soon' : 'Placeholder screen'}>
         <span class="shell-placeholder__mark" aria-hidden="true">
           <span />
         </span>
         <p>{copy}</p>
-        <p class="shell-placeholder__note">No health data is shown or stored in this shell.</p>
+        <p class="shell-placeholder__note">
+          {comingSoon ? 'Your private logs remain yours.' : 'No health data is shown or stored here.'}
+        </p>
       </Card>
     </section>
   );
@@ -200,13 +203,29 @@ function RepositoryLogScreen({
   readonly onPinnedTrackersChange: (trackers: readonly Tracker[]) => void;
   readonly localDate: LocalDate | undefined;
 }) {
-  const { logRepo } = useRepositories();
+  const { logRepo, settingsRepo } = useRepositories();
+  const [temperatureUnit, setTemperatureUnit] = useState<TemperatureUnit>('celsius');
+
+  useEffect(() => {
+    let mounted = true;
+    void settingsRepo
+      .getProfile()
+      .then((profile) => {
+        if (mounted) setTemperatureUnit(profile?.units.temp ?? 'celsius');
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, [settingsRepo]);
+
   return (
     <LogScreen
       logRepo={logRepo ?? undefined}
       pinnedTrackers={pinnedTrackers}
       onPinnedTrackersChange={onPinnedTrackersChange}
       localDate={localDate}
+      temperatureUnit={temperatureUnit}
     />
   );
 }
@@ -425,7 +444,6 @@ export function AppShell({
           </svg>
           <div>
             <p class="shell-brand__name">Cycle companion</p>
-            <p class="shell-brand__caption">Static preview</p>
           </div>
         </div>
         <span class="shell-role">{roleLabel}</span>

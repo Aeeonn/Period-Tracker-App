@@ -3,6 +3,7 @@ import type { LocalDate } from '../../src/contracts/localdate.ts';
 import { addDays, parse } from '../../src/lib/localdate/index.ts';
 import { CALENDAR_PREVIEW_FIXTURE } from '../../src/ui/screens/calendar/preview-fixtures.ts';
 import {
+  calendarWeekdays,
   cycleForDate,
   markersForDate,
   monthCells,
@@ -25,6 +26,17 @@ describe('calendar LocalDate model', () => {
     expect(cells[0]?.date).toBe(localDate('2024-01-28'));
     expect(cells.at(-1)?.date).toBe(localDate('2024-03-02'));
     expect(daysInMonth[28]?.date).toBe(localDate('2024-02-29'));
+  });
+
+  it('starts the calendar grid and weekday labels on the saved ISO week start', () => {
+    const february = localDate('2024-02-01');
+    const mondayFirst = monthCells(february, 1);
+    const sundayFirst = monthCells(february, 7);
+
+    expect(calendarWeekdays(1)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    expect(calendarWeekdays(7)).toEqual(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+    expect(mondayFirst[0]?.date).toBe(localDate('2024-01-29'));
+    expect(sundayFirst[0]?.date).toBe(localDate('2024-01-28'));
   });
 
   it('shifts months across year boundaries and stops outside LocalDate limits', () => {

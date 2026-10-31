@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import type { DayBundle } from '../../../contracts/entities.ts';
-import { TRACKERS, type Tracker } from '../../../contracts/enums.ts';
+import { TRACKERS, type TemperatureUnit, type Tracker } from '../../../contracts/enums.ts';
 import type { LocalDate } from '../../../contracts/localdate.ts';
 import { format, parse, todayLocal } from '../../../lib/localdate/index.ts';
 import { Button, Card, Chip } from '../../components/base';
@@ -18,6 +18,7 @@ export interface LogScreenProps {
   readonly logRepo?: LogRepo | undefined;
   readonly localDate?: LocalDate | undefined;
   readonly pinnedTrackers?: readonly Tracker[] | undefined;
+  readonly temperatureUnit?: TemperatureUnit | undefined;
   readonly onPinnedTrackersChange?: ((trackers: readonly Tracker[]) => void) | undefined;
 }
 
@@ -109,6 +110,7 @@ export function LogScreen({
   logRepo,
   localDate: initialDate,
   pinnedTrackers: pinnedTrackersProp,
+  temperatureUnit = 'celsius',
   onPinnedTrackersChange,
 }: LogScreenProps) {
   const [selectedDate, setSelectedDate] = useState<LocalDate>(() => initialDate ?? todayLocal());
@@ -130,7 +132,9 @@ export function LogScreen({
   ]);
   const pinnedTrackers = pinnedTrackersProp ?? localPinnedTrackers;
   const updatePinnedTrackers = onPinnedTrackersChange ?? setLocalPinnedTrackers;
-  const [selectedTracker, setSelectedTracker] = useState<Tracker | null>('desire');
+  const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(
+    () => pinnedTrackersProp?.[0] ?? DEFAULT_PINNED_TRACKERS[0] ?? 'flow',
+  );
   const [customizing, setCustomizing] = useState(false);
   const pending = getPendingEdits(pendingDrafts);
   const summary = formatDaySummary(day);
@@ -467,6 +471,7 @@ export function LogScreen({
                 tracker={tracker}
                 day={day}
                 disabled={editorDisabled}
+                temperatureUnit={temperatureUnit}
                 onSave={(entries) => void saveEntries(entries)}
                 onClear={() => void clearTracker(tracker)}
                 onDraftChange={reportDraft}

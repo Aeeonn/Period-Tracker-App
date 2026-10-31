@@ -88,6 +88,12 @@ test('@day-log saves a whole day and shows the saved entries in Calendar', async
     .getByRole('group', { name: 'Flow level' })
     .getByRole('button', { name: 'Light', exact: true })
     .click();
+  await expect(
+    page
+      .getByRole('group', { name: 'Pinned trackers' })
+      .getByRole('button', { name: 'Flow', exact: true })
+      .locator('.log-tracker-list__unsaved-dot'),
+  ).toBeVisible();
   await dateInput.fill(otherDate);
   await expect(page.locator('.log-screen__date-confirmation')).toContainText('unsaved edits');
   await page.getByRole('button', { name: 'Stay on this day', exact: true }).click();

@@ -72,4 +72,15 @@ test('@today-logging persists one period entry and lets the user remove it', asy
     return testWindow.__quickLogTest?.readDay();
   });
   expect(clearedDay?.flow).toBeUndefined();
+
+  await page.getByRole('button', { name: 'Log today', exact: true }).click();
+  const energyDialog = page.getByRole('dialog', { name: 'Quick log' });
+  await energyDialog
+    .getByRole('group', { name: 'Pinned quick-log trackers' })
+    .getByRole('button', { name: 'Energy', exact: true })
+    .click();
+  const energy = energyDialog.getByRole('group', { name: 'Energy' });
+  for (const label of ['Drained', 'Low', 'OK', 'Energised']) {
+    await expect(energy.getByRole('button', { name: label, exact: true })).toBeVisible();
+  }
 });

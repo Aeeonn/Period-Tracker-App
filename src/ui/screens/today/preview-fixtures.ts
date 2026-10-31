@@ -34,8 +34,8 @@ const input: EngineInput = {
 const engineOutput = runEngine(input);
 const contentSlot = {
   title: 'Did you know?',
-  paragraphs: ['A reviewed education card will appear here when available.'],
-  sourceNote: 'Synthetic preview placeholder; no reviewed card is connected.',
+  paragraphs: [],
+  sourceNote: '',
 } as const;
 
 export const TODAY_PREVIEW_FIXTURE: TodayScreenProps = {
@@ -44,7 +44,7 @@ export const TODAY_PREVIEW_FIXTURE: TodayScreenProps = {
   cycleDay: 12,
   stillBleeding: false,
   contentSlot,
-  loggedToday: ['Energy ▲', 'Cramps'],
+  loggedToday: ['Energy: Energised', 'Symptoms: Cramps'],
 };
 
 const emergencyOutput: EngineOutput = {

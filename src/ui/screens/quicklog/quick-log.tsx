@@ -14,6 +14,7 @@ import {
   EMERGENCY_CONTRACEPTION,
   type Desire,
   type Discharge,
+  type Energy,
   type Flow as FlowValue,
   type Mood as MoodValue,
   type SexActivity,
@@ -21,6 +22,7 @@ import {
   type Tracker,
 } from '../../../contracts/enums.ts';
 import type { LocalDate } from '../../../contracts/localdate.ts';
+import { compare, parse } from '../../../lib/localdate/index.ts';
 import { Button, Chip, Sheet, Toast } from '../../components/base';
 import { RepositoriesContext } from '../../layout/repositories.tsx';
 import {
@@ -36,6 +38,13 @@ import {
   type QuickLogUndoReceipt,
 } from './quick-log-model.ts';
 import './quick-log.css';
+
+const ENERGY_LABELS: Readonly<Record<Energy, string>> = {
+  0: 'Drained',
+  1: 'Low',
+  2: 'OK',
+  3: 'Energised',
+};
 
 interface ChoiceGridProps<Value extends string | number> {
   readonly legend: string;
@@ -120,6 +129,7 @@ export interface QuickLogSheetProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly localDate: LocalDate;
+  readonly initialTracker?: Tracker | undefined;
   readonly pinnedTrackers?: readonly Tracker[];
   readonly onOpenLog?: (() => void) | undefined;
   readonly logRepo?: LogRepo | null | undefined;
@@ -128,6 +138,7 @@ export interface QuickLogSheetProps {
 export function QuickLogSheet({
   localDate,
   logRepo: logRepoOverride,
+  initialTracker,
   onOpenChange,
   onOpenLog,
   open,
@@ -136,6 +147,7 @@ export function QuickLogSheet({
   const repositories = useContext(RepositoriesContext);
   const logRepo = logRepoOverride === undefined ? (repositories?.logRepo ?? null) : logRepoOverride;
   const [todayLog, setTodayLog] = useState<DayBundle | undefined>();
+  const [selectedLogDate, setSelectedLogDate] = useState<LocalDate>(localDate);
   const [loadingDay, setLoadingDay] = useState(false);
   const [saving, setSaving] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
@@ -143,15 +155,19 @@ export function QuickLogSheet({
   const [toastMessage, setToastMessage] = useState('');
   const [toastOpen, setToastOpen] = useState(false);
   const [undoReceipt, setUndoReceipt] = useState<QuickLogUndoReceipt | null>(null);
+  const [undoLocalDate, setUndoLocalDate] = useState<LocalDate>(localDate);
   const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(() =>
-    pinnedTrackers.includes('symptoms_body') ? 'symptoms_body' : (pinnedTrackers[0] ?? null),
+    initialTracker ??
+    (pinnedTrackers.includes('symptoms_body') ? 'symptoms_body' : (pinnedTrackers[0] ?? null)),
   );
   useEffect(() => {
     if (!open) return;
+    setSelectedLogDate(localDate);
     setSelectedTracker(
-      pinnedTrackers.includes('symptoms_body') ? 'symptoms_body' : (pinnedTrackers[0] ?? null),
+      initialTracker ??
+        (pinnedTrackers.includes('symptoms_body') ? 'symptoms_body' : (pinnedTrackers[0] ?? null)),
     );
-  }, [open, pinnedTrackers]);
+  }, [open, localDate, initialTracker, pinnedTrackers]);
 
   useEffect(() => {
     if (!open || !logRepo) {
@@ -162,7 +178,7 @@ export function QuickLogSheet({
     let mounted = true;
     setLoadingDay(true);
     void logRepo
-      .getDay(localDate)
+      .getDay(selectedLogDate)
       .then((day) => {
         if (mounted) setTodayLog(day);
       })
@@ -175,10 +191,11 @@ export function QuickLogSheet({
     return () => {
       mounted = false;
     };
-  }, [open, localDate, logRepo]);
+  }, [open, selectedLogDate, logRepo]);
 
   const activeTracker =
-    selectedTracker !== null && pinnedTrackers.includes(selectedTracker)
+    selectedTracker !== null &&
+    (pinnedTrackers.includes(selectedTracker) || selectedTracker === initialTracker)
       ? selectedTracker
       : pinnedTrackers.includes('symptoms_body')
         ? 'symptoms_body'
@@ -192,8 +209,9 @@ export function QuickLogSheet({
     setSaving(true);
     setErrorMessage('');
     try {
-      const receipt = await saveQuickLogEntry(logRepo, localDate, createEntry);
+      const receipt = await saveQuickLogEntry(logRepo, selectedLogDate, createEntry);
       setUndoReceipt(receipt);
+      setUndoLocalDate(selectedLogDate);
       setToastMessage(`Saved: ${label}.`);
       setToastOpen(true);
       setNoteDraft('');
@@ -242,7 +260,7 @@ export function QuickLogSheet({
     );
 
   const saveEnergy = (value: (typeof ENERGY)[number]) =>
-    saveEntry(() => ({ tracker: 'energy', value }), `Energy: level ${value}`);
+    saveEntry(() => ({ tracker: 'energy', value }), `Energy: ${ENERGY_LABELS[value]}`);
 
   const saveTestChoice = (choice: TestChoice) => saveEntry(choice.createEntry, choice.label);
 
@@ -254,7 +272,7 @@ export function QuickLogSheet({
   const undoLastSave = async () => {
     if (!logRepo || !undoReceipt) return;
     try {
-      const undone = await undoQuickLogEntry(logRepo, localDate, undoReceipt);
+      const undone = await undoQuickLogEntry(logRepo, undoLocalDate, undoReceipt);
       if (!undone) {
         setErrorMessage('This tracker changed after the quick log, so nothing was undone.');
         onOpenChange(true);
@@ -270,14 +288,36 @@ export function QuickLogSheet({
     switch (tracker) {
       case 'flow':
         return (
-          <ChoiceGrid
-            key={tracker}
-            legend="Flow level"
-            values={FLOW}
-            disabled={!logRepo || saving || loadingDay}
-            selectedValue={todayLog?.flow}
-            onChoose={(value: FlowValue) => void saveSimple('flow', value, optionLabel(value))}
-          />
+          <div class="quick-log__tracker" key={tracker}>
+            {initialTracker === 'flow' ? (
+              <label class="quick-log__date-field" for="quick-log-flow-date">
+                <span>It started on</span>
+                <input
+                  id="quick-log-flow-date"
+                  type="date"
+                  max={localDate}
+                  value={selectedLogDate}
+                  disabled={saving}
+                  onInput={(event) => {
+                    const selected = parse(event.currentTarget.value);
+                    if (selected === null || compare(selected, localDate) > 0) {
+                      setErrorMessage('Choose today or a past date.');
+                      return;
+                    }
+                    setSelectedLogDate(selected);
+                    setErrorMessage('');
+                  }}
+                />
+              </label>
+            ) : null}
+            <ChoiceGrid
+              legend="Flow level"
+              values={FLOW}
+              disabled={!logRepo || saving || loadingDay}
+              selectedValue={todayLog?.flow}
+              onChoose={(value: FlowValue) => void saveSimple('flow', value, optionLabel(value))}
+            />
+          </div>
         );
       case 'symptoms_body':
         return (
@@ -345,6 +385,7 @@ export function QuickLogSheet({
             key={tracker}
             legend="Energy"
             values={ENERGY}
+            labelFor={(value) => ENERGY_LABELS[value]}
             disabled={!logRepo || saving || loadingDay}
             selectedValue={todayLog?.energy}
             onChoose={(value: (typeof ENERGY)[number]) => void saveEnergy(value)}
@@ -432,7 +473,10 @@ export function QuickLogSheet({
               role="group"
               aria-label="Pinned quick-log trackers"
             >
-              {pinnedTrackers.map((tracker) => (
+              {(initialTracker && !pinnedTrackers.includes(initialTracker)
+                ? [initialTracker, ...pinnedTrackers]
+                : pinnedTrackers
+              ).map((tracker) => (
                 <Chip
                   key={tracker}
                   aria-label={TRACKER_LABELS[tracker]}

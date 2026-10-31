@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { DayBundle } from '../../../contracts/entities.ts';
+import type { IsoWeekday } from '../../../contracts/enums.ts';
 import type { EngineOutput } from '../../../contracts/engine-api.ts';
 import type { LocalDate } from '../../../contracts/localdate.ts';
 import { compare } from '../../../lib/localdate/index.ts';
@@ -8,7 +9,7 @@ import { formatDaySummary } from '../log/day-summary.ts';
 import {
   CALENDAR_MARKER_LABELS,
   CALENDAR_MONTH_NAMES,
-  CALENDAR_WEEKDAYS,
+  calendarWeekdays,
   cycleForDate,
   fullDateLabel,
   markersForDate,
@@ -31,6 +32,7 @@ export interface CalendarScreenProps {
   /** Additional synthetic or stored log dates not represented by period episodes. */
   readonly logDates?: readonly LocalDate[];
   readonly dayLogs?: readonly DayBundle[];
+  readonly weekStart?: IsoWeekday;
   readonly onEditDay?: (date: LocalDate) => void;
   readonly onOverride?: (override: CalendarOverride) => void;
 }
@@ -52,6 +54,7 @@ export function CalendarScreen({
   today,
   logDates = [],
   dayLogs = [],
+  weekStart = 1,
   onEditDay,
   onOverride,
 }: CalendarScreenProps) {
@@ -109,13 +112,14 @@ export function CalendarScreen({
     setFeedback('Period override selected in this preview. This change is not saved.');
   }
 
-  const cells = monthCells(visibleMonth);
+  const cells = monthCells(visibleMonth, weekStart);
   const weeks = Array.from({ length: cells.length / 7 }, (_, index) =>
     cells.slice(index * 7, index * 7 + 7),
   );
   const previousMonth = shiftMonth(visibleMonth, -1);
   const nextMonth = shiftMonth(visibleMonth, 1);
   const year = Number(visibleMonth.slice(0, 4));
+  const weekdays = calendarWeekdays(weekStart);
 
   return (
     <section class="calendar-screen" aria-labelledby="calendar-title">
@@ -127,71 +131,75 @@ export function CalendarScreen({
 
       <section class="calendar-card" aria-label="Cycle calendar">
         <div class="calendar-toolbar">
-          <Button
-            class="calendar-toolbar__arrow"
-            variant="quiet"
-            aria-label={`Previous ${viewMode === 'month' ? 'month' : 'year'}`}
-            disabled={viewMode === 'month' ? previousMonth === null : year === 0}
-            onClick={() => {
-              if (viewMode === 'month') changeMonth(-1);
-              else setVisibleMonth(shiftMonth(visibleMonth, -12) ?? visibleMonth);
-              setSelectedDate(null);
-            }}
-          >
-            <span aria-hidden="true">&lsaquo;</span>
-          </Button>
-          <h2 id="calendar-period" aria-live="polite">
-            {viewMode === 'month' ? monthTitle : year}
-          </h2>
-          <Button
-            class="calendar-toolbar__arrow"
-            variant="quiet"
-            aria-label={`Next ${viewMode === 'month' ? 'month' : 'year'}`}
-            disabled={viewMode === 'month' ? nextMonth === null : year === 9999}
-            onClick={() => {
-              if (viewMode === 'month') changeMonth(1);
-              else setVisibleMonth(shiftMonth(visibleMonth, 12) ?? visibleMonth);
-              setSelectedDate(null);
-            }}
-          >
-            <span aria-hidden="true">&rsaquo;</span>
-          </Button>
-          <Button
-            class="calendar-toolbar__view"
-            variant={viewMode === 'month' ? 'primary' : 'secondary'}
-            aria-pressed={viewMode === 'month'}
-            onClick={() => setViewMode('month')}
-          >
-            Month
-          </Button>
-          <Button
-            class="calendar-toolbar__view"
-            variant={viewMode === 'year' ? 'primary' : 'secondary'}
-            aria-pressed={viewMode === 'year'}
-            onClick={() => {
-              setViewMode('year');
-              setSelectedDate(null);
-            }}
-          >
-            Year
-          </Button>
-          <Button
-            class="calendar-toolbar__info"
-            variant="secondary"
-            aria-label="Open calendar legend"
-            aria-expanded={legendOpen}
-            aria-controls={legendOpen ? 'calendar-legend' : undefined}
-            onClick={() => setLegendOpen((open) => !open)}
-          >
-            <span aria-hidden="true">&#9432;</span>
-          </Button>
+          <div class="calendar-toolbar__period">
+            <Button
+              class="calendar-toolbar__arrow"
+              variant="quiet"
+              aria-label={`Previous ${viewMode === 'month' ? 'month' : 'year'}`}
+              disabled={viewMode === 'month' ? previousMonth === null : year === 0}
+              onClick={() => {
+                if (viewMode === 'month') changeMonth(-1);
+                else setVisibleMonth(shiftMonth(visibleMonth, -12) ?? visibleMonth);
+                setSelectedDate(null);
+              }}
+            >
+              <span aria-hidden="true">&lsaquo;</span>
+            </Button>
+            <h2 id="calendar-period" aria-live="polite">
+              {viewMode === 'month' ? monthTitle : year}
+            </h2>
+            <Button
+              class="calendar-toolbar__arrow"
+              variant="quiet"
+              aria-label={`Next ${viewMode === 'month' ? 'month' : 'year'}`}
+              disabled={viewMode === 'month' ? nextMonth === null : year === 9999}
+              onClick={() => {
+                if (viewMode === 'month') changeMonth(1);
+                else setVisibleMonth(shiftMonth(visibleMonth, 12) ?? visibleMonth);
+                setSelectedDate(null);
+              }}
+            >
+              <span aria-hidden="true">&rsaquo;</span>
+            </Button>
+          </div>
+          <div class="calendar-toolbar__controls">
+            <Button
+              class="calendar-toolbar__view"
+              variant={viewMode === 'month' ? 'primary' : 'secondary'}
+              aria-pressed={viewMode === 'month'}
+              onClick={() => setViewMode('month')}
+            >
+              Month
+            </Button>
+            <Button
+              class="calendar-toolbar__view"
+              variant={viewMode === 'year' ? 'primary' : 'secondary'}
+              aria-pressed={viewMode === 'year'}
+              onClick={() => {
+                setViewMode('year');
+                setSelectedDate(null);
+              }}
+            >
+              Year
+            </Button>
+            <Button
+              class="calendar-toolbar__info"
+              variant="secondary"
+              aria-label="Open calendar legend"
+              aria-expanded={legendOpen}
+              aria-controls={legendOpen ? 'calendar-legend' : undefined}
+              onClick={() => setLegendOpen((open) => !open)}
+            >
+              <span aria-hidden="true">&#9432;</span>
+            </Button>
+          </div>
         </div>
 
         {viewMode === 'month' ? (
           <div class="calendar-month" aria-labelledby="calendar-period">
             <div class="calendar-grid" role="grid" aria-label={`${monthTitle} calendar`}>
               <div class="calendar-grid__weekdays" role="row">
-                {CALENDAR_WEEKDAYS.map((weekday) => (
+                {weekdays.map((weekday) => (
                   <span key={weekday} role="columnheader" aria-label={weekday}>
                     {weekday}
                   </span>
@@ -263,7 +271,7 @@ export function CalendarScreen({
               if (date === null) return null;
               const monthMarkers = [
                 ...new Set(
-                  monthCells(date).flatMap((cell) =>
+                  monthCells(date, weekStart).flatMap((cell) =>
                     cell.date && cell.inCurrentMonth
                       ? markersForDate(engineOutput, cell.date, logDates)
                       : [],

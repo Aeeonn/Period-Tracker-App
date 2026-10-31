@@ -1,5 +1,7 @@
 .calendar-screen {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   color: var(--color-text);
 }
@@ -52,24 +54,41 @@
 
 .calendar-card {
   display: grid;
+  min-width: 0;
   gap: var(--space-4);
   padding: clamp(var(--space-3), 4vw, var(--space-5));
 }
 
 .calendar-toolbar {
   display: grid;
-  grid-template-columns: 2.75rem minmax(4.5rem, 1fr) 2.75rem auto auto 2.75rem;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
+  gap: var(--space-1);
+}
+
+.calendar-toolbar__period {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.calendar-toolbar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: var(--space-1);
 }
 
 .calendar-toolbar h2 {
   margin: 0;
-  overflow: hidden;
+  min-width: 0;
   font-size: var(--font-size-md);
   text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .calendar-toolbar .ui-button {
@@ -94,17 +113,17 @@
 }
 
 .calendar-grid {
-  overflow-x: auto;
+  min-width: 0;
+  overflow-x: hidden;
   padding: 1px;
-  scrollbar-width: thin;
 }
 
 .calendar-grid__weekdays,
 .calendar-grid__week {
   display: grid;
-  min-width: 20.75rem;
-  grid-template-columns: repeat(7, minmax(2.75rem, 1fr));
-  gap: var(--space-1);
+  min-width: 0;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
 }
 
 .calendar-grid__weekdays {
@@ -137,7 +156,7 @@
 .calendar-day {
   display: grid;
   width: 100%;
-  min-width: 2.75rem;
+  min-width: 0;
   min-height: 2.9rem;
   align-content: center;
   justify-items: center;
@@ -429,4 +448,34 @@
 
 .calendar-day-detail__logged li > span {
   font-weight: 700;
+}
+
+@media (max-width: 21.25rem) {
+  .calendar-screen {
+    margin-inline: calc(-1 * var(--space-4));
+  }
+
+  .calendar-screen__header {
+    padding-inline: var(--space-2);
+  }
+
+  .calendar-card {
+    padding: var(--space-1);
+  }
+
+  .calendar-grid {
+    padding: 0;
+  }
+
+  .calendar-grid__weekdays,
+  .calendar-grid__week {
+    grid-template-columns: repeat(7, minmax(44px, 1fr));
+    gap: 0;
+  }
+
+  .calendar-day {
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: var(--radius-md);
+  }
 }

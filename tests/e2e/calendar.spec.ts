@@ -40,6 +40,36 @@ test.afterAll(async () => {
   vite = undefined;
 });
 
+test('T-UX-01 @calendar follows the saved Sunday week start', async ({ page }) => {
+  await page.goto(`${origin}/tests/e2e/log-fixtures/?fixture=calendar-live&weekstart=sunday`);
+  await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader').first()).toHaveAttribute('aria-label', 'Sun');
+});
+
+test('T-UX-01 @calendar keeps its month layout usable at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await openCalendar(page);
+  await expect(page.getByRole('heading', { name: 'October 2026', exact: true })).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+    screen: document.querySelector<HTMLElement>('.calendar-screen')?.scrollWidth ?? 0,
+    screenClient: document.querySelector<HTMLElement>('.calendar-screen')?.clientWidth ?? 0,
+    monthTitle: (() => {
+      const title = document.querySelector<HTMLElement>('#calendar-period');
+      return title === null ? undefined : { client: title.clientWidth, scroll: title.scrollWidth };
+    })(),
+  }));
+  expect(layout.document).toBeLessThanOrEqual(layout.viewport);
+  expect(layout.screen).toBeLessThanOrEqual(layout.screenClient);
+  expect(layout.monthTitle).toBeDefined();
+  expect(layout.monthTitle?.scroll).toBeLessThanOrEqual(layout.monthTitle?.client ?? 0);
+
+  const dayBox = await page.locator('.calendar-day').first().boundingBox();
+  expect(dayBox?.height).toBeGreaterThanOrEqual(44);
+});
+
 test('T-UX-02 @calendar supports markers, year/month views, day details, and cycle exclusion preview', async ({
   page,
 }) => {

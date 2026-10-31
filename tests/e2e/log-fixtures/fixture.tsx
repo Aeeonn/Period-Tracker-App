@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import type { DeviceId } from '../../../src/contracts/brand.ts';
+import type { DayBundle } from '../../../src/contracts/entities.ts';
 import type { LocalDate } from '../../../src/contracts/localdate.ts';
 import { createLogRepo, createSettingsRepo } from '../../../src/data/repos/index.ts';
 import { parse } from '../../../src/lib/localdate/index.ts';
@@ -28,15 +29,47 @@ const params = new URLSearchParams(window.location.search);
 const fixture = params.get('fixture');
 document.documentElement.dataset.theme = params.get('theme') === 'dark' ? 'dark' : 'light';
 
+declare global {
+  interface Window {
+    __logTest?: { readDay: (localDate: string) => Promise<DayBundle | undefined> };
+  }
+}
+
 async function mountFixture(): Promise<void> {
   if (fixture === 'heavy') await repository.setTracker(date, 'flow', 'heavy');
   if (fixture === 'note') await repository.setTracker(date, 'notes', notePayload);
+  if (params.get('unit') === 'fahrenheit' || params.get('weekstart') === 'sunday') {
+    await repositories.settingsRepo.putProfile({
+      goal: 'track',
+      lifeStage: 'cycle',
+      units: {
+        temp: params.get('unit') === 'fahrenheit' ? 'fahrenheit' : 'celsius',
+        weight: 'kg',
+      },
+      weekStart: params.get('weekstart') === 'sunday' ? 7 : 1,
+      theme: 'system',
+      lockTimeoutSec: 300,
+      quickHideEnabled: false,
+    });
+  }
+  window.__logTest = {
+    readDay: async (localDate) => {
+      const parsed = parse(localDate);
+      return parsed === null ? undefined : repository.getDay(parsed);
+    },
+  };
 
   const root = document.getElementById('log-root');
   if (root === null) throw new Error('Log fixture mount point is missing.');
 
-  if (fixture === 'app' || fixture === 'day-log' || fixture === 'calendar') {
-    window.location.hash = fixture === 'calendar' ? 'calendar' : 'log';
+  if (
+    fixture === 'app' ||
+    fixture === 'day-log' ||
+    fixture === 'calendar' ||
+    fixture === 'calendar-live'
+  ) {
+    window.location.hash =
+      fixture === 'calendar' || fixture === 'calendar-live' ? 'calendar' : 'log';
     render(
       <AppShell
         repositories={repositories}

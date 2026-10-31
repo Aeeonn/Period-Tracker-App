@@ -25,6 +25,15 @@ describe('live calendar data', () => {
       logRepo: createLogRepo(store, options),
       settingsRepo: createSettingsRepo(store, options),
     };
+    await repositories.settingsRepo.putProfile({
+      goal: 'track',
+      lifeStage: 'cycle',
+      units: { temp: 'celsius', weight: 'kg' },
+      weekStart: 7,
+      theme: 'system',
+      lockTimeoutSec: 300,
+      quickHideEnabled: false,
+    });
     const before = localDate('2032-04-04');
     const after = localDate('2032-04-06');
     await repositories.logRepo.setTracker(before, 'flow', 'medium');
@@ -39,5 +48,6 @@ describe('live calendar data', () => {
     expect(props.dayLogs?.map((day) => day.localDate)).toEqual([before, after]);
     expect(props.engineOutput).toBeDefined();
     expect(props.today).toBe(TODAY);
+    expect(props.weekStart).toBe(7);
   });
 });

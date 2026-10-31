@@ -117,6 +117,42 @@ test('T-UX-03 @log heavy and very-heavy flow reveal heavy details', async ({ pag
   await expect(page.getByRole('group', { name: 'Heavy-flow details' })).toBeVisible();
 });
 
+test('T-UX-01 @log Fahrenheit BBT input saves in canonical Celsius', async ({ page }) => {
+  await page.clock.install({ time: new Date('2032-04-05T12:00:00') });
+  await openFixture(page, '?fixture=day-log&unit=fahrenheit');
+  await expect(page.getByLabel('Log date')).toHaveValue('2032-04-05');
+  await selectTracker(page, 'Basal body temperature');
+
+  const bbt = page.getByRole('region', { name: 'Basal body temperature', exact: true });
+  await expect(bbt).toBeVisible();
+  const temperature = bbt.getByRole('spinbutton', { name: /^Temperature/ });
+  await expect(temperature).toHaveCount(1);
+  await expect(bbt.locator('.log-input__with-unit')).toContainText('°F');
+  await expect(temperature).toHaveAttribute('min', '95');
+  await expect(temperature).toHaveAttribute('max', '107.6');
+  await temperature.fill('107.7');
+  await expect(
+    bbt.getByText('Enter a temperature between 35 and 42 °C (95 to 107.6 °F).'),
+  ).toBeVisible();
+  const saveButton = bbt.getByRole('button', { name: 'Save Basal body temperature' });
+  await expect(saveButton).toBeDisabled();
+
+  await temperature.fill('98.6');
+  await bbt.getByLabel('Measured at', { exact: true }).fill('07:00');
+  await expect(saveButton).toBeEnabled();
+  await saveButton.click();
+  await expect(page.getByText('Saved privately.', { exact: true })).toBeVisible();
+  const saved = await page.evaluate(async () => {
+    const testWindow = window as Window & {
+      __logTest?: {
+        readDay: (localDate: string) => Promise<{ bbt?: { valueC: number } } | undefined>;
+      };
+    };
+    return testWindow.__logTest?.readDay('2032-04-05');
+  });
+  expect(saved?.bbt?.valueC).toBeCloseTo(37, 2);
+});
+
 test('T-UX-03 @log trackers can be pinned, hidden, and reordered', async ({ page }) => {
   await openFixture(page);
   const pinned = page.getByRole('group', { name: 'Pinned trackers' });

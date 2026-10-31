@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ReminderId } from '../../../../src/contracts/brand.ts';
-import type { DayBundle, DayLog, ReminderRule } from '../../../../src/contracts/entities.ts';
+import type {
+  DayBundle,
+  DayLog,
+  Profile,
+  ReminderRule,
+} from '../../../../src/contracts/entities.ts';
 import type { LocalDate, LocalTime } from '../../../../src/contracts/localdate.ts';
 import { createTodayScreenProps } from '../../../../src/ui/screens/today/live-data.ts';
 import { addDays, parse } from '../../../../src/lib/localdate/index.ts';
@@ -19,7 +24,11 @@ function day(localDate: string | LocalDate, values: Partial<DayLog> = {}): DayBu
   };
 }
 
-function repositories(days: readonly DayBundle[], rules: readonly ReminderRule[] = []) {
+function repositories(
+  days: readonly DayBundle[],
+  rules: readonly ReminderRule[] = [],
+  profile: Profile | undefined = undefined,
+) {
   return {
     logRepo: {
       async listDays(range: { start: LocalDate; end: LocalDate }) {
@@ -31,7 +40,7 @@ function repositories(days: readonly DayBundle[], rules: readonly ReminderRule[]
     },
     settingsRepo: {
       async getProfile() {
-        return undefined;
+        return profile;
       },
       async listContraception() {
         return [];
@@ -84,6 +93,93 @@ describe('live Today data', () => {
 
     expect(result.loggedToday).toEqual(['Flow: Medium', 'Symptoms: Cramps, Fatigue', 'Mood: Calm']);
     expect(result.flowToday).toBe('medium');
+  });
+
+  it('summarizes every logged tracker without exposing private tracker values', async () => {
+    const result = await createTodayScreenProps(
+      repositories([
+        day('2026-04-02', {
+          flow: 'medium',
+          heavy_detail: ['flooding'],
+          period_pain: 'moderate',
+          discharge: 'creamy',
+          symptoms_body: ['cramps'],
+          mood: ['calm'],
+          energy: 3,
+          stress: 1,
+          desire: 'high',
+          sex: [{ activity: ['vaginal'], protection: [] }],
+          tests: { pregnancy: 'negative' },
+          bbt: { valueC: 36.55, measuredAt: '06:30' as LocalTime, disturbances: [] },
+          ovulation_manual: 'yes',
+          pill_intake: 'late',
+          medication: [{ name: 'Synthetic medication', taken: true }],
+          weight: 61.2,
+          water: 1400,
+          sleep: { hours: 7.5, quality: 2 },
+          activity: { minutes: 35, type: 'walk' },
+          alcohol: 0,
+          notes: 'Synthetic private note',
+          peri_impact: {
+            hot_flushes: 1,
+            night_sweats: 2,
+            sleep: 3,
+            mood: 0,
+            anxiety: 1,
+            joint_aches: 2,
+            concentration: 1,
+            vaginal_dryness: 0,
+            libido_change: 2,
+            fatigue: 3,
+          },
+          lochia: 'moderate',
+        }),
+      ]),
+      clock,
+    );
+
+    expect(result.loggedToday).toEqual([
+      'Flow: Medium',
+      'Heavy-flow details: Flooding',
+      'Period pain: Moderate',
+      'Discharge: Creamy',
+      'Symptoms: Cramps',
+      'Mood: Calm',
+      'Energy: Energised',
+      'Stress logged',
+      'Desire logged',
+      'Intimacy logged',
+      'Tests logged',
+      'Temperature logged',
+      'Ovulation: Yes',
+      'Pill intake: Late',
+      'Medication logged',
+      'Weight logged',
+      'Water logged',
+      'Sleep logged',
+      'Activity logged',
+      'Alcohol logged',
+      'Note added',
+      'Perimenopause impacts logged',
+      'Postpartum bleeding: Moderate',
+    ]);
+    expect(result.loggedToday.join(' ')).not.toContain('Synthetic private note');
+    expect(result.loggedToday.join(' ')).not.toContain('vaginal');
+  });
+
+  it('passes the saved ISO week-start preference through to Today', async () => {
+    const sundayFirstProfile: Profile = {
+      goal: 'track',
+      lifeStage: 'cycle',
+      units: { temp: 'celsius', weight: 'kg' },
+      weekStart: 7,
+      theme: 'system',
+      lockTimeoutSec: 300,
+      quickHideEnabled: false,
+    };
+    const result = await createTodayScreenProps(repositories([], [], sundayFirstProfile), clock);
+
+    expect(result.weekStart).toBe(7);
   });
 
   it('computes the current cycle and reminder banner inputs from repository data', async () => {

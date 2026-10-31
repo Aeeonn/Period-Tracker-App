@@ -2,6 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createServer, type ViteDevServer } from 'vite';
 import { resolve } from 'node:path';
+import type { LocalDate } from '../../src/contracts/localdate.ts';
+import { compare } from '../../src/lib/localdate/index.ts';
+import { TODAY_PREVIEW_FIXTURE } from '../../src/ui/screens/today/preview-fixtures.ts';
 import { configureThroughUi, fillConfirmation, setupOrUnlockApp } from './helpers/lock.ts';
 
 let vite: ViteDevServer | undefined;
@@ -71,15 +74,20 @@ type QuickLogFixtureDay = {
   readonly desire?: string | undefined;
 };
 
-async function readQuickLogDay(page: Page): Promise<QuickLogFixtureDay | undefined> {
-  return page.evaluate(async () => {
+async function readQuickLogDay(
+  page: Page,
+  localDate?: string,
+): Promise<QuickLogFixtureDay | undefined> {
+  return page.evaluate(async (date) => {
     const fixture = (
       window as Window & {
-        __quickLogTest?: { readDay: () => Promise<QuickLogFixtureDay | undefined> };
+        __quickLogTest?: {
+          readDay: (localDate?: string) => Promise<QuickLogFixtureDay | undefined>;
+        };
       }
     ).__quickLogTest;
-    return fixture?.readDay();
-  });
+    return fixture?.readDay(date);
+  }, localDate);
 }
 
 test('T-UX-01 @today @quicklog period start takes one tap and quick logs stay within three taps', async ({
@@ -201,6 +209,45 @@ test('T-UX-02 @today suppressed output still explains the paused prediction', as
   await whyButtons.first().click();
   await expect(page.getByRole('dialog', { name: 'Why?' })).toContainText(
     'Log your period to start predictions.',
+  );
+});
+
+test('T-UX-01 @today first-period logging opens on Flow and saves a chosen past date', async ({
+  page,
+}) => {
+  await openFixture(page, '?suppression=no_data');
+  await page.getByRole('button', { name: 'Log first period', exact: true }).click();
+  const logDialog = page.getByRole('dialog', { name: 'Quick log' });
+  await expect(logDialog.getByRole('group', { name: 'Flow level' })).toBeVisible();
+  const startDate = logDialog.getByLabel('It started on');
+  await expect(startDate).toHaveValue('2026-10-22');
+  await startDate.fill('2026-10-12');
+  await logDialog
+    .getByRole('group', { name: 'Flow level' })
+    .getByRole('button', { name: 'Medium', exact: true })
+    .click();
+
+  await expect(page.locator('.ui-toast')).toContainText('Saved: Flow: Medium.');
+  expect(await readQuickLogDay(page, '2026-10-12')).toMatchObject({ flow: 'medium' });
+});
+
+test('T-UX-01 @today the week strip follows a Sunday week-start preference', async ({ page }) => {
+  await openFixture(page, '?weekstart=sunday');
+  const week = page.getByRole('list', { name: 'Week around today' });
+  const fertility = TODAY_PREVIEW_FIXTURE.engineOutput.fertility;
+  expect(fertility.kind).toBe('fertility');
+  if (fertility.kind !== 'fertility') throw new Error('The preview fixture must estimate fertility.');
+  const saturday = '2026-10-24' as LocalDate;
+  expect(compare(saturday, fertility.coreWindow.start)).toBeGreaterThanOrEqual(0);
+  expect(compare(saturday, fertility.coreWindow.end)).toBeLessThanOrEqual(0);
+
+  await expect(week.getByRole('listitem').first()).toHaveAttribute(
+    'aria-label',
+    'Sunday, Oct 18',
+  );
+  await expect(week.getByRole('listitem').last()).toHaveAttribute(
+    'aria-label',
+    'Saturday, Oct 24, estimated fertile day',
   );
 });
 
@@ -338,9 +385,10 @@ test('Today @today keeps selectable synthetic data in the preview app shell', as
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(page.locator('.shell-preview-banner')).toContainText('synthetic data only');
   await expect(page.getByText('Next period: around Nov 8')).toBeVisible();
-  await expect(
-    page.getByText('A reviewed education card will appear here when available.'),
-  ).toBeVisible();
+  await expect(page.getByText('A reviewed education card will appear here when available.')).toHaveCount(
+    0,
+  );
+  await expect(page.getByText('Static preview', { exact: true })).toHaveCount(0);
 });
 
 test('Today @today shows a friendly live empty state when no repository data is logged', async ({

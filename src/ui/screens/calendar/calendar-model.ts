@@ -1,4 +1,5 @@
 import type { CycleStat, EngineOutput } from '../../../contracts/engine-api.ts';
+import type { IsoWeekday } from '../../../contracts/enums.ts';
 import type { LocalDate, LocalDateRange } from '../../../contracts/localdate.ts';
 import { addDays, compare, epochDay, parse } from '../../../lib/localdate/index.ts';
 
@@ -74,6 +75,15 @@ function weekdayIndex(date: LocalDate): number {
   return (((Number(epochDay(date)) + 4) % 7) + 7) % 7;
 }
 
+function firstWeekdayIndex(weekStart: IsoWeekday): number {
+  return weekStart % 7;
+}
+
+export function calendarWeekdays(weekStart: IsoWeekday = 7): readonly string[] {
+  const first = firstWeekdayIndex(weekStart);
+  return [...CALENDAR_WEEKDAYS.slice(first), ...CALENDAR_WEEKDAYS.slice(0, first)];
+}
+
 export function monthLabel(date: LocalDate): string {
   const month = Number(date.slice(5, 7));
   return `${CALENDAR_MONTH_NAMES[month - 1]} ${date.slice(0, 4)}`;
@@ -85,10 +95,10 @@ export function fullDateLabel(date: LocalDate): string {
   return `${CALENDAR_MONTH_NAMES[month - 1]} ${day}, ${date.slice(0, 4)}`;
 }
 
-export function monthCells(date: LocalDate): readonly CalendarCell[] {
+export function monthCells(date: LocalDate, weekStart: IsoWeekday = 7): readonly CalendarCell[] {
   const first = monthStart(date);
   const days = daysInMonth(first);
-  const offset = weekdayIndex(first);
+  const offset = (weekdayIndex(first) - firstWeekdayIndex(weekStart) + 7) % 7;
   const count = Math.ceil((offset + days) / 7) * 7;
 
   return Array.from({ length: count }, (_, index) => {

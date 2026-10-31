@@ -1,7 +1,7 @@
 import type { DayLog } from '../../../contracts/entities.ts';
 import type { DueReminder } from '../../../contracts/reminders.ts';
 import type { LogRepo, SettingsRepo } from '../../../contracts/store.ts';
-import type { Flow } from '../../../contracts/enums.ts';
+import type { Flow, IsoWeekday } from '../../../contracts/enums.ts';
 import type { LocalDate, LocalTime } from '../../../contracts/localdate.ts';
 import { evaluateReminders } from '../../../reminders/inapp/index.ts';
 import { runEngine } from '../../../engine/index.ts';
@@ -31,25 +31,64 @@ export interface TodayClockSnapshot {
 
 const CONTENT_SLOT = {
   title: 'Did you know?',
-  paragraphs: ['A reviewed education card will appear here when available.'],
-  sourceNote: 'No reviewed education card is connected yet.',
+  paragraphs: [],
+  sourceNote: '',
 } as const;
 
 function displayValue(value: string): string {
   return value.replaceAll('_', ' ').replace(/(^|\s)\p{L}/gu, (letter) => letter.toUpperCase());
 }
 
+const ENERGY_LABELS = ['Drained', 'Low', 'OK', 'Energised'] as const;
+
 function loggedTodaySummary(dayLog: DayLog | undefined): readonly string[] {
   if (!dayLog) return [];
   const summary: string[] = [];
   if (dayLog.flow !== undefined) summary.push(`Flow: ${displayValue(dayLog.flow)}`);
+  if (dayLog.heavy_detail !== undefined && dayLog.heavy_detail.length > 0) {
+    summary.push(
+      `Heavy-flow details: ${[...new Set(dayLog.heavy_detail)].map(displayValue).join(', ')}`,
+    );
+  }
+  if (dayLog.period_pain !== undefined) {
+    summary.push(`Period pain: ${displayValue(dayLog.period_pain)}`);
+  }
+  if (dayLog.discharge !== undefined) {
+    summary.push(`Discharge: ${displayValue(dayLog.discharge)}`);
+  }
   if (dayLog.symptoms_body !== undefined && dayLog.symptoms_body.length > 0) {
     summary.push(`Symptoms: ${[...new Set(dayLog.symptoms_body)].map(displayValue).join(', ')}`);
   }
   if (dayLog.mood !== undefined && dayLog.mood.length > 0) {
     summary.push(`Mood: ${[...new Set(dayLog.mood)].map(displayValue).join(', ')}`);
   }
-  if (dayLog.energy !== undefined) summary.push(`Energy: ${dayLog.energy}`);
+  if (dayLog.energy !== undefined) {
+    summary.push(`Energy: ${ENERGY_LABELS[dayLog.energy] ?? 'Logged'}`);
+  }
+  if (dayLog.stress !== undefined) summary.push('Stress logged');
+  if (dayLog.desire !== undefined) summary.push('Desire logged');
+  if (dayLog.sex !== undefined && dayLog.sex.length > 0) summary.push('Intimacy logged');
+  if (dayLog.tests !== undefined) summary.push('Tests logged');
+  if (dayLog.bbt !== undefined) summary.push('Temperature logged');
+  if (dayLog.ovulation_manual !== undefined) {
+    summary.push(`Ovulation: ${displayValue(dayLog.ovulation_manual)}`);
+  }
+  if (dayLog.pill_intake !== undefined) {
+    summary.push(`Pill intake: ${displayValue(dayLog.pill_intake)}`);
+  }
+  if (dayLog.medication !== undefined && dayLog.medication.length > 0) {
+    summary.push('Medication logged');
+  }
+  if (dayLog.weight !== undefined) summary.push('Weight logged');
+  if (dayLog.water !== undefined) summary.push('Water logged');
+  if (dayLog.sleep !== undefined) summary.push('Sleep logged');
+  if (dayLog.activity !== undefined) summary.push('Activity logged');
+  if (dayLog.alcohol !== undefined) summary.push('Alcohol logged');
+  if (dayLog.notes !== undefined && dayLog.notes.trim().length > 0) summary.push('Note added');
+  if (dayLog.peri_impact !== undefined) summary.push('Perimenopause impacts logged');
+  if (dayLog.lochia !== undefined) {
+    summary.push(`Postpartum bleeding: ${displayValue(dayLog.lochia)}`);
+  }
   return [...new Set(summary)];
 }
 
@@ -129,6 +168,7 @@ async function loadTodayScreenProps(
     stillBleeding: currentEpisode && todayLog?.flow !== 'none',
     contentSlot: CONTENT_SLOT,
     loggedToday: loggedTodaySummary(todayLog),
+    weekStart: profile?.weekStart ?? (1 as IsoWeekday),
     ...(todayLog?.flow === undefined ? {} : { flowToday: todayLog.flow as Flow }),
     reminders,
   };
