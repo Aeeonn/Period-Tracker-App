@@ -645,6 +645,7 @@
 - since: 2026-10-02
 - notes: Captain iPhone (iOS 18, model not yet given; Home Screen app) 2026-10-30, probe df38093c: FB-03 PARTIAL (IndexedDB write/close/reopen/read-back pass, persist() granted, quota ~36 GiB; force-quit, reboot and 7+ day retention not yet shown); FB-04 PARTIAL (synthetic .json download triggered; save to Files and re-import unconfirmed); FB-05 PASS (exact QR payload decoded in Home Screen app); FB-06 PASS (generic notification delivered); FB-07 PASS (discoverable passkey PRF stable while offline); FB-10 PASS (PBKDF2-SHA-256 600k in 140 ms). Remaining: partner phone full run; captain FB-03 retention recheck after force-quit/reboot and after 7 days; FB-04 re-import.
 - updated: 2026-10-30
+- hold: Waiting on partner iPhone probe run and captain FB-03 retention / FB-04 re-import rechecks
 
 ### p0-contracts
 
@@ -2890,11 +2891,12 @@
 - phase: P1
 - risk: low
 - blocked-by: —
-- owns: `docs/plan/ux-spec.md`, `src/ui/theme/**`
+- owns: `docs/plan/ux-spec.md`, `src/ui/tokens.css`, `src/ui/tokens.ts`
 - route: rule 5 -> flo-builder
 - record: `~/firstmate/data/p1-visual-direction/`
 - since: 2026-10-30
 - notes: Captain 2026-10-30 after seeing the app preview: wants it soft, inviting and supportive rather than techy; suggested purple tones/gradients. Not urgent. Keep contrast and colour-never-only-signal rules.
+- updated: 2026-10-30
 
 ### p1-preview-button-behavior
 
