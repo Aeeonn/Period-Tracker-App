@@ -1,5 +1,19 @@
 # P0 synthetic app demo deployment
 
+## Redeployment (2026-10-30)
+
+- Deployment ID: `9c4e354e` (deployment URL slug: https://9c4e354e.flo-preview-cm6.pages.dev)
+- Pages project / branch: `flo-preview` / `app` (production `main` was not changed)
+- Source revision: `6c43ceaf928b5cd13026c6c8c4d918c5134d97eb`
+- Stable alias: https://app.flo-preview-cm6.pages.dev
+- Build listing SHA-256: `01fbca18efe9b89e97483e2db0392ad1f21c2465bbc0084075dd92e09f7b00ab`
+- Deploy command: `bash tools/deploy/pages-preview.sh app --branch app` (PASS; 57 modules, service worker precache has 7 URLs).
+- Smoke check: `npx --no-install tsx tools/deploy/check-preview.ts https://app.flo-preview-cm6.pages.dev app` (PASS; 7 served files byte-equal; `_headers` is Pages configuration, not a served file).
+- `npm run check`: PASS; 24 test files and 240 tests passed; typecheck, lint, formatting, dependency/secrets/data/copy checks and bundle-size budget passed.
+- Synthetic data only; no real health data or secrets were recorded.
+
+## Previous deployment (retained for history)
+
 - Date: 2026-10-30
 - Pages project / branch: `flo-preview` / `app` (production branch `main` was not changed)
 - Source revision: `6ca0172257f9e6f8f2e41c31dfab3fac41b8ca1e`
