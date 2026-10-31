@@ -197,7 +197,7 @@ export function AppShell({ updateNotice, restartStatus, cancelRestart }: AppShel
       <main class="shell-main shell-container" tabIndex={0}>
         <div class="shell-preview-banner" role="note">
           <span class="shell-preview-banner__dot" aria-hidden="true" />
-          Static preview · synthetic placeholder content
+          Preview — synthetic data only
         </div>
         {updateNotice ? (
           <div role="status" aria-live="polite">

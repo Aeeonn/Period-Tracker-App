@@ -255,7 +255,7 @@ test('T-SW-01 @sw cold navigation renders the installed shell after the origin g
   await coldPage.goto(appOrigin);
   await setupOrUnlockApp(coldPage);
   await expect(coldPage.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
-  await expect(coldPage.getByText('Static preview · synthetic placeholder content')).toBeVisible();
+  await expect(coldPage.getByText('Preview — synthetic data only')).toBeVisible();
 });
 
 test('T-SW-02 @sw waits for the pending app write before activating v2 and preserves its record', async ({

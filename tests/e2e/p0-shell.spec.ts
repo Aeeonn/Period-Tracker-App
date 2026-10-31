@@ -87,7 +87,7 @@ test('P0 shell keeps the synthetic preview and owner routes after the lock gate'
   await openApp(page);
   await expect(page.locator('.shell-root')).toHaveCount(0);
   await configureApp(page);
-  await expect(page.getByText('Static preview · synthetic placeholder content')).toBeVisible();
+  await expect(page.getByText('Preview — synthetic data only')).toBeVisible();
 
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(page.getByText('Cycle day 12')).toBeVisible();
