@@ -197,6 +197,7 @@ export function deriveEpisodes(
       for (let offset = 1; offset <= assumedCount; offset += 1) {
         const assumedDate = addDays(latest.start, offset);
         if (latestNoneDate !== undefined && compare(assumedDate, latestNoneDate) >= 0) break;
+        // Flow logs confirm a date; non-flow logs leave assumed flow unchanged.
         if (logsByDate.get(assumedDate)?.flow === undefined) assumedDays.push(assumedDate);
       }
     }
@@ -218,6 +219,7 @@ export function estimatePeriodLength(
       (episode) =>
         episode.kind === 'period' &&
         episode.assumedDays.length === 0 &&
+        // Short intervals remain visible, but do not contribute to A3.
         !episode.flags.includes('short_interval'),
     )
     .sort((left, right) => compare(left.start, right.start))

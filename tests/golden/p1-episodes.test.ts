@@ -27,6 +27,7 @@ interface RawInput {
     readonly localDate: string;
     readonly flow?: string;
     readonly lochia?: string;
+    readonly mood?: readonly string[];
   }[];
   readonly episodesOverride?: readonly { readonly localDate: string; readonly kind: string }[];
   readonly pregnancies?: readonly unknown[];
@@ -143,7 +144,7 @@ function syntheticEpisode(
   };
 }
 
-describe('A1/A3 golden vectors TV-E1–TV-E5 and TV-L1–TV-L3', () => {
+describe('A1/A3 golden vectors', () => {
   it('records the exact synthetic reference vectors and provenance', () => {
     expect(fixture.synthetic).toBe(true);
     expect(fixture.source).toBe('docs/plan/algorithms-spec.md A1, A3');
@@ -159,6 +160,10 @@ describe('A1/A3 golden vectors TV-E1–TV-E5 and TV-L1–TV-L3', () => {
       'TV-L3',
       'TV-E6-none-ends-assumed-days',
       'TV-E7-spotting-does-not-end-assumptions',
+      'TV-E8-logged-nonflow-day-remains-assumed',
+      'TV-E9-mood-only-mid-period-day-remains-assumed',
+      'TV-L4-short-interval-excluded',
+      'TV-L5-mood-only-log-does-not-complete-episode',
     ]);
   });
 

@@ -1,6 +1,6 @@
 {
   "synthetic": true,
-  "provenance": "A1 TV-E1-TV-E5 and A3 TV-L1-TV-L3 were hand-derived from docs/plan/algorithms-spec.md before implementation; TV-E6/E7 are synthetic edge vectors for the captain-approved F3 follow-up. All dates and logs are synthetic.",
+  "provenance": "A1 TV-E1-TV-E5 and A3 TV-L1-TV-L3 were hand-derived from docs/plan/algorithms-spec.md before implementation; TV-E6/E7 are synthetic edge vectors for the captain-approved F3 follow-up; TV-E8/E9 are synthetic flow-only D6 cases; TV-L4/L5 are synthetic A3/D7 regression cases. All dates and logs are synthetic.",
   "source": "docs/plan/algorithms-spec.md A1, A3",
   "vectors": [
     {
@@ -284,6 +284,138 @@
           "flags": []
         }
       ]
+    },
+    {
+      "id": "TV-E8-logged-nonflow-day-remains-assumed",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-03-04",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [
+          { "localDate": "2026-03-01", "flow": "medium" },
+          { "localDate": "2026-03-02", "mood": ["calm"] }
+        ],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-03-01",
+          "end": "2026-03-01",
+          "bleedingDays": 1,
+          "spottingDays": [],
+          "assumedDays": ["2026-03-02", "2026-03-03", "2026-03-04"],
+          "kind": "period",
+          "flags": []
+        }
+      ]
+    },
+    {
+      "id": "TV-E9-mood-only-mid-period-day-remains-assumed",
+      "operation": "episodes",
+      "input": {
+        "today": "2026-03-04",
+        "profile": { "lifeStage": "cycle", "contraception": [], "typicalPeriodLength": 5 },
+        "dayLogs": [
+          { "localDate": "2026-03-01", "flow": "medium" },
+          { "localDate": "2026-03-03", "mood": ["calm"] }
+        ],
+        "episodesOverride": [],
+        "pregnancies": [],
+        "coupleEntriesAllowedForInsights": []
+      },
+      "expected": [
+        {
+          "start": "2026-03-01",
+          "end": "2026-03-01",
+          "bleedingDays": 1,
+          "spottingDays": [],
+          "assumedDays": ["2026-03-02", "2026-03-03", "2026-03-04"],
+          "kind": "period",
+          "flags": []
+        }
+      ]
+    },
+    {
+      "id": "TV-L4-short-interval-excluded",
+      "operation": "periodLength",
+      "input": {
+        "today": "2026-02-02",
+        "profile": { "lifeStage": "cycle", "contraception": [] },
+        "episodes": [
+          {
+            "start": "2026-01-01",
+            "end": "2026-01-04",
+            "bleedingDays": 4,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          },
+          {
+            "start": "2026-01-10",
+            "end": "2026-01-19",
+            "bleedingDays": 10,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": ["short_interval"]
+          },
+          {
+            "start": "2026-02-01",
+            "end": "2026-02-06",
+            "bleedingDays": 6,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          }
+        ]
+      },
+      "expected": 5
+    },
+    {
+      "id": "TV-L5-mood-only-log-does-not-complete-episode",
+      "operation": "periodLength",
+      "input": {
+        "today": "2026-03-02",
+        "profile": { "lifeStage": "cycle", "contraception": [] },
+        "dayLogs": [
+          { "localDate": "2026-03-01", "flow": "medium" },
+          { "localDate": "2026-03-02", "mood": ["calm"] }
+        ],
+        "episodes": [
+          {
+            "start": "2026-01-01",
+            "end": "2026-01-04",
+            "bleedingDays": 4,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          },
+          {
+            "start": "2026-01-30",
+            "end": "2026-02-04",
+            "bleedingDays": 6,
+            "spottingDays": [],
+            "assumedDays": [],
+            "kind": "period",
+            "flags": []
+          },
+          {
+            "start": "2026-03-01",
+            "end": "2026-03-01",
+            "bleedingDays": 1,
+            "spottingDays": [],
+            "assumedDays": ["2026-03-02"],
+            "kind": "period",
+            "flags": []
+          }
+        ]
+      },
+      "expected": 5
     }
   ]
 }
