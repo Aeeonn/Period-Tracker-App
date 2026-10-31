@@ -1,15 +1,62 @@
-﻿import { spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
-import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
-const buildDirectory = resolve(tmpdir(), 'flo-preview-build', 'probe');
-const probeTitle = 'Device feasibility probe';
+export type PreviewEntry = 'probe' | 'app';
+
 const reservedPagesFiles = new Set(['_headers']);
 const curlMetadata = '%{stderr}__FLO_HTTP__%{http_code}__FLO_TYPE__%{content_type}';
 
 class PreviewUnavailableError extends Error {}
 class ByteMismatchError extends Error {}
+
+export function previewBuildDirectory(entry: PreviewEntry): string {
+  return resolve('/tmp/flo-preview-build', entry);
+}
+
+export function extractPageTitle(html: Buffer): string {
+  const title = /<title\b[^>]*>([\s\S]*?)<\/title>/iu.exec(html.toString('utf8'))?.[1]?.trim();
+  if (!title) throw new Error('Build output index.html is missing a non-empty <title>.');
+  return title;
+}
+
+export function isNetworkBlockPage(
+  bytes: Buffer,
+  contentType: string,
+  expectedPageTitle: string,
+): boolean {
+  const body = bytes.toString('utf8').toLowerCase();
+  if (
+    ['cisco umbrella', '146.112.61.', 'umbrella.cisco.com'].some((marker) => body.includes(marker))
+  ) {
+    return true;
+  }
+  return (
+    contentType.toLowerCase().includes('text/html') &&
+    body.includes('<html') &&
+    !body.includes(expectedPageTitle.toLowerCase())
+  );
+}
+
+export function isMissingAssetFallback(
+  relativePath: string,
+  contentType: string,
+  bytes: Buffer,
+  expectedPageTitle: string,
+): boolean {
+  const isHtmlPath = /\.html?$/iu.test(relativePath);
+  const hasExpectedPageIdentity = bytes
+    .toString('utf8')
+    .toLowerCase()
+    .includes(expectedPageTitle.toLowerCase());
+  return (
+    !isHtmlPath &&
+    contentType.toLowerCase().includes('text/html') &&
+    hasExpectedPageIdentity &&
+    !isNetworkBlockPage(bytes, contentType, expectedPageTitle)
+  );
+}
 
 async function listFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -46,21 +93,12 @@ function previewOrigin(value: string): URL {
   return url;
 }
 
-function isNetworkBlockPage(bytes: Buffer, contentType: string): boolean {
-  const body = bytes.toString('utf8').toLowerCase();
-  if (
-    ['cisco umbrella', '146.112.61.', 'umbrella.cisco.com'].some((marker) => body.includes(marker))
-  ) {
-    return true;
-  }
-  return (
-    contentType.toLowerCase().includes('text/html') &&
-    body.includes('<html') &&
-    !body.includes(probeTitle.toLowerCase())
-  );
+interface PreviewResponse {
+  readonly bytes: Buffer;
+  readonly contentType: string;
 }
 
-function fetchFile(url: URL, relativePath: string): Buffer {
+function fetchFile(url: URL, relativePath: string): PreviewResponse {
   const result = spawnSync(
     'curl',
     [
@@ -96,42 +134,52 @@ function fetchFile(url: URL, relativePath: string): Buffer {
       `${relativePath}: preview request unavailable (HTTP ${status ?? 'unknown'}, curl exit ${result.status ?? 'signal'}).`,
     );
   }
-  if (isNetworkBlockPage(bytes, contentType)) {
-    throw new PreviewUnavailableError(
-      `${relativePath}: preview returned non-probe HTML, likely a local network-filter block page.`,
-    );
-  }
-  return bytes;
+  return { bytes, contentType };
 }
 
 async function main(): Promise<void> {
   const argument = process.argv[2];
-  if (!argument || process.argv.length !== 3) {
-    throw new Error('Usage: npx tsx tools/deploy/check-preview.ts <preview-url>');
+  if (!argument || process.argv.length < 3 || process.argv.length > 4) {
+    throw new Error('Usage: npx tsx tools/deploy/check-preview.ts <preview-url> [probe|app]');
   }
-
+  const entryArgument = process.argv[3] ?? 'probe';
+  if (entryArgument !== 'probe' && entryArgument !== 'app') {
+    throw new Error('Expected build entry "probe" or "app".');
+  }
+  const entry: PreviewEntry = entryArgument;
   const origin = previewOrigin(argument);
+  const buildDirectory = previewBuildDirectory(entry);
   const files = (await listFiles(buildDirectory)).filter(
     (file) => !reservedPagesFiles.has(relative(buildDirectory, file).split(sep).join('/')),
   );
-  if (
-    files.length === 0 ||
-    !files.some((file) => relative(buildDirectory, file) === 'index.html')
-  ) {
+  const indexFile = join(buildDirectory, 'index.html');
+  if (files.length === 0 || !files.includes(indexFile)) {
     throw new Error(`Build output is empty or missing index.html: ${buildDirectory}`);
   }
 
+  const indexHtml = await readFile(indexFile);
+  const expectedPageTitle = extractPageTitle(indexHtml);
   let compared = 0;
   for (const file of files) {
     const path = relative(buildDirectory, file).split(sep).join('/');
     const encodedPath = path.split('/').map(encodeURIComponent).join('/');
     const url = path === 'index.html' ? origin : new URL(encodedPath, origin);
-    const expected = await readFile(file);
-    const served = fetchFile(url, path);
+    const expected = file === indexFile ? indexHtml : await readFile(file);
+    const response = fetchFile(url, path);
 
-    if (!expected.equals(served)) {
+    if (isNetworkBlockPage(response.bytes, response.contentType, expectedPageTitle)) {
+      throw new PreviewUnavailableError(
+        `${path}: preview returned unexpected HTML, likely a local network-filter block page.`,
+      );
+    }
+    if (isMissingAssetFallback(path, response.contentType, response.bytes, expectedPageTitle)) {
       throw new ByteMismatchError(
-        `${path}: served bytes differ (expected ${expected.length}, received ${served.length}); possible host rewrite or injected script.`,
+        `${path}: missing file (Pages returned the SPA index fallback for this asset).`,
+      );
+    }
+    if (!expected.equals(response.bytes)) {
+      throw new ByteMismatchError(
+        `${path}: served bytes differ (expected ${expected.length}, received ${response.bytes.length}); possible host rewrite or injected script.`,
       );
     }
     compared += 1;
@@ -140,20 +188,26 @@ async function main(): Promise<void> {
   const skippedConfig = reservedPagesFiles.has('_headers')
     ? ' (_headers is Pages configuration, not a served asset)'
     : '';
-  console.log(`check-preview: PASS; ${compared} served files byte-equal${skippedConfig}.`);
+  console.log(
+    `check-preview: PASS; ${entry} build: ${compared} served files byte-equal${skippedConfig}.`,
+  );
 }
 
-main().catch((error: unknown) => {
-  if (error instanceof PreviewUnavailableError) {
-    console.error(`check-preview: PENDING; ${error.message}`);
-    process.exitCode = 2;
-    return;
-  }
-  if (error instanceof ByteMismatchError) {
-    console.error(`check-preview: FAIL; ${error.message}`);
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error: unknown) => {
+    if (error instanceof PreviewUnavailableError) {
+      console.error(`check-preview: PENDING; ${error.message}`);
+      process.exitCode = 2;
+      return;
+    }
+    if (error instanceof ByteMismatchError) {
+      console.error(`check-preview: FAIL; ${error.message}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.error(
+      `check-preview: ERROR; ${error instanceof Error ? error.message : String(error)}`,
+    );
     process.exitCode = 1;
-    return;
-  }
-  console.error(`check-preview: ERROR; ${error instanceof Error ? error.message : String(error)}`);
-  process.exitCode = 1;
-});
+  });
+}
