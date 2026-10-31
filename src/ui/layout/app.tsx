@@ -6,7 +6,10 @@ import { TODAY_PREVIEW_FIXTURE, TodayScreen } from '../screens/today';
 import { CALENDAR_PREVIEW_FIXTURE, CalendarScreen } from '../screens/calendar';
 import type { TodayScreenProps } from '../screens/today';
 import { createTodayScreenProps } from '../screens/today/live-data.ts';
-import { RepositoriesContext, type Repositories } from './repositories.tsx';
+import { RepositoriesContext, type Repositories, useRepositories } from './repositories.tsx';
+import { LogScreen } from '../screens/log';
+import { DEFAULT_PINNED_TRACKERS } from '../screens/log/types.ts';
+import type { Tracker } from '../../contracts/enums.ts';
 import type { UpdateReadyNotice } from '../../sw/client.ts';
 
 type Role = 'owner' | 'partner';
@@ -170,6 +173,23 @@ function PlaceholderScreen({ role, tab }: { role: Role; tab: Tab }) {
   );
 }
 
+function RepositoryLogScreen({
+  pinnedTrackers,
+  onPinnedTrackersChange,
+}: {
+  readonly pinnedTrackers: readonly Tracker[];
+  readonly onPinnedTrackersChange: (trackers: readonly Tracker[]) => void;
+}) {
+  const { logRepo } = useRepositories();
+  return (
+    <LogScreen
+      logRepo={logRepo ?? undefined}
+      pinnedTrackers={pinnedTrackers}
+      onPinnedTrackersChange={onPinnedTrackersChange}
+    />
+  );
+}
+
 export function AppShell({
   repositories,
   updateNotice,
@@ -179,6 +199,9 @@ export function AppShell({
   const role = selectedRole();
   const tabs = role === 'owner' ? OWNER_TABS : PARTNER_TABS;
   const [activeTab, setActiveTab] = useState<TabId>(() => tabFromLocation(tabs));
+  const [pinnedTrackers, setPinnedTrackers] = useState<readonly Tracker[]>(() => [
+    ...DEFAULT_PINNED_TRACKERS,
+  ]);
   const selectedTab = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const syntheticPreview = new URLSearchParams(window.location.search).get('today') === 'synthetic';
   const [todayProps, setTodayProps] = useState<TodayScreenProps | null>(null);
@@ -279,7 +302,12 @@ export function AppShell({
               </Card>
             </div>
           ) : null}
-          {role === 'owner' && selectedTab.id === 'today' ? (
+          {role === 'owner' && selectedTab.id === 'log' ? (
+            <RepositoryLogScreen
+              pinnedTrackers={pinnedTrackers}
+              onPinnedTrackersChange={setPinnedTrackers}
+            />
+          ) : role === 'owner' && selectedTab.id === 'today' ? (
             todayProps ? (
               <TodayScreen {...todayProps} onLogFirstPeriod={openLogTab} />
             ) : todayLoadFailed ? (

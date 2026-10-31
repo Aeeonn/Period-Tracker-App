@@ -1,0 +1,239 @@
+.log-screen {
+  display: grid;
+  width: min(100%, 46rem);
+  gap: var(--space-4);
+  margin-inline: auto;
+  padding-block: var(--space-6);
+}
+
+.log-screen__header {
+  padding: clamp(var(--space-4), 5vw, var(--space-8));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse at 92% 8%, var(--color-accent-subtle), transparent 58%),
+    var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.log-screen__eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.log-screen__header h1 {
+  margin: 0 0 var(--space-3);
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  letter-spacing: -0.045em;
+  line-height: var(--line-height-tight);
+}
+
+.log-screen__privacy {
+  max-width: 39rem;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.log-screen__date-card,
+.log-screen__form-card,
+.log-tracker-customizer {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.log-screen__locked,
+.log-screen__saved,
+.log-screen__error,
+.log-screen__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.log-screen__locked {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+  font-weight: 600;
+}
+
+.log-screen__error {
+  color: var(--color-period);
+}
+
+.log-screen__saved {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.log-tracker-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.log-tracker-list__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.log-tracker-list__heading h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.log-tracker-list__choices,
+.log-choice-group__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.log-tracker-customizer__list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log-tracker-customizer__list li {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.log-tracker-customizer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.log-editor {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.log-editor h2 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.log-editor h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.log-editor__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.log-choice-group {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.log-choice-group legend {
+  padding-inline: var(--space-2);
+  font-weight: 650;
+}
+
+.log-choice-group__choices {
+  padding-block-start: var(--space-2);
+}
+
+.log-input {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.log-input input,
+.log-input textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.log-input textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.log-input input:focus-visible,
+.log-input textarea:focus-visible,
+.log-checkbox input:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.log-input__with-unit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.log-input__with-unit input {
+  max-width: 14rem;
+}
+
+.log-input__with-unit > span:last-child {
+  color: var(--color-text-muted);
+}
+
+.log-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-block-start: var(--space-2);
+}
+
+.log-sex-event,
+.log-medication {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.log-checkbox {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.log-checkbox input {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.log-screen button:disabled,
+.log-screen input:disabled,
+.log-screen textarea:disabled {
+  cursor: not-allowed;
+}
+
+@media (min-width: 40rem) {
+  .log-tracker-customizer__list li {
+    grid-template-columns: minmax(9rem, 1fr) auto;
+    align-items: center;
+  }
+}
