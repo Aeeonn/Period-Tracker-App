@@ -3020,8 +3020,9 @@
 - phase: P1
 - risk: low
 - blocked-by: p1-visual-direction
-- owns: docs/deploy/p0-app-peek.md
+- owns: docs/deploy/p0-demo.md, docs/deploy/p0-app-peek.md
 - route: rule 5
 - record: `~/firstmate/data/p1-visual-redeploy/`
 - since: 2026-10-30
 - notes: pages-preview.sh app --branch app from main; check-preview app; record deployment id + source SHA.
+- updated: 2026-10-30
