@@ -1,6 +1,6 @@
 {
   "synthetic": true,
-  "provenance": "A11 TV-W1-TV-W12, TV-W3b, and captain-approved follow-up cases were hand-derived from docs/plan/algorithms-spec.md and R3; dates and logs are synthetic.",
+  "provenance": "A11 TV-W1-TV-W12 and TV-W3b were hand-derived from docs/plan/algorithms-spec.md and R3; the W-01 today+yesterday evidence window and inclusive 183-day warning-evidence window encode captain-approved product decisions (the latter is a changeable default); dates and logs are synthetic.",
   "source": "docs/plan/algorithms-spec.md A11",
   "scenarios": {
     "w1": {

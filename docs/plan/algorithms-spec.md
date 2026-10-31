@@ -432,6 +432,7 @@ pregnancy end: outcome ∈ {birth, loss, ended}; → lifeStage postpartum (birth
   - Not a triage system, and not a diagnosis.
 - **Severities:** `EMERGENCY`, `SEEK_ADVICE_SOON`, `DISCUSS`, `INFO`.
 - **Dismissal and repeats.** A dismissed card stays hidden for the same episode or cycle. `EMERGENCY` cards cannot be dismissed while the condition still holds.
+- **Warning evidence recency.** W-02 and W-07 use `WARNING_EVIDENCE_WINDOW_DAYS = 183` LocalDate days, inclusive; this is a product default the captain may change.
 
 Each rule names its source **and the population that source describes** (ADR-0007). Population descriptors summarise what R3 records; the medical audit confirms them against the source text. A source written for adults or for a selected cohort may not fit everyone, which is one more reason every card says "talk to a clinician" rather than diagnosing.
 
@@ -441,9 +442,9 @@ Each rule names its source **and the population that source describes** (ADR-000
 | W-02 | Heavy-bleeding items logged on days of the current period episode: product change every 1–2 h, soaking hourly for >2 h (without the W-01 symptoms; Stage E addition, flagged for audit), clots >2.5 cm, flooding, "bleeding stops me doing normal things". Exactly **one** item on exactly **one** day → DISCUSS; any other non-empty case (two or more different items, or one item on two or more days) → SEEK_ADVICE_SOON | DISCUSS / SEEK_ADVICE_SOON | NHS heavy periods; NICE NG88 quality-of-life emphasis (R3 [17],[19]) | UK guidance for people with heavy menstrual bleeding |
 | W-03 | Period bleeding days >7: once → INFO; ≥2 of last 6 → DISCUSS (FIGO's ≤8 is shown as context) | INFO/DISCUSS | ACOG FAQ095; FIGO (R3 [16],[18]) | ACOG adult patient education; FIGO System 1 normal limits for non-pregnant people of reproductive age |
 | W-04 | Cycle length outside 21–35: once → INFO; ≥2 of last 6 valid cycles → DISCUSS (FIGO 24–38 shown as context) | INFO/DISCUSS | ACOG FAQ095; FIGO | As W-03 |
-| W-05 | Shortest-to-longest variation over the last 6 months >9 (age 18–25 or unknown) or >7 (26–41) | INFO ("variable") | FIGO 2023 explanation (R3 [16]) | FIGO age bands 18–25, 26–41, 42–45 |
-| W-06 | No period for **more than 90 days** (today − last start ≥ 91), not pregnant, not on a continuous hormonal method, not postpartum or breastfeeding | SEEK_ADVICE_SOON + pregnancy-test card | PCOS 2023 (">90 days"); ACOG (3–6 months) | PCOS guideline: any cycle >90 days more than one year after menarche; adult and adolescent criteria differ |
-| W-07 | (a) Bleeding after sex (a sex entry with `bleeding_after = yes`) → DISCUSS. (b) Intermenstrual bleeding: a day with any flow that is neither part of a period episode nor attached to one as spotting (A1); in 1 cycle → INFO, in ≥2 cycles → DISCUSS. During the first 3 months of a new hormonal method, (b) is INFO only | INFO/DISCUSS | ACOG FAQ095 | US adult patient education |
+| W-05 | Shortest-to-longest variation over the last 6 months >9 (age 18–25, 42–45, or unknown) or >7 (26–41) | INFO ("variable") | FIGO 2023 explanation (R3 [16]) | FIGO age bands 18–25, 26–41, 42–45 |
+| W-06 | No period for **more than 90 days** (today − last start ≥ 91) when the life stage is neither pregnancy nor postpartum and there is no active continuous hormonal method; breastfeeding suppression is deferred (breastfeeding alone does not suppress W-06 in P1) | SEEK_ADVICE_SOON + pregnancy-test card | PCOS 2023 (">90 days"); ACOG (3–6 months) | PCOS guideline: any cycle >90 days more than one year after menarche; adult and adolescent criteria differ |
+| W-07 | (a) Bleeding after sex (a sex entry with `bleeding_after = yes`) → DISCUSS. (b) Intermenstrual bleeding: a day with any flow that is neither part of a period episode nor attached to one as spotting (A1); lochia and spotting within 2 days before or after a lochia episode are excluded. In 1 cycle → INFO, in ≥2 cycles → DISCUSS. During a new hormonal method’s first 3 calendar months [start, 3-month anniversary), spotting dated inside that window yields INFO but does not count toward the ≥2-cycle DISCUSS threshold; outside-window spotting remains eligible for that threshold. This exception does not downgrade (a) | INFO/DISCUSS | ACOG FAQ095 | US adult patient education |
 | W-08 | Possible pregnancy (late, positive test, or early pregnancy mode) **and** one-sided pain, shoulder-tip pain or unusual bleeding → SEEK_ADVICE_SOON ("get advice today"); with sudden severe pain plus dizziness or fainting → EMERGENCY | SEEK/EMERGENCY | NHS ectopic pregnancy (R3 [19]; page review overdue — re-verify in content review) | UK general public guidance |
 | W-09 | Severe period pain that stops daily activities in ≥2 of last 3 periods, or pain during sex in ≥2 cycles | DISCUSS | ESHRE 2022 (R3 [21]) | Clinical guideline for people with suspected endometriosis |
 | W-10 | The same symptom in the 5 days before the period in 3 consecutive cycles, absent in cycle days 4–12 | INFO ("you may want to track for PMS"; no PMDD rule) | ACOG FAQ057 (R3 [22]) | US adult patient education |
@@ -464,8 +465,10 @@ Each rule names its source **and the population that source describes** (ADR-000
 | TV-W8 | One sex entry with `bleeding_after = yes`; no hormonal method | W-07 DISCUSS |
 | TV-W9 | Spotting on cycle day 14 of one cycle, not adjacent to any period episode | W-07 INFO |
 | TV-W10 | Such intermenstrual spotting in two different cycles | W-07 DISCUSS |
-| TV-W11 | TV-W10, with a combined pill started 40 days before the second spotting day | W-07 INFO only (new-method window) |
+| TV-W11 | TV-W10, with both spotting days inside a new combined pill’s first-three-calendar-month window | W-07 INFO only (new-method window) |
 | TV-W12 | "Thoughts of harming myself" logged on 10-02; today 10-02 | W-11 crisis card shown, not dismissible on 10-02 or 10-03 |
+| TV-W13 | Combined pill starts 2026-08-02; intermenstrual spotting in different cycles on 2026-07-15 (before start) and 2026-11-01 (inside window) | W-07 INFO (one outside-window cycle) |
+| TV-W14 | TV-W13, but the second spotting is on 2026-11-02 (three-month anniversary) | W-07 DISCUSS (two outside-window cycles) |
 
 **Vectors owed by later phases** (written in each phase's tasks at the gate before it, from this spec): W-08, W-09 and W-10 (P3/P4); A14 S2 and S3 (P4); A15 endometriosis, fibroids/HMB and PMS checkers (P5); A12 binary metrics and the consistency-failure path (P3).
 

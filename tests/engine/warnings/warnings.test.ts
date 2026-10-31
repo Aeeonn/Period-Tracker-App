@@ -189,6 +189,27 @@ describe('A11 warning rule boundaries', () => {
     expect(warningFor(boundary, 'W-07')?.severity).toBe('INFO');
   });
 
+  it('W-07 counts the method anniversary as outside the window, but not the day before', () => {
+    const starts = startsFromLengths('2026-07-01', [28, 28, 28, 28]);
+    const method: ContraceptionState = {
+      method: 'combined_pill',
+      startDate: date('2026-08-02'),
+      regimen: { activeDays: 21, breakDays: 7, continuous: false },
+    };
+    const preStartSpotting: RawLog = { localDate: '2026-07-15', flow: 'spotting' };
+    const anniversary = createInput('2026-11-02', starts, [1, 1, 1, 1, 1], {
+      contraception: [method],
+      extraLogs: [preStartSpotting, { localDate: '2026-11-02', flow: 'spotting' }],
+    });
+    const dayBeforeAnniversary = createInput('2026-11-01', starts, [1, 1, 1, 1, 1], {
+      contraception: [method],
+      extraLogs: [preStartSpotting, { localDate: '2026-11-01', flow: 'spotting' }],
+    });
+
+    expect(warningFor(anniversary, 'W-07')?.severity).toBe('DISCUSS');
+    expect(warningFor(dayBeforeAnniversary, 'W-07')?.severity).toBe('INFO');
+  });
+
   it('W-11 remains non-dismissible through yesterday and expires after that', () => {
     const logs: RawLog[] = [{ localDate: '2026-10-02', mood: ['thoughts_of_self_harm'] }];
     const today = createInput('2026-10-02', [], [], { extraLogs: logs });
