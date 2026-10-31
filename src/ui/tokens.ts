@@ -2,15 +2,21 @@ export type UiTheme = 'light' | 'dark';
 
 export const colorTokens = {
   canvas: 'var(--color-canvas)',
+  canvasGradient: 'var(--gradient-canvas)',
   surface: 'var(--color-surface)',
   raisedSurface: 'var(--color-surface-raised)',
   text: 'var(--color-text)',
   mutedText: 'var(--color-text-muted)',
   border: 'var(--color-border)',
   accent: 'var(--color-accent)',
+  accentGradient: 'var(--gradient-accent)',
   onAccent: 'var(--color-on-accent)',
   subtleAccent: 'var(--color-accent-subtle)',
   focus: 'var(--color-focus)',
+  period: 'var(--color-period)',
+  fertility: 'var(--color-fertility)',
+  today: 'var(--color-today)',
+  ringTrack: 'var(--color-ring-track)',
 } as const;
 
 export const typographyTokens = {
@@ -44,4 +50,10 @@ export const radiusTokens = {
   lg: 'var(--radius-lg)',
   sheet: 'var(--radius-sheet)',
   pill: 'var(--radius-pill)',
+} as const;
+
+export const shadowTokens = {
+  card: 'var(--shadow-card)',
+  sheet: 'var(--shadow-sheet)',
+  toast: 'var(--shadow-toast)',
 } as const;

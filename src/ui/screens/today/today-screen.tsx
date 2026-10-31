@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
 import type { EngineOutput } from '../../../contracts/engine-api.ts';
 import type { ChanceCategory, WarningSeverity } from '../../../contracts/enums.ts';
-import type { LocalDate } from '../../../contracts/localdate.ts';
+import type { LocalDate, LocalDateRange } from '../../../contracts/localdate.ts';
+import { addDays, compare, diffDays, epochDay } from '../../../lib/localdate/index.ts';
 import { Button, Card, Sheet, Toast } from '../../components/base';
 import './today.css';
 
@@ -75,6 +76,344 @@ function explanationBasis(engineOutput: EngineOutput): string | null {
   const explanation = engineOutput.explanations.find((item) => item.topic === 'prediction');
   const basis = explanation?.values.basis;
   return typeof basis === 'string' ? basis : null;
+}
+
+const WEEKDAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+type CycleRingSegment = 'period' | 'fertility' | 'today';
+
+function dateInRange(value: LocalDate, range: LocalDateRange): boolean {
+  return compare(value, range.start) >= 0 && compare(value, range.end) <= 0;
+}
+
+function weekdayIndex(value: LocalDate): number {
+  return (((Number(epochDay(value)) + 4) % 7) + 7) % 7;
+}
+
+function weekDates(today: LocalDate): readonly LocalDate[] {
+  const mondayOffset = (weekdayIndex(today) + 6) % 7;
+  return Array.from({ length: 7 }, (_, index) => addDays(today, index - mondayOffset));
+}
+
+function dateRangeLabel(range: LocalDateRange): string {
+  return `${formatLocalDate(range.start)} through ${formatLocalDate(range.end)}`;
+}
+
+function cycleStartDate(
+  engineOutput: EngineOutput,
+  today: LocalDate,
+  cycleDay: number | null,
+): LocalDate | null {
+  if (cycleDay !== null) return addDays(today, 1 - cycleDay);
+  return engineOutput.cycles.at(-1)?.nextStart ?? null;
+}
+
+function ringArcPath(
+  range: LocalDateRange,
+  cycleStart: LocalDate | null,
+  ringDays: number,
+  radius: number,
+): string | null {
+  if (cycleStart === null) return null;
+  const startDay = Math.max(0, diffDays(cycleStart, range.start));
+  const endDay = Math.min(ringDays, diffDays(cycleStart, range.end) + 1);
+  if (endDay <= startDay) return null;
+
+  const startAngle = -90 + (startDay / ringDays) * 360;
+  const endAngle = -90 + (endDay / ringDays) * 360;
+  const startRadians = (startAngle * Math.PI) / 180;
+  const endRadians = (endAngle * Math.PI) / 180;
+  const startX = 120 + radius * Math.cos(startRadians);
+  const startY = 120 + radius * Math.sin(startRadians);
+  const endX = 120 + radius * Math.cos(endRadians);
+  const endY = 120 + radius * Math.sin(endRadians);
+  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+  return `M ${startX.toFixed(2)} ${startY.toFixed(2)} A ${radius} ${radius} 0 ${largeArc} 1 ${endX.toFixed(2)} ${endY.toFixed(2)}`;
+}
+
+function CycleRing({
+  cycleDay,
+  engineOutput,
+  stillBleeding,
+  today,
+}: {
+  readonly engineOutput: EngineOutput;
+  readonly today: LocalDate;
+  readonly cycleDay: number | null;
+  readonly stillBleeding: boolean;
+}) {
+  const [selectedSegment, setSelectedSegment] = useState<CycleRingSegment | null>(null);
+  const prediction = engineOutput.prediction;
+  const fertility = engineOutput.fertility;
+  const predictionRange =
+    prediction.kind === 'prediction' ? { start: prediction.lo, end: prediction.hi } : null;
+  const fertilityRange = fertility.kind === 'fertility' ? fertility.possibleBand : null;
+  const start = cycleStartDate(engineOutput, today, cycleDay);
+  const todayOffset = start === null ? null : diffDays(start, today);
+  const extentOffsets = [
+    cycleDay ?? 0,
+    todayOffset === null ? 0 : todayOffset + 1,
+    start !== null && predictionRange !== null ? diffDays(start, predictionRange.end) + 1 : 0,
+    start !== null && fertilityRange !== null ? diffDays(start, fertilityRange.end) + 1 : 0,
+  ];
+  const ringDays = Math.max(1, ...extentOffsets);
+  const periodArc =
+    predictionRange === null ? null : ringArcPath(predictionRange, start, ringDays, 86);
+  const fertilityArc =
+    fertilityRange === null ? null : ringArcPath(fertilityRange, start, ringDays, 66);
+  const markerOffset =
+    todayOffset === null ? null : Math.max(0, Math.min(ringDays - 1, todayOffset));
+  const markerAngle = markerOffset === null ? -90 : -90 + ((markerOffset + 0.5) / ringDays) * 360;
+  const markerRadians = (markerAngle * Math.PI) / 180;
+  const markerPointX = 120 + 76 * Math.cos(markerRadians);
+  const markerPointY = 120 + 76 * Math.sin(markerRadians);
+  const untilPeriod = prediction.kind === 'prediction' ? diffDays(today, prediction.center) : null;
+  const centerValue = stillBleeding
+    ? cycleDay === null
+      ? '-'
+      : String(cycleDay)
+    : untilPeriod !== null && untilPeriod >= 0
+      ? String(untilPeriod)
+      : cycleDay === null
+        ? '-'
+        : String(cycleDay);
+  const centerLabel = stillBleeding
+    ? 'period day'
+    : untilPeriod !== null && untilPeriod >= 0
+      ? untilPeriod === 1
+        ? 'day until period'
+        : 'days until period'
+      : cycleDay === null
+        ? 'cycle day unavailable'
+        : 'day of cycle';
+  const periodLabel =
+    predictionRange === null
+      ? null
+      : `Predicted period window, ${dateRangeLabel(predictionRange)}.`;
+  const fertilityLabel =
+    fertilityRange === null ? null : `Possible fertile window, ${dateRangeLabel(fertilityRange)}.`;
+  const fullDescription = [
+    `Today is ${formatLocalDate(today)}.`,
+    stillBleeding && cycleDay !== null ? `Period day ${cycleDay}.` : null,
+    !stillBleeding && untilPeriod !== null && untilPeriod >= 0
+      ? `${untilPeriod} ${untilPeriod === 1 ? 'day' : 'days'} until the predicted period.`
+      : null,
+    !stillBleeding && (untilPeriod === null || untilPeriod < 0) && cycleDay !== null
+      ? `Day ${cycleDay} of the cycle.`
+      : null,
+    periodLabel,
+    fertilityLabel,
+    'The marker shows today. Each ring segment has a text label and explanation.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const selectedExplanation =
+    selectedSegment === 'period'
+      ? 'This is the predicted period window. Dates can vary.'
+      : selectedSegment === 'fertility'
+        ? 'This is a possible fertile window. Ovulation can happen outside these dates.'
+        : selectedSegment === 'today'
+          ? `The marker shows today, ${formatLocalDate(today)}.`
+          : 'Focus or choose a ring segment to learn what it means.';
+
+  const dateLabels = weekDates(today);
+
+  return (
+    <div class="today-cycle-overview">
+      <Card class="today-ring-card">
+        <figure class="today-ring">
+          <figcaption class="today-ring__caption">
+            <h2>Cycle at a glance</h2>
+            <p>Estimated timing, shown as a planning guide.</p>
+          </figcaption>
+          <div class="today-ring__visual">
+            <svg
+              class="today-ring__svg"
+              viewBox="0 0 240 240"
+              role="img"
+              aria-label="Cycle ring"
+              aria-describedby="today-ring-description"
+            >
+              <title>Cycle timing ring</title>
+              <desc>{fullDescription}</desc>
+              <circle
+                class="today-ring__track today-ring__track--outer"
+                cx="120"
+                cy="120"
+                r="86"
+                aria-hidden="true"
+              />
+              <circle
+                class="today-ring__track today-ring__track--inner"
+                cx="120"
+                cy="120"
+                r="66"
+                aria-hidden="true"
+              />
+              {fertilityArc ? (
+                <path
+                  class={`today-ring__segment today-ring__segment--fertility${selectedSegment === 'fertility' ? ' today-ring__segment--selected' : ''}`}
+                  data-testid="today-ring-fertility-segment"
+                  d={fertilityArc}
+                  aria-hidden="true"
+                  onClick={() => setSelectedSegment('fertility')}
+                />
+              ) : null}
+              {periodArc ? (
+                <path
+                  class={`today-ring__segment today-ring__segment--period${selectedSegment === 'period' ? ' today-ring__segment--selected' : ''}`}
+                  data-testid="today-ring-period-segment"
+                  d={periodArc}
+                  aria-hidden="true"
+                  onClick={() => setSelectedSegment('period')}
+                />
+              ) : null}
+              {markerOffset !== null ? (
+                <g
+                  class={`today-ring__marker${selectedSegment === 'today' ? ' today-ring__marker--selected' : ''}`}
+                  data-testid="today-ring-today-segment"
+                  aria-hidden="true"
+                  onClick={() => setSelectedSegment('today')}
+                >
+                  <circle
+                    class="today-ring__marker-hit-area"
+                    cx={markerPointX}
+                    cy={markerPointY}
+                    r="22"
+                  />
+                  <line
+                    x1={120 + 58 * Math.cos(markerRadians)}
+                    y1={120 + 58 * Math.sin(markerRadians)}
+                    x2={120 + 92 * Math.cos(markerRadians)}
+                    y2={120 + 92 * Math.sin(markerRadians)}
+                  />
+                  <circle
+                    class="today-ring__marker-dot"
+                    cx={markerPointX}
+                    cy={markerPointY}
+                    r="7"
+                  />
+                </g>
+              ) : null}
+            </svg>
+            <div class="today-ring__center" aria-hidden="true">
+              <strong>{centerValue}</strong>
+              <span>{centerLabel}</span>
+            </div>
+          </div>
+          <p id="today-ring-description" class="visually-hidden">
+            {fullDescription}
+          </p>
+          <div class="today-ring__legend" role="group" aria-label="Cycle ring segments">
+            {predictionRange ? (
+              <Button
+                class="today-ring__legend-button"
+                data-testid="today-ring-period-control"
+                aria-pressed={selectedSegment === 'period'}
+                onFocus={() => setSelectedSegment('period')}
+                onClick={() => setSelectedSegment('period')}
+                variant="secondary"
+              >
+                <span class="today-ring__swatch today-ring__swatch--period" aria-hidden="true" />
+                Predicted period
+                <span class="visually-hidden">{dateRangeLabel(predictionRange)}</span>
+              </Button>
+            ) : null}
+            {fertilityRange ? (
+              <Button
+                class="today-ring__legend-button"
+                data-testid="today-ring-fertility-control"
+                aria-pressed={selectedSegment === 'fertility'}
+                onFocus={() => setSelectedSegment('fertility')}
+                onClick={() => setSelectedSegment('fertility')}
+                variant="secondary"
+              >
+                <span class="today-ring__swatch today-ring__swatch--fertility" aria-hidden="true" />
+                Possible fertile window
+                <span class="visually-hidden">{dateRangeLabel(fertilityRange)}</span>
+              </Button>
+            ) : null}
+            {markerOffset !== null ? (
+              <Button
+                class="today-ring__legend-button"
+                data-testid="today-ring-today-control"
+                aria-pressed={selectedSegment === 'today'}
+                onFocus={() => setSelectedSegment('today')}
+                onClick={() => setSelectedSegment('today')}
+                variant="secondary"
+              >
+                <span class="today-ring__swatch today-ring__swatch--today" aria-hidden="true" />
+                Today
+                <span class="visually-hidden">{formatLocalDate(today)}</span>
+              </Button>
+            ) : null}
+            {periodLabel === null && fertilityLabel === null && markerOffset === null ? (
+              <p>Cycle dates are not available yet.</p>
+            ) : null}
+          </div>
+          <p class="today-ring__explanation" aria-live="polite" aria-atomic="true">
+            {selectedExplanation}
+          </p>
+        </figure>
+      </Card>
+      <section class="today-week" aria-labelledby="today-week-title">
+        <div class="today-week__heading">
+          <h2 id="today-week-title">This week</h2>
+          <span>Today is marked</span>
+        </div>
+        <ol class="today-week__days" aria-label="Week around today">
+          {dateLabels.map((date, index) => {
+            const dayIndex = weekdayIndex(date);
+            const isToday = date === today;
+            const previousDate = index === 0 ? null : dateLabels[index - 1];
+            const monthLabel =
+              previousDate === null ||
+              previousDate === undefined ||
+              previousDate.slice(5, 7) !== date.slice(5, 7)
+                ? MONTH_LABELS[Number(date.slice(5, 7)) - 1]
+                : null;
+            const isPeriod = predictionRange !== null && dateInRange(date, predictionRange);
+            const isFertile = fertilityRange !== null && dateInRange(date, fertilityRange);
+            const ariaParts = [WEEKDAY_NAMES[dayIndex], formatLocalDate(date)];
+            if (isToday) ariaParts.push('today');
+            if (isPeriod) ariaParts.push('predicted period window');
+            if (isFertile) ariaParts.push('possible fertile window');
+            return (
+              <li
+                key={date}
+                class={`today-week__day${isToday ? ' today-week__day--today' : ''}`}
+                aria-label={ariaParts.join(', ')}
+                aria-current={isToday ? 'date' : undefined}
+              >
+                <span class="today-week__weekday">{WEEKDAY_SHORT[dayIndex]}</span>
+                {monthLabel ? <span class="today-week__month">{monthLabel}</span> : null}
+                <strong>{Number(date.slice(8))}</strong>
+                {isToday ? <span class="today-week__tag today-week__tag--today">Today</span> : null}
+                {isPeriod ? (
+                  <span class="today-week__tag today-week__tag--period">Period</span>
+                ) : null}
+                {isFertile ? (
+                  <span class="today-week__tag today-week__tag--fertile">Fertile</span>
+                ) : null}
+                {!isToday && isPeriod && isFertile ? (
+                  <span class="visually-hidden">Also within possible fertile window.</span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    </div>
+  );
 }
 
 interface WarningNoticeProps {
@@ -199,29 +538,52 @@ export function TodayScreen({
         </section>
       ) : null}
 
-      <Card class="today-prediction" heading="Prediction window">
-        <p class="today-prediction__summary">{predictionText}</p>
-        {prediction.kind === 'prediction' ? (
-          <p class="today-prediction__range">
-            Expected window: {formatLocalDate(prediction.lo)} – {formatLocalDate(prediction.hi)}
-          </p>
-        ) : null}
-        {predictionBasis ? <p class="today-prediction__basis">{predictionBasis}</p> : null}
-        <Button class="today-why" onClick={() => setWhyTopic('prediction')} variant="quiet">
-          Why?
-        </Button>
-      </Card>
+      <CycleRing
+        cycleDay={currentCycleDay}
+        engineOutput={engineOutput}
+        stillBleeding={showStillBleeding}
+        today={today}
+      />
 
-      <Card class="today-chance" heading="Pregnancy chance today">
-        <p class="today-chance__value">{CHANCE_LABELS[chanceCategory]}</p>
-        <p class="today-safety-line">No day is &quot;safe&quot; without contraception.</p>
-        <p class="today-chance__uncertainty">
-          This estimate is uncertain. Pregnancy is possible any day.
-        </p>
-        <Button class="today-why" onClick={() => setWhyTopic('chance')} variant="quiet">
-          Why?
-        </Button>
-      </Card>
+      <div class="today-stat-grid" aria-label="Cycle details">
+        <Card class="today-stat today-stat--period" heading="Next period">
+          <p class="today-prediction__summary">{predictionText}</p>
+          {prediction.kind === 'prediction' ? (
+            <p class="today-prediction__range">
+              Expected window: {formatLocalDate(prediction.lo)} &ndash;{' '}
+              {formatLocalDate(prediction.hi)}
+            </p>
+          ) : null}
+          {predictionBasis ? <p class="today-prediction__basis">{predictionBasis}</p> : null}
+          <Button class="today-why" onClick={() => setWhyTopic('prediction')} variant="quiet">
+            Why?
+          </Button>
+        </Card>
+
+        <Card class="today-stat today-chance" heading="Fertile chance today">
+          <p class="today-chance__value">{CHANCE_LABELS[chanceCategory]}</p>
+          <p class="today-chance__uncertainty">
+            This estimate is uncertain. Pregnancy is possible any day.
+          </p>
+          <p class="today-safety-line">No day is &quot;safe&quot; without contraception.</p>
+          <Button class="today-why" onClick={() => setWhyTopic('chance')} variant="quiet">
+            Why?
+          </Button>
+        </Card>
+
+        <Card class="today-stat today-stat--cycle-day" heading="Cycle day">
+          <p class="today-stat__value">
+            {currentCycleDay === null ? 'Not available' : currentCycleDay}
+          </p>
+          <p class="today-stat__detail">
+            {currentCycleDay === null
+              ? 'Log a period to see your cycle day.'
+              : showStillBleeding
+                ? `Period day ${currentCycleDay}`
+                : `Day ${currentCycleDay} of cycle`}
+          </p>
+        </Card>
+      </div>
 
       <div class="today-actions" role="group" aria-label="Log today">
         <Button

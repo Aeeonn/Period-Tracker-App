@@ -31,7 +31,7 @@
   min-block-size: 100dvh;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-canvas);
+  background: var(--gradient-canvas);
 }
 
 .shell-container {
@@ -169,7 +169,7 @@
   background:
     radial-gradient(ellipse at right top, var(--color-accent-subtle), transparent 55%),
     var(--color-surface);
-  box-shadow: 0 1rem 2.5rem rgb(20 30 26 / 7%);
+  box-shadow: 0 1rem 2.5rem rgb(73 47 94 / 8%);
 }
 
 .shell-placeholder::before {

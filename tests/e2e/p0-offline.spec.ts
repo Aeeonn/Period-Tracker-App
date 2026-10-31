@@ -228,7 +228,7 @@ test('T-SW-01 @sw offline cold start shows Today after unlocking the integrated 
     timeout: 15_000,
   });
   await expect(coldPage.getByText('Cycle day 12')).toBeVisible();
-  await expect(coldPage.locator('.shell-preview-banner')).toContainText('synthetic placeholder');
+  await expect(coldPage.locator('.shell-preview-banner')).toContainText('synthetic data only');
   expect(coldPageErrors).toEqual([]);
 });
 

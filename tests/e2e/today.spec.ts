@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { createServer, type ViteDevServer } from 'vite';
 import { resolve } from 'node:path';
 import { setupOrUnlockApp } from './helpers/lock.ts';
@@ -52,6 +53,8 @@ test('T-UX-01 @today period start takes one tap and flow, symptom, and mood take
   await expect(page.locator('.ui-toast')).toContainText('Saved: Period started.');
   await expect(page.getByRole('heading', { name: 'Still bleeding today?' })).toBeVisible();
   await expect(page.getByText('Cycle day 1')).toBeVisible();
+  await expect(page.locator('.today-ring__center')).toContainText('period day');
+  await expect(page.locator('.today-ring__center')).toContainText('1');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.getByText('Cycle day 12')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Still bleeding today?' })).toHaveCount(0);
@@ -147,6 +150,86 @@ test('T-UX-04 @today an EMERGENCY warning fixture cannot be dismissed while acti
   await expect(warning).toBeVisible();
 });
 
+test('T-UX-02 @today cycle ring, week strip, and stat tiles describe synthetic cycle data', async ({
+  page,
+}) => {
+  await openFixture(page);
+  const ring = page.getByRole('img', { name: 'Cycle ring', exact: true });
+  await expect(ring).toHaveAttribute('aria-describedby', 'today-ring-description');
+  await expect(page.getByText('17', { exact: true })).toBeVisible();
+  await expect(page.getByText('days until period', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('today-ring-period-segment')).toBeVisible();
+  await page.getByTestId('today-ring-period-segment').evaluate((segment) => {
+    segment.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+  await expect(page.locator('.today-ring__explanation')).toContainText(
+    'This is the predicted period window. Dates can vary.',
+  );
+  const periodControl = page.getByTestId('today-ring-period-control');
+  await periodControl.focus();
+  await expect(periodControl).toBeFocused();
+  await expect(page.locator('.today-ring__explanation')).toContainText(
+    'This is the predicted period window. Dates can vary.',
+  );
+  await expect(page.getByTestId('today-ring-fertility-segment')).toBeVisible();
+  await page.getByTestId('today-ring-fertility-control').click();
+  await expect(page.locator('.today-ring__explanation')).toContainText(
+    'Ovulation can happen outside these dates.',
+  );
+
+  const week = page.getByRole('list', { name: 'Week around today' });
+  await expect(week).toBeVisible();
+  await expect(week.getByRole('listitem')).toHaveCount(7);
+  await expect(week.getByRole('listitem', { name: 'Monday, Oct 19' })).toBeVisible();
+  await expect(week.getByRole('listitem', { name: 'Sunday, Oct 25' })).toBeVisible();
+  await expect(week.getByRole('listitem', { name: 'Thursday, Oct 22, today' })).toHaveAttribute(
+    'aria-current',
+    'date',
+  );
+  await expect(page.getByRole('heading', { name: 'Next period' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fertile chance today' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cycle day' })).toBeVisible();
+  await expect(page.locator('.today-chance').getByText('Medium', { exact: true })).toBeVisible();
+  const visibleText = await page.locator('body').innerText();
+  expect(visibleText).not.toMatch(/\b\d+(?:\.\d+)?%/u);
+  expect(visibleText).not.toMatch(/\b(?:zero chance|no chance)\b/iu);
+});
+
+test('T-UX-02 @today suppressed estimates keep a cycle day and omit forecast segments', async ({
+  page,
+}) => {
+  await openFixture(page, '?suppression=late');
+  await expect(page.getByRole('img', { name: 'Cycle ring', exact: true })).toBeVisible();
+  await expect(page.getByTestId('today-ring-period-segment')).toHaveCount(0);
+  await expect(page.getByTestId('today-ring-fertility-segment')).toHaveCount(0);
+  await expect(page.getByTestId('today-ring-today-segment')).toBeVisible();
+  await expect(page.getByText('Day 12 of cycle')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cycle day' })).toBeVisible();
+});
+
+test('T-UX-02 @today no-data fixture omits cycle markers without inventing dates', async ({
+  page,
+}) => {
+  await openFixture(page, '?suppression=no_data');
+  await expect(page.getByRole('img', { name: 'Cycle ring', exact: true })).toBeVisible();
+  await expect(page.getByTestId('today-ring-period-segment')).toHaveCount(0);
+  await expect(page.getByTestId('today-ring-fertility-segment')).toHaveCount(0);
+  await expect(page.getByTestId('today-ring-today-segment')).toHaveCount(0);
+  await expect(page.locator('.today-ring__center')).toContainText('cycle day unavailable');
+  await expect(page.getByText('Cycle dates are not available yet.')).toBeVisible();
+});
+
+test('T-UX-02 @today visual contrast meets WCAG AA in light and dark themes', async ({ page }) => {
+  await openFixture(page);
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    const audit = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+      .analyze();
+    expect(audit.violations).toEqual([]);
+  }
+});
+
 test('Today @today is registered in the existing owner app shell', async ({ page }) => {
   await page.goto(`${origin}/`);
   await setupOrUnlockApp(page);
@@ -156,4 +239,30 @@ test('Today @today is registered in the existing owner app shell', async ({ page
   await expect(
     page.getByText('A reviewed education card will appear here when available.'),
   ).toBeVisible();
+});
+
+test('Today @today buttons provide pressed feedback on the WebKit iPhone preview', async ({
+  page,
+}) => {
+  await page.goto(`${origin}/`);
+  await setupOrUnlockApp(page);
+  const button = page.getByRole('button', { name: 'Log today', exact: true });
+  await button.scrollIntoViewIfNeeded();
+  const box = await button.boundingBox();
+  if (box === null) throw new Error('Today button has no layout box');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const touchStyle = await button.evaluate((element) => ({
+    touchAction: getComputedStyle(element).touchAction,
+    hoverShadow: getComputedStyle(element).boxShadow,
+  }));
+  expect(touchStyle.touchAction).toBe('manipulation');
+  expect(touchStyle.hoverShadow).toBe('none');
+  await page.mouse.down();
+  const pressed = await button.evaluate((element) => ({
+    active: element.matches(':active'),
+    boxShadow: getComputedStyle(element).boxShadow,
+  }));
+  await page.mouse.up();
+  expect(pressed.active).toBe(true);
+  expect(pressed.boxShadow).not.toBe('none');
 });

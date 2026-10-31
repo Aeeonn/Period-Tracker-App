@@ -1,6 +1,6 @@
 # UX and content specification (Step 7)
 
-**Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)). Wireframes are text sketches only; no visual design has been made yet. The app's name is a placeholder until it is approved (AP-20). Its working name is **"Tide"**, chosen to avoid Flo branding (constitution rule 5); "Tide" is also a well-known third-party trademark, so the final name needs a name check (AP-20).
+**Status:** Stage E revision, 2026-10-30 (visual direction added; Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)). Wireframes remain text sketches; the visual direction is recorded below. The app's name is a placeholder until it is approved (AP-20). Its working name is **"Tide"**, chosen to avoid Flo branding (constitution rule 5); "Tide" is also a well-known third-party trademark, so the final name needs a name check (AP-20).
 
 ## 1. Principles
 
@@ -277,6 +277,14 @@ Returning means unlocking. Nothing is deleted. The app does not pretend to be a 
 | Forms | Labelled forms; errors announced |
 
 Automated checks: axe in Playwright. Manual checks: VoiceOver smoke tests on the real phones at each phase demo.
+
+## Visual direction
+
+- **Mood and palette:** warm, reassuring and calm rather than technical. Use a soft lavender canvas with subtle lavender-to-rose gradients, deep plum text, and small rose accents. Cards are generously rounded, frosted white in light mode, and gently elevated; dark mode uses a coordinated plum surface. Keep text and controls at WCAG AA contrast.
+- **Today hierarchy:** lead with a friendly cycle overview, then a seven-day strip with today explicitly marked, then three stat tiles: next-period estimate and range, qualitative fertile chance today, and cycle day. Preserve the existing warnings, reminders, synthetic-preview notice, log actions, and Why sheets.
+- **Cycle ring:** show the predicted period window, possible fertile-chance band, and today's marker. The centre says `N days until period`, `Period day N`, or `Day N of cycle` as applicable. Provide a plain text alternative, keyboard-focusable segment controls, and a short explanation on focus or activation. Use labels, line patterns, and shapes as well as color.
+- **Uncertainty and safety:** show the full prediction range when available. Fertility is qualitative only (Lower, Medium, or Higher); never show a number or percentage, a zero chance, or describe any day as safe or as contraception. Keep the existing uncertainty and contraception disclaimer beside the estimate; suppression states use their fixed explanations.
+- **Controls and motion:** buttons have a clear pressed state on touch and keyboard, visible focus, and a 44-by-44 CSS-pixel target. Hover treatments apply only on hover-capable pointers, not touch. Preserve `touch-action: manipulation` and the default non-submit button type. Respect `prefers-reduced-motion`.
 
 ## 8. Original educational content plan
 

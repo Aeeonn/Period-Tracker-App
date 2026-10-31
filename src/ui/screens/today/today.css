@@ -94,22 +94,341 @@
   opacity: 1;
 }
 
+.today-cycle-overview {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.today-ring-card {
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--color-accent) 32%, var(--color-border));
+  background:
+    radial-gradient(
+      ellipse at 92% 8%,
+      color-mix(in srgb, var(--color-period) 12%, transparent),
+      transparent 42%
+    ),
+    radial-gradient(ellipse at 4% 92%, var(--color-accent-subtle), transparent 44%),
+    var(--color-surface);
+}
+
+.today-ring {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.today-ring__caption {
+  text-align: center;
+}
+
+.today-ring__caption h2,
+.today-ring__caption p {
+  margin: 0;
+}
+
+.today-ring__caption h2 {
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-tight);
+}
+
+.today-ring__caption p {
+  margin-block-start: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.today-ring__visual {
+  position: relative;
+  width: min(100%, 18rem);
+  aspect-ratio: 1;
+}
+
+.today-ring__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.today-ring__track {
+  fill: none;
+  stroke: var(--color-ring-track);
+}
+
+.today-ring__track--outer {
+  stroke-width: 14;
+}
+
+.today-ring__track--inner {
+  opacity: 0.75;
+  stroke-width: 12;
+}
+
+.today-ring__segment {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 14;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.today-ring__segment--period {
+  stroke: var(--color-period);
+}
+
+.today-ring__segment--fertility {
+  stroke: var(--color-fertility);
+  stroke-dasharray: 3 2;
+}
+
+.today-ring__segment--selected {
+  stroke-width: 17;
+}
+
+.today-ring__segment:focus-visible,
+.today-ring__marker:focus-visible {
+  outline: none;
+  filter: drop-shadow(0 0 3px var(--color-focus));
+}
+
+.today-ring__marker {
+  cursor: pointer;
+}
+
+.today-ring__marker line {
+  stroke: var(--color-today);
+  stroke-width: 2.5;
+}
+
+.today-ring__marker-hit-area {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: all;
+}
+
+.today-ring__marker-dot {
+  fill: var(--color-today);
+  stroke: var(--color-surface-raised);
+  stroke-width: 3;
+}
+
+.today-ring__marker--selected .today-ring__marker-dot {
+  stroke: var(--color-focus);
+  stroke-width: 5;
+}
+
+.today-ring__center {
+  position: absolute;
+  inset: 30%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-1);
+  text-align: center;
+}
+
+.today-ring__center strong {
+  font-size: clamp(2.5rem, 12vw, 3.75rem);
+  font-weight: 750;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.today-ring__center span {
+  max-width: 8rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 650;
+  line-height: var(--line-height-tight);
+}
+
+.today-ring__legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.today-ring__legend-button {
+  min-block-size: 44px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+}
+
+.today-ring__legend-button[aria-pressed='true'] {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+.today-ring__swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.today-ring__swatch--period {
+  background: var(--color-period);
+}
+
+.today-ring__swatch--fertility {
+  border-style: dashed;
+  background: var(--color-fertility);
+}
+
+.today-ring__swatch--today {
+  background: var(--color-today);
+}
+
+.today-ring__explanation {
+  min-block-size: 3rem;
+  max-width: 34rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.today-week {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.today-week__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.today-week__heading h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.today-week__heading > span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.today-week__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-week__day {
+  display: grid;
+  min-width: 0;
+  min-height: 4.5rem;
+  align-content: center;
+  justify-items: center;
+  gap: 0.1rem;
+  padding: 0.3rem 0.05rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.today-week__day--today {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.today-week__weekday {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 650;
+}
+
+.today-week__month {
+  color: var(--color-text-muted);
+  font-size: 0.58rem;
+  line-height: 1;
+}
+
+.today-week__day strong {
+  font-size: var(--font-size-md);
+  line-height: 1.1;
+}
+
+.today-week__tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.today-week__tag--today {
+  color: var(--color-accent);
+}
+
+.today-week__tag--period {
+  color: var(--color-period);
+}
+
+.today-week__tag--fertile {
+  color: var(--color-fertility);
+}
+
+.today-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.today-stat {
+  min-width: 0;
+  padding: var(--space-4);
+  border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
+}
+
+.today-stat--period {
+  grid-column: 1 / -1;
+  background:
+    radial-gradient(
+      ellipse at right top,
+      color-mix(in srgb, var(--color-period) 12%, transparent),
+      transparent 58%
+    ),
+    var(--color-surface);
+}
+
+.today-stat .ui-card__heading {
+  margin-block-end: var(--space-2);
+  font-size: var(--font-size-md);
+}
+
 .today-prediction__summary,
 .today-prediction__range,
 .today-prediction__basis,
 .today-chance__value,
 .today-chance__uncertainty,
-.today-safety-line {
+.today-safety-line,
+.today-stat__value,
+.today-stat__detail {
   margin: 0;
 }
 
 .today-prediction__summary {
   font-size: var(--font-size-lg);
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .today-prediction__range {
-  margin-block-start: var(--space-2);
+  margin-block-start: var(--space-1);
   color: var(--color-text-muted);
 }
 
@@ -123,9 +442,17 @@
   margin-block-start: var(--space-2);
 }
 
-.today-chance__value {
+.today-chance__value,
+.today-stat__value {
   font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-weight: 750;
+}
+
+.today-chance__uncertainty,
+.today-stat__detail {
+  margin-block-start: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .today-safety-line {
@@ -135,11 +462,6 @@
   border-radius: var(--radius-sm);
   background: var(--color-accent-subtle);
   font-weight: 700;
-}
-
-.today-chance__uncertainty {
-  margin-block-start: var(--space-2);
-  color: var(--color-text-muted);
 }
 
 .today-actions {
@@ -201,9 +523,38 @@
   font-weight: 700;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 @media (min-width: 40rem) {
   .today-screen {
     gap: var(--space-5);
+  }
+
+  .today-cycle-overview {
+    grid-template-columns: minmax(0, 1.25fr) minmax(17rem, 0.75fr);
+    align-items: stretch;
+  }
+
+  .today-ring-card {
+    display: grid;
+    align-content: center;
+  }
+
+  .today-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .today-stat--period {
+    grid-column: auto;
   }
 
   .today-actions {
