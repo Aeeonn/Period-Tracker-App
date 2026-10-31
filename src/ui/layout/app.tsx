@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { LocalTime } from '../../contracts/localdate.ts';
+import type { LocalDate, LocalTime } from '../../contracts/localdate.ts';
 import { todayLocal } from '../../lib/localdate/index.ts';
 import { Button, Card } from '../components/base';
 import { TODAY_PREVIEW_FIXTURE, TodayScreen } from '../screens/today';
-import { CALENDAR_PREVIEW_FIXTURE, CalendarScreen } from '../screens/calendar';
+import {
+  CALENDAR_PREVIEW_FIXTURE,
+  CalendarScreen,
+  createCalendarScreenProps,
+  type CalendarScreenProps,
+} from '../screens/calendar';
 import type { TodayScreenProps } from '../screens/today';
 import { createTodayScreenProps } from '../screens/today/live-data.ts';
 import { RepositoriesContext, type Repositories, useRepositories } from './repositories.tsx';
@@ -189,9 +194,11 @@ function PlaceholderScreen({ role, tab }: { role: Role; tab: Tab }) {
 function RepositoryLogScreen({
   pinnedTrackers,
   onPinnedTrackersChange,
+  localDate,
 }: {
   readonly pinnedTrackers: readonly Tracker[];
   readonly onPinnedTrackersChange: (trackers: readonly Tracker[]) => void;
+  readonly localDate: LocalDate | undefined;
 }) {
   const { logRepo } = useRepositories();
   return (
@@ -199,6 +206,7 @@ function RepositoryLogScreen({
       logRepo={logRepo ?? undefined}
       pinnedTrackers={pinnedTrackers}
       onPinnedTrackersChange={onPinnedTrackersChange}
+      localDate={localDate}
     />
   );
 }
@@ -221,6 +229,7 @@ export function AppShell({
   const [pinnedTrackers, setPinnedTrackers] = useState<readonly Tracker[]>(() => [
     ...DEFAULT_PINNED_TRACKERS,
   ]);
+  const [logSelectedDate, setLogSelectedDate] = useState<LocalDate | undefined>();
   const selectedTab =
     activeTab === 'settings' ? SETTINGS_TAB : (tabs.find((tab) => tab.id === activeTab) ?? tabs[0]);
   const syntheticPreview = new URLSearchParams(window.location.search).get('today') === 'synthetic';
@@ -229,6 +238,8 @@ export function AppShell({
   >(() => (syntheticPreview || sessionOnboardingComplete ? 'complete' : 'checking'));
   const [todayProps, setTodayProps] = useState<TodayScreenProps | null>(null);
   const [todayLoadFailed, setTodayLoadFailed] = useState(false);
+  const [calendarProps, setCalendarProps] = useState<CalendarScreenProps | null>(null);
+  const [calendarLoadFailed, setCalendarLoadFailed] = useState(false);
   const themeRevision = useRef(0);
 
   useEffect(() => {
@@ -312,10 +323,47 @@ export function AppShell({
     };
   }, [repositories, role, selectedTab?.id, syntheticPreview, onboardingStatus]);
 
-  const openLogTab = () => {
+  const openLogTab = (date?: LocalDate) => {
+    setLogSelectedDate(date);
     setActiveTab('log');
     window.location.hash = 'log';
   };
+
+  useEffect(() => {
+    if (onboardingStatus !== 'complete' || role !== 'owner' || selectedTab?.id !== 'calendar')
+      return;
+    if (!syntheticPreview) {
+      setCalendarProps(null);
+      setCalendarLoadFailed(false);
+    }
+    let mounted = true;
+    const refreshCalendar = async () => {
+      try {
+        const props = syntheticPreview
+          ? CALENDAR_PREVIEW_FIXTURE
+          : await createCalendarScreenProps(repositories, localClockSnapshot());
+        if (mounted) {
+          setCalendarProps(props);
+          setCalendarLoadFailed(false);
+        }
+      } catch {
+        if (mounted) {
+          setCalendarProps(null);
+          setCalendarLoadFailed(true);
+        }
+      }
+    };
+    const unsubscribe = syntheticPreview
+      ? () => undefined
+      : repositories.logRepo.onChange(() => void refreshCalendar());
+    window.addEventListener('focus', refreshCalendar);
+    void refreshCalendar();
+    return () => {
+      mounted = false;
+      unsubscribe();
+      window.removeEventListener('focus', refreshCalendar);
+    };
+  }, [repositories, role, selectedTab?.id, syntheticPreview, onboardingStatus]);
 
   const restartNow = () => {
     if (!updateNotice || restartStatus !== 'ready') return;
@@ -443,6 +491,7 @@ export function AppShell({
             <RepositoryLogScreen
               pinnedTrackers={pinnedTrackers}
               onPinnedTrackersChange={setPinnedTrackers}
+              localDate={logSelectedDate}
             />
           ) : role === 'owner' && selectedTab.id === 'today' ? (
             todayProps ? (
@@ -458,7 +507,13 @@ export function AppShell({
               <p role="status">Loading today's cycle data...</p>
             )
           ) : role === 'owner' && selectedTab.id === 'calendar' ? (
-            <CalendarScreen {...CALENDAR_PREVIEW_FIXTURE} />
+            calendarProps ? (
+              <CalendarScreen {...calendarProps} onEditDay={openLogTab} />
+            ) : calendarLoadFailed ? (
+              <p role="alert">Calendar data could not be loaded. Try reopening the app.</p>
+            ) : (
+              <p role="status">Loading your calendar...</p>
+            )
           ) : (
             <PlaceholderScreen role={role} tab={selectedTab} />
           )}

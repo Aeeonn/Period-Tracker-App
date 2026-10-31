@@ -237,3 +237,101 @@
     align-items: center;
   }
 }
+
+.log-screen__day-summary {
+  display: grid;
+  gap: var(--space-3);
+  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+  background:
+    radial-gradient(ellipse at 100% 0, var(--color-accent-subtle), transparent 56%),
+    var(--color-surface);
+}
+
+.log-screen__day-summary > .ui-card__heading {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.log-screen__summary-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log-screen__summary-entry {
+  width: 100%;
+  min-height: 44px;
+  justify-content: flex-start;
+  padding-inline: var(--space-2);
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.log-screen__summary-label {
+  font-weight: 700;
+}
+
+.log-screen__day-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.log-screen__day-actions .ui-button {
+  min-height: 44px;
+  min-width: min(100%, 12rem);
+}
+
+.log-screen__date-confirmation {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-period) 45%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: var(--color-accent-subtle);
+}
+
+.log-screen__date-confirmation p {
+  margin: 0;
+}
+
+.log-screen__date-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.log-tracker-list__unsaved-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-period);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--color-period) 16%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .log-screen *,
+  .log-screen *::before,
+  .log-screen *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
+.log-tracker-list__choice {
+  display: flex;
+}
+
+.log-screen__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}

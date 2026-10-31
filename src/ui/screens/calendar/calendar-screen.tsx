@@ -1,8 +1,10 @@
 import { useState } from 'preact/hooks';
+import type { DayBundle } from '../../../contracts/entities.ts';
 import type { EngineOutput } from '../../../contracts/engine-api.ts';
 import type { LocalDate } from '../../../contracts/localdate.ts';
 import { compare } from '../../../lib/localdate/index.ts';
 import { Button } from '../../components/base';
+import { formatDaySummary } from '../log/day-summary.ts';
 import {
   CALENDAR_MARKER_LABELS,
   CALENDAR_MONTH_NAMES,
@@ -28,6 +30,8 @@ export interface CalendarScreenProps {
   readonly today: LocalDate;
   /** Additional synthetic or stored log dates not represented by period episodes. */
   readonly logDates?: readonly LocalDate[];
+  readonly dayLogs?: readonly DayBundle[];
+  readonly onEditDay?: (date: LocalDate) => void;
   readonly onOverride?: (override: CalendarOverride) => void;
 }
 
@@ -47,6 +51,8 @@ export function CalendarScreen({
   engineOutput,
   today,
   logDates = [],
+  dayLogs = [],
+  onEditDay,
   onOverride,
 }: CalendarScreenProps) {
   const [visibleMonth, setVisibleMonth] = useState(() => monthStart(today));
@@ -60,6 +66,10 @@ export function CalendarScreen({
   const monthTitle = monthLabel(visibleMonth);
   const selectedMarkers = selectedDate ? markersForDate(engineOutput, selectedDate, logDates) : [];
   const selectedCycle = selectedDate ? cycleForDate(engineOutput, selectedDate) : undefined;
+  const selectedDay = selectedDate
+    ? dayLogs.find((dayLog) => dayLog.localDate === selectedDate)
+    : undefined;
+  const selectedSummary = formatDaySummary(selectedDay);
   const previewExcluded = selectedCycle ? excludedCycleStarts.includes(selectedCycle.start) : false;
   const cycleExcluded = selectedCycle?.excludedBecause !== undefined || previewExcluded;
   const dateIsFuture = selectedDate !== null && compare(selectedDate, today) > 0;
@@ -341,6 +351,20 @@ export function CalendarScreen({
               ? `Markers: ${selectedMarkers.map((marker) => CALENDAR_MARKER_LABELS[marker]).join(', ')}.`
               : 'No cycle markers or logs for this day.'}
           </p>
+          <section class="calendar-day-detail__logged" aria-label="Logged entries">
+            <h3>What you logged</h3>
+            {selectedSummary.length > 0 ? (
+              <ul>
+                {selectedSummary.map((item) => (
+                  <li key={item.tracker}>
+                    <span>{item.label}:</span> {item.value}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Nothing logged yet</p>
+            )}
+          </section>
           {selectedCycle ? (
             <p class="calendar-day-detail__cycle">
               Cycle starting {fullDateLabel(selectedCycle.start)}
@@ -348,6 +372,9 @@ export function CalendarScreen({
             </p>
           ) : null}
           <div class="calendar-day-detail__actions">
+            <Button onClick={() => onEditDay?.(selectedDate)} disabled={!onEditDay}>
+              Edit this day
+            </Button>
             <Button
               variant="secondary"
               disabled={dateIsFuture}

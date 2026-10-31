@@ -2,16 +2,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { createServer, type ViteDevServer } from 'vite';
 import { resolve } from 'node:path';
-import { setupOrUnlockApp } from './helpers/lock.ts';
 
 let vite: ViteDevServer | undefined;
 let origin = '';
 const pageErrors = new WeakMap<Page, string[]>();
 
 async function openCalendar(page: Page): Promise<void> {
-  await page.goto(origin);
-  await setupOrUnlockApp(page);
-  await page.getByRole('link', { name: 'Calendar', exact: true }).click();
+  await page.goto(`${origin}/tests/e2e/log-fixtures/?fixture=calendar&today=synthetic`);
   await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible();
   await expect(page.getByRole('grid', { name: 'October 2026 calendar' })).toBeVisible();
 }

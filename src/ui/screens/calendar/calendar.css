@@ -400,3 +400,33 @@
     transition: none !important;
   }
 }
+
+.calendar-day-detail__logged {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.calendar-day-detail__logged h3,
+.calendar-day-detail__logged p {
+  margin: 0;
+}
+
+.calendar-day-detail__logged h3 {
+  font-size: var(--font-size-md);
+}
+
+.calendar-day-detail__logged ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  overflow-wrap: anywhere;
+}
+
+.calendar-day-detail__logged li > span {
+  font-weight: 700;
+}

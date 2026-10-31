@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import {
   ACTIVITY_TYPE,
   ALCOHOL_UNITS_MAX,
@@ -62,6 +62,7 @@ interface TrackerEditorProps {
   readonly disabled: boolean;
   readonly onSave: (entries: readonly LogEntry[]) => void;
   readonly onClear: () => void;
+  readonly onDraftChange: (tracker: Tracker, entries: readonly LogEntry[], dirty: boolean) => void;
 }
 
 interface ChoiceGroupProps<T extends string> {
@@ -257,7 +258,14 @@ function updateEvent<T extends keyof SexEvent>(
   );
 }
 
-export function TrackerEditor({ tracker, day, disabled, onSave, onClear }: TrackerEditorProps) {
+export function TrackerEditor({
+  tracker,
+  day,
+  disabled,
+  onSave,
+  onClear,
+  onDraftChange,
+}: TrackerEditorProps) {
   const [flow, setFlow] = useState<Flow | undefined>(day?.flow);
   const [heavyDetails, setHeavyDetails] = useState<readonly HeavyDetail[]>(day?.heavy_detail ?? []);
   const [periodPain, setPeriodPain] = useState<PeriodPain | undefined>(day?.period_pain);
@@ -300,20 +308,24 @@ export function TrackerEditor({ tracker, day, disabled, onSave, onClear }: Track
   const [lochia, setLochia] = useState<Lochia | undefined>(day?.lochia);
 
   const canClear = hasValue(day, tracker);
+  let draftEntries: readonly LogEntry[] = [];
   const saveBar = (
     canSave: boolean,
     entries: readonly LogEntry[],
     label = TRACKER_LABELS[tracker],
-  ) => (
-    <SaveBar
-      label={label}
-      disabled={disabled}
-      canSave={canSave}
-      canClear={canClear}
-      onSave={() => onSave(entries)}
-      onClear={onClear}
-    />
-  );
+  ) => {
+    if (canSave) draftEntries = entries;
+    return (
+      <SaveBar
+        label={label}
+        disabled={disabled}
+        canSave={canSave}
+        canClear={canClear}
+        onSave={() => onSave(entries)}
+        onClear={onClear}
+      />
+    );
+  };
 
   let editor;
   switch (tracker) {
@@ -933,9 +945,28 @@ export function TrackerEditor({ tracker, day, disabled, onSave, onClear }: Track
       break;
   }
 
+  const draftScope: readonly Tracker[] =
+    tracker === 'flow' && (flow === 'heavy' || flow === 'very_heavy')
+      ? ['flow', 'heavy_detail']
+      : [tracker];
+  const draftIsDirty = draftScope.some((draftTracker) => {
+    const savedValue = day?.[draftTracker];
+    const currentValue = draftEntries.find((entry) => entry.tracker === draftTracker)?.value;
+    return JSON.stringify(savedValue) !== JSON.stringify(currentValue);
+  });
+  const changedEntries = draftEntries.filter(
+    (entry) => JSON.stringify(day?.[entry.tracker]) !== JSON.stringify(entry.value),
+  );
+  const draftSignature = JSON.stringify(changedEntries);
+  const baselineSignature = JSON.stringify(draftScope.map((draftTracker) => day?.[draftTracker]));
+
+  useEffect(() => {
+    onDraftChange(tracker, changedEntries, draftIsDirty);
+  }, [baselineSignature, changedEntries, draftIsDirty, draftSignature, onDraftChange, tracker]);
+
   return (
-    <section class="log-editor" aria-labelledby="log-editor-title">
-      <h2 id="log-editor-title">{TRACKER_LABELS[tracker]}</h2>
+    <section class="log-editor" aria-labelledby={`log-editor-title-${tracker}`}>
+      <h2 id={`log-editor-title-${tracker}`}>{TRACKER_LABELS[tracker]}</h2>
       {editor}
     </section>
   );

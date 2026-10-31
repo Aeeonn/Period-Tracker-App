@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useState } from 'preact/hooks';
 import type { DayBundle } from '../../../contracts/entities.ts';
 import { TRACKERS, type Tracker } from '../../../contracts/enums.ts';
 import type { LocalDate } from '../../../contracts/localdate.ts';
 import { format, parse, todayLocal } from '../../../lib/localdate/index.ts';
 import { Button, Card, Chip } from '../../components/base';
 import { TrackerEditor } from './tracker-editor.tsx';
+import { formatDaySummary } from './day-summary.ts';
+import {
+  getPendingEdits,
+  updatePendingTrackerDrafts,
+  type PendingTrackerDrafts,
+} from './pending-edits.ts';
 import { DEFAULT_PINNED_TRACKERS, TRACKER_LABELS, type LogEntry, type LogRepo } from './types.ts';
 import './log.css';
 
 export interface LogScreenProps {
   readonly logRepo?: LogRepo | undefined;
-  readonly localDate?: LocalDate;
+  readonly localDate?: LocalDate | undefined;
   readonly pinnedTrackers?: readonly Tracker[] | undefined;
   readonly onPinnedTrackersChange?: ((trackers: readonly Tracker[]) => void) | undefined;
 }
@@ -111,12 +117,14 @@ export function LogScreen({
   );
   const [dateText, setDateText] = useState(() => format(selectedDate));
   const [dateError, setDateError] = useState<string | null>(null);
+  const [dateChangePending, setDateChangePending] = useState<LocalDate | null>(null);
   const [day, setDay] = useState<DayBundle | undefined>();
   const [loading, setLoading] = useState(Boolean(logRepo));
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [revision, setRevision] = useState(0);
+  const [editorRevisions, setEditorRevisions] = useState<Partial<Record<Tracker, number>>>({});
+  const [pendingDrafts, setPendingDrafts] = useState<PendingTrackerDrafts>({});
   const [localPinnedTrackers, setLocalPinnedTrackers] = useState<readonly Tracker[]>([
     ...DEFAULT_PINNED_TRACKERS,
   ]);
@@ -124,6 +132,15 @@ export function LogScreen({
   const updatePinnedTrackers = onPinnedTrackersChange ?? setLocalPinnedTrackers;
   const [selectedTracker, setSelectedTracker] = useState<Tracker | null>('desire');
   const [customizing, setCustomizing] = useState(false);
+  const pending = getPendingEdits(pendingDrafts);
+  const summary = formatDaySummary(day);
+
+  const reportDraft = useCallback(
+    (tracker: Tracker, entries: readonly LogEntry[], dirty: boolean) => {
+      setPendingDrafts((current) => updatePendingTrackerDrafts(current, tracker, entries, dirty));
+    },
+    [],
+  );
 
   useEffect(() => {
     let current = true;
@@ -153,27 +170,48 @@ export function LogScreen({
     };
   }, [logRepo, selectedDate]);
 
+  const openDate = (date: LocalDate) => {
+    setLoading(Boolean(logRepo));
+    setDay(undefined);
+    setSelectedDate(date);
+    setDateText(format(date));
+    setDateError(null);
+    setDateChangePending(null);
+    setSavedMessage('');
+    setErrorMessage('');
+    setPendingDrafts({});
+  };
+
   const changeDate = (text: string) => {
-    setDateText(text);
     const parsed = parse(text);
     if (parsed === null) {
+      setDateText(text);
       setDateError('Choose a valid calendar date.');
       return;
     }
-    setSelectedDate(parsed);
-    setDateError(null);
-    setSavedMessage('');
+    if (parsed === selectedDate) {
+      setDateText(format(parsed));
+      setDateError(null);
+      setDateChangePending(null);
+      return;
+    }
+    if (pending.dirtyTrackers.length > 0) {
+      setDateText(format(selectedDate));
+      setDateError(null);
+      setDateChangePending(parsed);
+      return;
+    }
+    openDate(parsed);
   };
 
   const saveEntries = async (entries: readonly LogEntry[]) => {
-    if (!logRepo || dateError || saving) return;
+    if (!logRepo || dateError || saving || entries.length === 0) return;
     setSaving(true);
     setErrorMessage('');
     setSavedMessage('');
     try {
       await persistLogEntries(logRepo, selectedDate, entries);
       setDay(await logRepo.getDay(selectedDate));
-      setRevision((value) => value + 1);
       setSavedMessage('Saved privately.');
     } catch {
       setErrorMessage('That log could not be saved. It remains private; please try again.');
@@ -181,6 +219,8 @@ export function LogScreen({
       setSaving(false);
     }
   };
+
+  const saveDay = () => void saveEntries(getPendingEdits(pendingDrafts).entries);
 
   const clearTracker = async (tracker: Tracker) => {
     if (!logRepo || dateError || saving) return;
@@ -190,7 +230,11 @@ export function LogScreen({
     try {
       await logRepo.clearTracker(selectedDate, tracker);
       setDay(await logRepo.getDay(selectedDate));
-      setRevision((value) => value + 1);
+      setPendingDrafts((current) => updatePendingTrackerDrafts(current, tracker, [], false));
+      setEditorRevisions((current) => ({
+        ...current,
+        [tracker]: (current[tracker] ?? 0) + 1,
+      }));
       setSavedMessage('Log cleared.');
     } catch {
       setErrorMessage('That log could not be cleared. Please try again.');
@@ -220,7 +264,10 @@ export function LogScreen({
     updatePinnedTrackers(next);
   };
 
-  const editorDisabled = !logRepo || loading || saving || dateError !== null;
+  const editorDisabled =
+    !logRepo || loading || saving || dateError !== null || dateChangePending !== null;
+  const canSaveDay =
+    Boolean(logRepo) && !loading && !saving && dateError === null && pending.entries.length > 0;
 
   return (
     <section class="log-screen" aria-labelledby="log-screen-title">
@@ -250,11 +297,59 @@ export function LogScreen({
         ) : null}
       </Card>
 
+      {dateChangePending ? (
+        <div class="log-screen__date-confirmation" role="alert">
+          <p>This day has unsaved edits. Discard them and open {format(dateChangePending)}?</p>
+          <div class="log-screen__date-confirmation-actions">
+            <Button variant="secondary" onClick={() => setDateChangePending(null)}>
+              Stay on this day
+            </Button>
+            <Button
+              variant="quiet"
+              onClick={() => {
+                const nextDate = dateChangePending;
+                if (nextDate !== null) openDate(nextDate);
+              }}
+            >
+              Discard edits and open date
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {!logRepo ? (
         <p class="log-screen__locked" role="note">
           Unlock to save. These private log controls are paused until your encrypted space is ready.
         </p>
       ) : null}
+
+      <Card class="log-screen__day-summary" heading="This day">
+        {summary.length > 0 ? (
+          <ul class="log-screen__summary-list">
+            {summary.map((item) => (
+              <li key={item.tracker}>
+                <Button
+                  class="log-screen__summary-entry"
+                  variant="quiet"
+                  onClick={() =>
+                    setSelectedTracker(item.tracker === 'heavy_detail' ? 'flow' : item.tracker)
+                  }
+                >
+                  <span class="log-screen__summary-label">{item.label}:</span> {item.value}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p class="log-screen__hint">Nothing logged yet</p>
+        )}
+      </Card>
+
+      <div class="log-screen__day-actions">
+        <Button disabled={!canSaveDay} onClick={saveDay}>
+          Save day
+        </Button>
+      </div>
 
       <section class="log-tracker-list" aria-labelledby="log-tracker-list-title">
         <div class="log-tracker-list__heading">
@@ -270,15 +365,29 @@ export function LogScreen({
         </div>
         {pinnedTrackers.length > 0 ? (
           <div class="log-tracker-list__choices" role="group" aria-label="Pinned trackers">
-            {pinnedTrackers.map((tracker) => (
-              <Chip
-                key={tracker}
-                pressed={selectedTracker === tracker}
-                onPressedChange={() => setSelectedTracker(tracker)}
-              >
-                {TRACKER_LABELS[tracker]}
-              </Chip>
-            ))}
+            {pinnedTrackers.map((tracker) => {
+              const hasUnsavedEdits = pending.dirtyTrackers.includes(tracker);
+              const descriptionId = `log-tracker-unsaved-${tracker}`;
+              return (
+                <span class="log-tracker-list__choice" key={tracker}>
+                  <Chip
+                    aria-describedby={hasUnsavedEdits ? descriptionId : undefined}
+                    pressed={selectedTracker === tracker}
+                    onPressedChange={() => setSelectedTracker(tracker)}
+                  >
+                    <span>{TRACKER_LABELS[tracker]}</span>
+                    {hasUnsavedEdits ? (
+                      <span class="log-tracker-list__unsaved-dot" aria-hidden="true" />
+                    ) : null}
+                  </Chip>
+                  {hasUnsavedEdits ? (
+                    <span class="log-screen__sr-only" id={descriptionId}>
+                      Unsaved edits
+                    </span>
+                  ) : null}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <p class="log-screen__hint">No trackers are pinned. Customize your list to add one.</p>
@@ -346,18 +455,25 @@ export function LogScreen({
           {savedMessage}
         </p>
       ) : null}
-      {selectedTracker ? (
-        <Card class="log-screen__form-card">
-          <TrackerEditor
-            key={`${selectedTracker}-${revision}`}
-            tracker={selectedTracker}
-            day={day}
-            disabled={editorDisabled}
-            onSave={(entries) => void saveEntries(entries)}
-            onClear={() => void clearTracker(selectedTracker)}
-          />
-        </Card>
-      ) : null}
+      {!loading
+        ? TRACKERS.map((tracker) => (
+            <Card
+              key={`${selectedDate}-${tracker}-${editorRevisions[tracker] ?? 0}`}
+              hidden={selectedTracker !== tracker}
+              aria-hidden={selectedTracker !== tracker ? 'true' : undefined}
+              class="log-screen__form-card"
+            >
+              <TrackerEditor
+                tracker={tracker}
+                day={day}
+                disabled={editorDisabled}
+                onSave={(entries) => void saveEntries(entries)}
+                onClear={() => void clearTracker(tracker)}
+                onDraftChange={reportDraft}
+              />
+            </Card>
+          ))
+        : null}
     </section>
   );
 }

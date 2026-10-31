@@ -35,14 +35,15 @@ async function mountFixture(): Promise<void> {
   const root = document.getElementById('log-root');
   if (root === null) throw new Error('Log fixture mount point is missing.');
 
-  if (fixture === 'app') {
-    window.location.hash = 'log';
+  if (fixture === 'app' || fixture === 'day-log' || fixture === 'calendar') {
+    window.location.hash = fixture === 'calendar' ? 'calendar' : 'log';
     render(
       <AppShell
         repositories={repositories}
         updateNotice={null}
         restartStatus="ready"
         cancelRestart={() => undefined}
+        sessionOnboardingComplete
       />,
       root,
     );
