@@ -1,0 +1,128 @@
+.quick-log {
+  display: grid;
+  max-block-size: min(68svh, 42rem);
+  gap: var(--space-3);
+  overflow-y: auto;
+  padding: var(--space-1);
+  overscroll-behavior: contain;
+}
+
+.quick-log__privacy,
+.quick-log__locked,
+.quick-log__error,
+.quick-log__helper,
+.quick-log__unsupported p {
+  margin: 0;
+}
+
+.quick-log__privacy {
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 0.25rem solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-subtle);
+  font-weight: 600;
+}
+
+.quick-log__locked {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.quick-log__error {
+  color: var(--color-period);
+  font-weight: 600;
+}
+
+.quick-log__tracker-pins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.quick-log__tracker-pins .ui-chip[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+.quick-log__groups {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.quick-log__tracker {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.quick-log__group {
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent-subtle) 28%, var(--color-surface));
+}
+
+.quick-log__group legend {
+  padding-inline: var(--space-2);
+  font-weight: 700;
+}
+
+.quick-log__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block-start: var(--space-2);
+}
+
+.quick-log__choices .ui-chip {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
+.quick-log__helper {
+  padding-inline: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.quick-log__note-field {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+  font-weight: 600;
+}
+
+.quick-log__note-field textarea {
+  min-block-size: 5rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.quick-log__note-field textarea:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.quick-log__unsupported h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-md);
+}
+
+.quick-log__unsupported .ui-button {
+  margin-block-start: var(--space-2);
+}
+
+.quick-log button:disabled,
+.quick-log textarea:disabled {
+  cursor: not-allowed;
+}

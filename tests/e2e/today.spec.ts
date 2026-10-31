@@ -45,10 +45,28 @@ test.afterAll(async () => {
   vite = undefined;
 });
 
-test('T-UX-01 @today period start takes one tap and flow, symptom, and mood take two', async ({
+type QuickLogFixtureDay = {
+  readonly flow?: string | undefined;
+  readonly symptoms_body?: readonly string[] | undefined;
+  readonly mood?: readonly string[] | undefined;
+  readonly desire?: string | undefined;
+};
+
+async function readQuickLogDay(page: Page): Promise<QuickLogFixtureDay | undefined> {
+  return page.evaluate(async () => {
+    const fixture = (
+      window as Window & {
+        __quickLogTest?: { readDay: () => Promise<QuickLogFixtureDay | undefined> };
+      }
+    ).__quickLogTest;
+    return fixture?.readDay();
+  });
+}
+
+test('T-UX-01 @today @quicklog period start takes one tap and quick logs stay within three taps', async ({
   page,
 }) => {
-  await openFixture(page);
+  await openFixture(page, '?fixture=existing');
   await page.getByRole('button', { name: 'Period started', exact: true }).click();
   await expect(page.locator('.ui-toast')).toContainText('Saved: Period started.');
   await expect(page.getByRole('heading', { name: 'Still bleeding today?' })).toBeVisible();
@@ -60,9 +78,14 @@ test('T-UX-01 @today period start takes one tap and flow, symptom, and mood take
   await expect(page.getByRole('heading', { name: 'Still bleeding today?' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Log today', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Quick log' })).toBeVisible();
+  await page
+    .getByRole('group', { name: 'Pinned quick-log trackers' })
+    .getByRole('button', { name: 'Flow', exact: true })
+    .click();
   await page
     .getByRole('group', { name: 'Flow level' })
-    .getByRole('button', { name: 'Medium' })
+    .getByRole('button', { name: 'Medium', exact: true })
     .click();
   await expect(page.locator('.ui-toast')).toContainText('Saved: Flow: Medium.');
   await dismissToast(page);
@@ -70,17 +93,63 @@ test('T-UX-01 @today period start takes one tap and flow, symptom, and mood take
   await page.getByRole('button', { name: 'Log today', exact: true }).click();
   await page
     .getByRole('group', { name: 'Symptoms' })
-    .getByRole('button', { name: 'Cramps' })
+    .getByRole('button', { name: 'Cramps', exact: true })
     .click();
   await expect(page.locator('.ui-toast')).toContainText('Saved: Symptom: Cramps.');
-  await dismissToast(page);
+  expect(await readQuickLogDay(page)).toMatchObject({
+    flow: 'medium',
+    symptoms_body: ['fatigue', 'cramps'],
+  });
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  expect(await readQuickLogDay(page)).toMatchObject({ flow: 'medium', symptoms_body: ['fatigue'] });
 
   await page.getByRole('button', { name: 'Log today', exact: true }).click();
+  await page
+    .getByRole('group', { name: 'Pinned quick-log trackers' })
+    .getByRole('button', { name: 'Mood', exact: true })
+    .click();
   await page
     .getByRole('group', { name: 'Mood' })
     .getByRole('button', { name: 'Low', exact: true })
     .click();
   await expect(page.locator('.ui-toast')).toContainText('Saved: Mood: Low.');
+});
+
+test('@quicklog missing repository shows Unlock to save and disables choices', async ({ page }) => {
+  await openFixture(page, '?fixture=locked');
+  await page.getByRole('button', { name: 'Log today', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Quick log' });
+  await expect(dialog.getByText(/Unlock to save/u)).toBeVisible();
+  await expect(
+    dialog.getByRole('group', { name: 'Symptoms' }).getByRole('button', { name: 'Cramps' }),
+  ).toBeDisabled();
+});
+
+test('T-A11Y-01 @quicklog chips are named and the private sheet passes an accessibility audit', async ({
+  page,
+}) => {
+  await openFixture(page);
+  await page.getByRole('button', { name: 'Log today', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Quick log' });
+  const pinned = dialog.getByRole('group', { name: 'Pinned quick-log trackers' });
+  await expect(pinned.getByRole('button', { name: 'Desire', exact: true })).toBeVisible();
+  await expect(pinned.getByRole('button', { name: 'Sex and intimacy', exact: true })).toBeVisible();
+  await pinned.getByRole('button', { name: 'Desire', exact: true }).click();
+  await expect(
+    dialog
+      .getByRole('group', { name: 'Desire' })
+      .getByRole('button', { name: 'High', exact: true }),
+  ).toBeVisible();
+  await expect(dialog).toContainText('Just for you, to notice your own patterns.');
+  await pinned.getByRole('button', { name: 'Sex and intimacy', exact: true }).click();
+  await expect(
+    dialog
+      .getByRole('group', { name: 'Sex and intimacy' })
+      .getByRole('button', { name: 'Vaginal', exact: true }),
+  ).toBeVisible();
+  await expect(dialog).toContainText('Logging never implies consent or enables sharing.');
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
 });
 
 test('T-UX-02 @today every prediction surface has a window and a Why sheet', async ({ page }) => {
@@ -105,7 +174,7 @@ test('T-UX-02 @today suppressed output still explains the paused prediction', as
   await expect(page.getByText('Log your period to start predictions.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'No cycle logs yet' })).toBeVisible();
   await page.getByRole('button', { name: 'Log first period', exact: true }).click();
-  const logDialog = page.getByRole('dialog', { name: 'Log today' });
+  const logDialog = page.getByRole('dialog', { name: 'Quick log' });
   await expect(logDialog).toBeVisible();
   await logDialog.getByRole('button', { name: 'Close' }).click();
   const whyButtons = page.getByRole('button', { name: 'Why?', exact: true });

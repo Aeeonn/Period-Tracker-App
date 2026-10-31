@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { DueReminder } from '../../../contracts/reminders.ts';
 import type { EngineOutput } from '../../../contracts/engine-api.ts';
-import type { ChanceCategory, WarningSeverity } from '../../../contracts/enums.ts';
+import type { ChanceCategory, Tracker, WarningSeverity } from '../../../contracts/enums.ts';
 import type { LocalDate, LocalDateRange } from '../../../contracts/localdate.ts';
 import { addDays, compare, diffDays, epochDay } from '../../../lib/localdate/index.ts';
 import { Button, Card, Sheet, Toast } from '../../components/base';
 import { ReminderBanner } from '../../components/reminder-banner/index.tsx';
+import { QuickLogSheet } from '../quicklog';
+import { DEFAULT_PINNED_TRACKERS } from '../log/types.ts';
 import './today.css';
 
 export interface TodayContentSlot {
@@ -22,7 +24,8 @@ export interface TodayScreenProps {
   readonly contentSlot: TodayContentSlot;
   readonly loggedToday: readonly string[];
   readonly reminders?: readonly DueReminder[];
-  readonly onLogFirstPeriod?: () => void;
+  readonly pinnedTrackers?: readonly Tracker[];
+  readonly onOpenLog?: (() => void) | undefined;
 }
 
 type WhyTopic = 'prediction' | 'chance';
@@ -467,7 +470,8 @@ export function TodayScreen({
   stillBleeding,
   today,
   reminders = [],
-  onLogFirstPeriod,
+  pinnedTrackers = DEFAULT_PINNED_TRACKERS,
+  onOpenLog,
 }: TodayScreenProps) {
   const [whyTopic, setWhyTopic] = useState<WhyTopic | null>(null);
   const [logOpen, setLogOpen] = useState(false);
@@ -566,7 +570,7 @@ export function TodayScreen({
             Log your first period to start building your cycle view. Predictions will only appear
             when there is enough information.
           </p>
-          <Button onClick={onLogFirstPeriod ?? (() => setLogOpen(true))}>Log first period</Button>
+          <Button onClick={() => setLogOpen(true)}>Log first period</Button>
         </Card>
       ) : null}
 
@@ -664,44 +668,13 @@ export function TodayScreen({
         </div>
       </Sheet>
 
-      <Sheet open={logOpen} title="Log today" onOpenChange={setLogOpen}>
-        <div class="today-log-sheet">
-          <fieldset class="today-log-group">
-            <legend>Flow level</legend>
-            <div class="today-log-group__choices">
-              {['Light', 'Medium', 'Heavy'].map((flow) => (
-                <Button key={flow} onClick={() => saveLog(`Flow: ${flow}`)} variant="secondary">
-                  {flow}
-                </Button>
-              ))}
-            </div>
-          </fieldset>
-          <fieldset class="today-log-group">
-            <legend>Symptoms</legend>
-            <div class="today-log-group__choices">
-              {['Cramps', 'Headache'].map((symptom) => (
-                <Button
-                  key={symptom}
-                  onClick={() => saveLog(`Symptom: ${symptom}`)}
-                  variant="secondary"
-                >
-                  {symptom}
-                </Button>
-              ))}
-            </div>
-          </fieldset>
-          <fieldset class="today-log-group">
-            <legend>Mood</legend>
-            <div class="today-log-group__choices">
-              {['Okay', 'Low'].map((mood) => (
-                <Button key={mood} onClick={() => saveLog(`Mood: ${mood}`)} variant="secondary">
-                  {mood}
-                </Button>
-              ))}
-            </div>
-          </fieldset>
-        </div>
-      </Sheet>
+      <QuickLogSheet
+        open={logOpen}
+        onOpenChange={setLogOpen}
+        localDate={today}
+        pinnedTrackers={pinnedTrackers}
+        onOpenLog={onOpenLog}
+      />
 
       <Toast
         actionLabel="Undo"
