@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Button, Card } from '../components/base';
 import { TODAY_PREVIEW_FIXTURE, TodayScreen } from '../screens/today';
+import { CALENDAR_PREVIEW_FIXTURE, CalendarScreen } from '../screens/calendar';
 import type { UpdateReadyNotice } from '../../sw/client.ts';
 
 type Role = 'owner' | 'partner';
@@ -217,6 +218,8 @@ export function AppShell({ updateNotice, restartStatus, cancelRestart }: AppShel
         ) : null}
         {role === 'owner' && selectedTab.id === 'today' ? (
           <TodayScreen {...TODAY_PREVIEW_FIXTURE} />
+        ) : role === 'owner' && selectedTab.id === 'calendar' ? (
+          <CalendarScreen {...CALENDAR_PREVIEW_FIXTURE} />
         ) : (
           <PlaceholderScreen role={role} tab={selectedTab} />
         )}
