@@ -10,8 +10,18 @@ import { extname, join, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { createServer as createViteServer, type ViteDevServer } from 'vite';
+import { startCspTestServer } from './csp-fixtures/server';
 
 const syntheticPassphrase = 'synthetic harbor glimmer 74';
+const shellHeaderNames = [
+  'content-security-policy',
+  'referrer-policy',
+  'x-content-type-options',
+  'permissions-policy',
+  'cross-origin-opener-policy',
+  'cross-origin-resource-policy',
+  'content-type',
+] as const;
 let devServer: ViteDevServer | undefined;
 let offlineServer: Server | undefined;
 let offlineRoot = '';
@@ -131,11 +141,22 @@ async function finishOwnerOnboarding(page: Page): Promise<void> {
 }
 
 async function openSyntheticPreviewAfterSetup(page: Page, appOrigin: string): Promise<void> {
+  await waitForActivatedController(page);
   await page.goto(`${appOrigin}/?today=synthetic`);
   await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
   await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
   await page.getByRole('button', { name: 'Unlock', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+}
+
+async function waitForActivatedController(page: Page): Promise<void> {
+  await page.waitForFunction(async () => {
+    const registration = await navigator.serviceWorker.getRegistration('/');
+    return (
+      registration?.active?.state === 'activated' &&
+      navigator.serviceWorker.controller?.state === 'activated'
+    );
+  });
 }
 
 async function configureApp(page: Page): Promise<void> {
@@ -232,10 +253,7 @@ test('T-SW-01 @sw offline cold start shows Today after unlocking the integrated 
   await openSyntheticPreviewAfterSetup(page, previewOrigin);
   await expect(page.getByText('Cycle day 12')).toBeVisible();
 
-  await page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.ready;
-    if (!registration.active) throw new Error('The app worker did not activate');
-  });
+  await waitForActivatedController(page);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
   await expect
@@ -260,6 +278,176 @@ test('T-SW-01 @sw offline cold start shows Today after unlocking the integrated 
   await expect(coldPage.getByText('Cycle day 12')).toBeVisible();
   await expect(coldPage.locator('.shell-preview-banner')).toContainText('synthetic data only');
   expect(coldPageErrors).toEqual([]);
+});
+
+test.describe('Pages-canonicalized navigation fallback', () => {
+  test.use({ ignoreHTTPSErrors: true });
+
+  test('serves a nonredirected shell for an uncached synthetic query navigation @sw', async ({
+    page,
+  }) => {
+    const server = await startCspTestServer(undefined, '127.0.0.1', 0, {
+      allowControlledOutage: true,
+      canonicalizeIndexToRoot: true,
+    });
+
+    try {
+      const rootResponse = await page.goto(server.baseURL, { waitUntil: 'domcontentloaded' });
+      expect(rootResponse?.status()).toBe(200);
+      const rootBody = await rootResponse!.body();
+      const rootHeaders = rootResponse!.headers();
+
+      await configureApp(page);
+      await waitForActivatedController(page);
+
+      const cacheState = await page.evaluate(async (headerNames) => {
+        const name = (await caches.keys()).find((cacheName) => cacheName.startsWith('flo-static-'));
+        if (!name) throw new Error('The app shell cache was not installed');
+        const cache = await caches.open(name);
+        const root = await cache.match(new URL('/', location.origin).href);
+        const index = await cache.match(new URL('/index.html', location.origin).href);
+        const query = await cache.match(new URL('/?today=synthetic', location.origin).href);
+        if (!root || !index) throw new Error('The root and index shell responses must be cached');
+        const digest = async (response: Response) => {
+          const bytes = await response.arrayBuffer();
+          const hash = await crypto.subtle.digest('SHA-256', bytes);
+          return {
+            bytes: bytes.byteLength,
+            sha256: Array.from(new Uint8Array(hash), (byte) =>
+              byte.toString(16).padStart(2, '0'),
+            ).join(''),
+          };
+        };
+        return {
+          rootRedirected: root.redirected,
+          indexRedirected: index.redirected,
+          queryCached: query !== undefined,
+          indexStatus: index.status,
+          indexHeaders: Object.fromEntries(
+            headerNames.map((headerName) => [headerName, index.headers.get(headerName)]),
+          ),
+          rootBody: await digest(root),
+          indexBody: await digest(index),
+        };
+      }, [...shellHeaderNames]);
+      const expectedShellHeaders = Object.fromEntries(
+        shellHeaderNames.map((headerName) => [headerName, rootHeaders[headerName]]),
+      );
+      expect(cacheState.rootRedirected).toBe(false);
+      expect(cacheState.indexRedirected).toBe(true);
+      expect(cacheState.queryCached).toBe(false);
+      expect(cacheState.indexStatus).toBe(200);
+      expect(cacheState.indexHeaders).toEqual(expectedShellHeaders);
+      expect(cacheState.indexBody).toEqual(cacheState.rootBody);
+      process.stdout.write(
+        `[p0-navigation] root/index bytes=${cacheState.rootBody.bytes}/${cacheState.indexBody.bytes}; sha256=${cacheState.rootBody.sha256}; redirected=false/true; headers=${shellHeaderNames.length} preserved\n`,
+      );
+
+      const rootReloadResponse = await page.reload({ waitUntil: 'domcontentloaded' });
+      expect(rootReloadResponse?.status()).toBe(200);
+      expect(rootReloadResponse?.fromServiceWorker()).toBe(true);
+      expect(await rootReloadResponse!.body()).toEqual(rootBody);
+      expect(
+        Object.fromEntries(
+          shellHeaderNames.map((headerName) => [
+            headerName,
+            rootReloadResponse?.headers()[headerName],
+          ]),
+        ),
+      ).toEqual(expectedShellHeaders);
+
+      let queryResponse: Awaited<ReturnType<Page['goto']>> | null = null;
+      let queryNavigationError = '';
+      try {
+        queryResponse = await page.goto(`${server.baseURL}?today=synthetic`, {
+          waitUntil: 'domcontentloaded',
+        });
+      } catch (error) {
+        queryNavigationError =
+          error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      }
+
+      expect(
+        queryNavigationError,
+        'query navigation must not reject a redirected SW response',
+      ).toBe('');
+      expect(queryResponse).not.toBeNull();
+      expect(queryResponse?.status()).toBe(200);
+      expect(queryResponse?.fromServiceWorker()).toBe(true);
+      const queryBody = await queryResponse!.body();
+      expect(queryBody).toEqual(rootBody);
+      expect(
+        Object.fromEntries(
+          shellHeaderNames.map((headerName) => [
+            headerName,
+            queryResponse?.headers()[headerName],
+          ]),
+        ),
+      ).toEqual(
+        expectedShellHeaders,
+      );
+      process.stdout.write(
+        `[p0-navigation] query bytes=${queryBody.byteLength}; fromServiceWorker=true; redirected-response-error=0; headers=${shellHeaderNames.length} preserved\n`,
+      );
+      await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+      await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
+      await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+      await expect(page.locator('.shell-preview-banner')).toContainText('synthetic data only');
+
+      server.setOriginAvailable(false);
+      const outageRootResponse = await page.goto(server.baseURL, {
+        waitUntil: 'domcontentloaded',
+      });
+      expect(outageRootResponse?.status()).toBe(200);
+      expect(outageRootResponse?.fromServiceWorker()).toBe(true);
+      const outageRootBody = await outageRootResponse!.body();
+      expect(outageRootBody).toEqual(rootBody);
+      expect(
+        Object.fromEntries(
+          shellHeaderNames.map((headerName) => [
+            headerName,
+            outageRootResponse?.headers()[headerName],
+          ]),
+        ),
+      ).toEqual(expectedShellHeaders);
+      await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+      await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
+      await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+      process.stdout.write(
+        `[p0-navigation] controlled-outage root bytes=${outageRootBody.byteLength}; fromServiceWorker=true; headers=${shellHeaderNames.length} preserved\n`,
+      );
+
+      const outageQueryResponse = await page.goto(
+        `${server.baseURL}?today=synthetic&outage=synthetic`,
+        { waitUntil: 'domcontentloaded' },
+      );
+      expect(outageQueryResponse?.status()).toBe(200);
+      expect(outageQueryResponse?.fromServiceWorker()).toBe(true);
+      const outageQueryBody = await outageQueryResponse!.body();
+      expect(outageQueryBody).toEqual(rootBody);
+      expect(
+        Object.fromEntries(
+          shellHeaderNames.map((headerName) => [
+            headerName,
+            outageQueryResponse?.headers()[headerName],
+          ]),
+        ),
+      ).toEqual(expectedShellHeaders);
+      await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+      await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
+      await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+      await expect(page.locator('.shell-preview-banner')).toContainText('synthetic data only');
+      process.stdout.write(
+        `[p0-navigation] controlled-outage query bytes=${outageQueryBody.byteLength}; fromServiceWorker=true; headers=${shellHeaderNames.length} preserved; pageErrors=${(pageErrors.get(page) ?? []).length}\n`,
+      );
+      expect(pageErrors.get(page) ?? []).toEqual([]);
+    } finally {
+      await server.close();
+    }
+  });
 });
 
 async function installCoordinationProbe(

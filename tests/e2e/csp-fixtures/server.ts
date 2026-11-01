@@ -27,7 +27,13 @@ interface HeaderRule {
 
 export interface CspTestServer {
   baseURL: string;
+  setOriginAvailable(available: boolean): void;
   close(): Promise<void>;
+}
+
+export interface CspTestServerOptions {
+  readonly allowControlledOutage?: boolean;
+  readonly canonicalizeIndexToRoot?: boolean;
 }
 
 function parseHeaderRules(content: string): HeaderRule[] {
@@ -94,6 +100,7 @@ export async function startCspTestServer(
   buildDirectory = resolve(projectRoot, 'dist'),
   host = '127.0.0.1',
   port = 0,
+  options: CspTestServerOptions = {},
 ): Promise<CspTestServer> {
   if (!['127.0.0.1', '::1', 'localhost'].includes(host)) {
     throw new Error('The CSP test server may bind only to loopback.');
@@ -103,6 +110,7 @@ export async function startCspTestServer(
   }
 
   const absoluteBuildDirectory = resolve(buildDirectory);
+  let originAvailable = true;
   const headerRules = parseHeaderRules(
     await readFile(resolve(absoluteBuildDirectory, '_headers'), 'utf8'),
   );
@@ -181,6 +189,18 @@ export async function startCspTestServer(
           send(response, 400, 'unknown synthetic CSP fixture');
           return;
         }
+        if (!originAvailable) {
+          request.socket.destroy();
+          return;
+        }
+        if (
+          options.canonicalizeIndexToRoot === true &&
+          request.method === 'GET' &&
+          requestUrl.pathname === '/index.html'
+        ) {
+          response.writeHead(308, { location: '/' }).end();
+          return;
+        }
         const fixtureBuildSelected = fixtureRequested || hasFixtureCookie(request);
         const buildRoot = fixtureBuildSelected
           ? resolve(temporaryRoot, 'fixture-build')
@@ -237,6 +257,12 @@ export async function startCspTestServer(
     const displayHost = host === '::1' ? '[::1]' : host;
     return {
       baseURL: `https://${displayHost}:${boundPort}/`,
+      setOriginAvailable(available: boolean): void {
+        if (!options.allowControlledOutage) {
+          throw new Error('Controlled origin outages are not enabled for this fixture.');
+        }
+        originAvailable = available;
+      },
       close: async () => {
         await new Promise<void>((resolveClose, reject) => {
           server.close((error) => (error ? reject(error) : resolveClose()));

@@ -87,6 +87,16 @@ function isBuildIdRequest(value: unknown): value is BuildIdRequest {
   );
 }
 
+function compatibleNavigationResponse(response: Response): Response {
+  if (!response.redirected) return response;
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 async function notifyClientsOfUpdate(): Promise<void> {
   if (!worker.registration.active) return;
 
@@ -146,11 +156,13 @@ worker.addEventListener('fetch', ((event: WorkerFetchEvent) => {
     (async () => {
       const cache = await worker.caches.open(cacheName);
       const cached = await cache.match(event.request);
-      if (cached) return cached;
+      if (cached) {
+        return event.request.mode === 'navigate' ? compatibleNavigationResponse(cached) : cached;
+      }
 
       if (event.request.mode === 'navigate') {
         const appShell = await cache.match(new URL('/index.html', worker.location.origin).href);
-        if (appShell) return appShell;
+        if (appShell) return compatibleNavigationResponse(appShell);
 
         try {
           return await fetch(event.request);
