@@ -7,6 +7,33 @@ let vite: ViteDevServer | undefined;
 let origin = '';
 const pageErrors = new WeakMap<Page, string[]>();
 
+async function continueWelcomeToLock(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Welcome to your cycle companion' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
+  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
+  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
+}
+
+async function finishOwnerOnboarding(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gentle reminders' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Who runs the app/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+}
+
+async function openSyntheticPreviewAfterSetup(page: Page): Promise<void> {
+  await page.goto(`${origin}/?today=synthetic`);
+  await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+  await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+}
+
 async function configureApp(page: Page): Promise<void> {
   const passphrase = page.getByLabel('Passphrase', { exact: true });
   const describedBy = await passphrase.getAttribute('aria-describedby');
@@ -28,6 +55,7 @@ async function configureApp(page: Page): Promise<void> {
       .fill(canonical[position - 1]!);
   }
   await page.getByRole('button', { name: 'Confirm recovery code' }).click();
+  await finishOwnerOnboarding(page);
   await expect(page.locator('.shell-root')).toBeVisible();
 }
 
@@ -62,9 +90,11 @@ test('T-SEC-02 @lock cold start and hidden timeout keep rendered preview records
 }) => {
   await page.clock.install();
   await page.goto(origin);
+  await continueWelcomeToLock(page);
   await expect(page.getByRole('heading', { name: 'Create your lock' })).toBeVisible();
   await expect(page.locator('.today-logged-summary')).toHaveCount(0);
   await configureApp(page);
+  await openSyntheticPreviewAfterSetup(page);
 
   const previewRecord = page.locator('.today-logged-summary');
   await expect(previewRecord).toContainText('Energy');

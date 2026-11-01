@@ -43,14 +43,23 @@ const approvedDevelopmentTools = new Set([
   '@playwright/test',
   '@types/node',
   'eslint',
+  'fake-indexeddb',
   'fast-check',
+  'happy-dom',
   'prettier',
   'tsx',
   'typescript',
   'typescript-eslint',
   'vite',
   'vitest',
+  '@vitest/coverage-v8',
   'wrangler',
+]);
+const approvedExactDevelopmentPins = new Map([
+  ['fake-indexeddb', '6.2.7'],
+  ['happy-dom', '21.0.4'],
+  ['vitest', '4.1.12'],
+  ['@vitest/coverage-v8', '4.1.12'],
 ]);
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
@@ -175,6 +184,20 @@ function main(): number {
       if (!exactVersion.test(version))
         fail(`${section} ${name} must be an exact version, got ${version}`, errors);
     }
+  }
+  for (const [name, version] of approvedExactDevelopmentPins) {
+    if (dev[name] !== version) {
+      fail(
+        `approved development pin ${name} must be ${version}, got ${dev[name] ?? 'missing'}`,
+        errors,
+      );
+    }
+  }
+  if (dev['@vitest/coverage-v8'] !== dev.vitest) {
+    fail(
+      `@vitest/coverage-v8 must exactly match vitest (${dev.vitest ?? 'missing'}), got ${dev['@vitest/coverage-v8'] ?? 'missing'}`,
+      errors,
+    );
   }
 
   const rootLockEntry = lock.packages?.[''];

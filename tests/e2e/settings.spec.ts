@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { createServer, type ViteDevServer } from 'vite';
@@ -124,6 +125,16 @@ test('Portable export and import @export offers a dry-run before applying a file
   await page.getByRole('button', { name: 'Download JSON export' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('data-export.json');
+
+  const csvDownloadPromise = page.waitForEvent('download');
+  await page.locator('#portable-tracker').selectOption('flow');
+  await page.getByRole('button', { name: 'Download tracker CSV' }).click();
+  const csvDownload = await csvDownloadPromise;
+  expect(csvDownload.suggestedFilename()).toBe('data-export-flow.csv');
+  const csvPath = await csvDownload.path();
+  if (!csvPath) throw new Error('Synthetic CSV export was not written for the browser download');
+  expect(readFileSync(csvPath, 'utf8')).toContain('"localDate","tracker","value"');
+  await expect(page.getByRole('status')).toContainText('flow CSV export is ready to save.');
 
   const input = page.locator('#portable-import-file');
   await input.setInputFiles({

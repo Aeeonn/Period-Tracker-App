@@ -111,7 +111,35 @@ declare global {
   }
 }
 
+async function continueWelcomeToLock(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Welcome to your cycle companion' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
+  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
+  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
+}
+
+async function finishOwnerOnboarding(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gentle reminders' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Who runs the app/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+}
+
+async function openSyntheticPreviewAfterSetup(page: Page, appOrigin: string): Promise<void> {
+  await page.goto(`${appOrigin}/?today=synthetic`);
+  await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+  await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+}
+
 async function configureApp(page: Page): Promise<void> {
+  await continueWelcomeToLock(page);
   await expect(page.getByRole('heading', { name: 'Create your lock' })).toBeVisible();
   await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
   await page.getByRole('button', { name: 'Create passphrase' }).click();
@@ -127,6 +155,7 @@ async function configureApp(page: Page): Promise<void> {
       .fill(canonical[position - 1]!);
   }
   await page.getByRole('button', { name: 'Confirm recovery code' }).click();
+  await finishOwnerOnboarding(page);
   await expect(page.locator('.shell-root')).toBeVisible();
 }
 
@@ -200,6 +229,7 @@ test('T-SW-01 @sw offline cold start shows Today after unlocking the integrated 
 }) => {
   await page.goto(previewOrigin);
   await configureApp(page);
+  await openSyntheticPreviewAfterSetup(page, previewOrigin);
   await expect(page.getByText('Cycle day 12')).toBeVisible();
 
   await page.evaluate(async () => {
@@ -220,7 +250,7 @@ test('T-SW-01 @sw offline cold start shows Today after unlocking the integrated 
   await page.close();
   const coldPage = await context.newPage();
   const coldPageErrors = listenForPageErrors(coldPage);
-  await coldPage.goto(previewOrigin);
+  await coldPage.goto(`${previewOrigin}/?today=synthetic`);
   await expect(coldPage.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
   await coldPage.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
   await coldPage.getByRole('button', { name: 'Unlock', exact: true }).click();
@@ -271,7 +301,12 @@ test('app update barrier drains writes in every open window before activation @s
   };
 
   try {
-    await Promise.all([page.goto(devOrigin), secondPage.goto(devOrigin)]);
+    await page.goto(devOrigin);
+    await configureApp(page);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+    await secondPage.goto(devOrigin);
+    await expect(secondPage.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
     await Promise.all([
       page.getByTestId('lock-screen').waitFor(),
       secondPage.getByTestId('lock-screen').waitFor(),

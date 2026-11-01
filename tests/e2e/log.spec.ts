@@ -182,6 +182,7 @@ test('T-SEC-06 @log note payloads remain literal text when shown again', async (
 test('@log without a repository shows the gentle disabled save state', async ({ page }) => {
   await openFixture(page, '?fixture=locked');
   await expect(page.locator('.log-screen__locked')).toContainText('Unlock to save');
+  await selectTracker(page, 'Desire');
   await expect(page.getByRole('button', { name: 'Save Desire' })).toBeDisabled();
 });
 test('@log the AppShell Log tab opens the injected screen and retains tracker choices across tabs', async ({

@@ -82,6 +82,89 @@ test('T-SEC-01 @db keeps record canaries and LocalDate values out of the raw Ind
   expect(dump).toContain('"type":"day"');
 });
 
+test('record transactions @db commit atomically, abort failed work, and reject after close', async ({
+  page,
+}) => {
+  await openFixture(page);
+  const committed = {
+    ...fixtureRecord,
+    logicalId: 'synthetic-transaction-committed' as LogicalId,
+  } as LogicalRecord;
+  const aborted = {
+    ...fixtureRecord,
+    logicalId: 'synthetic-transaction-aborted' as LogicalId,
+  } as LogicalRecord;
+  const afterAbort = {
+    ...fixtureRecord,
+    logicalId: 'synthetic-transaction-after-abort' as LogicalId,
+  } as LogicalRecord;
+
+  const result = await page.evaluate(async ({ committedRecord, abortedRecord, laterRecord }) => {
+    const status = await window.floDbTest.open('app-transaction-lifecycle', 1);
+    const errorDetails = (error: unknown) => {
+      if (typeof error === 'object' && error !== null) {
+        const details = error as { readonly name?: unknown; readonly message?: unknown };
+        return {
+          name: typeof details.name === 'string' ? details.name : 'unknown',
+          message: typeof details.message === 'string' ? details.message : String(error),
+        };
+      }
+      return { name: 'unknown', message: String(error) };
+    };
+    try {
+      await window.floDbTest.put(committedRecord);
+      const committedRead = await window.floDbTest.get(committedRecord.logicalId);
+
+      let abortError: { readonly name: string; readonly message: string } | undefined;
+      try {
+        await window.floDbTest.putThenAbort(abortedRecord);
+      } catch (error) {
+        abortError = errorDetails(error);
+      }
+
+      const abortedRead = await window.floDbTest.get(abortedRecord.logicalId);
+      const recordsBeforeLaterWrite = await window.floDbTest.list();
+      await window.floDbTest.put(laterRecord);
+      const laterRead = await window.floDbTest.get(laterRecord.logicalId);
+
+      window.floDbTest.closeRetained();
+      let closeErrorName: string | undefined;
+      try {
+        await window.floDbTest.get(committedRecord.logicalId);
+      } catch (error) {
+        closeErrorName = errorDetails(error).name;
+      }
+
+      return {
+        status,
+        committedRead,
+        abortError,
+        abortedRead,
+        recordIdsBeforeLaterWrite: recordsBeforeLaterWrite.map((record) => record.logicalId).sort(),
+        laterRead,
+        closeErrorName,
+      };
+    } finally {
+      window.floDbTest.close();
+    }
+  }, {
+    committedRecord: committed,
+    abortedRecord: aborted,
+    laterRecord: afterAbort,
+  });
+
+  expect(result.status).toBe('READY');
+  expect(result.committedRead).toEqual(committed);
+  expect(result.abortError).toEqual({
+    name: 'Error',
+    message: 'synthetic transaction callback failure',
+  });
+  expect(result.abortedRead).toBeUndefined();
+  expect(result.recordIdsBeforeLaterWrite).toEqual([committed.logicalId]);
+  expect(result.laterRead).toEqual(afterAbort);
+  expect(result.closeErrorName).toBe('InvalidStateError');
+});
+
 test('T-MIG-01 @db migrates v0 once, keeps an encrypted snapshot, and aborts safely on failure', async ({
   page,
 }) => {

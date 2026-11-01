@@ -13,6 +13,11 @@ import { createLogRepo, createSettingsRepo } from '../../src/data/repos/index.ts
 import { SCHEMA_VERSION } from '../../src/data/store/schema.ts';
 import { addDays, parse } from '../../src/lib/localdate/index.ts';
 import { createPortableBackupService, type PortableBackupRepositories } from '../../src/backup/portable/service.ts';
+import {
+  createPortableDocument,
+  createTrackerCsv,
+  parsePortableFile,
+} from '../../src/backup/portable/codec.ts';
 import { MemoryRecordStore } from '../data/repos/memory-record-store.ts';
 
 const ownDevice = 'synthetic-export-device' as DeviceId;
@@ -60,7 +65,11 @@ function repositories(store: MemoryRecordStore, deviceId: DeviceId): PortableBac
   };
 }
 
-function dayRecord(localDate: string, index: number, notes?: string): LogicalRecord<'DayBundle'> {
+function dayRecord(
+  localDate: string,
+  index: number,
+  notes?: string,
+): Extract<LogicalRecord<'DayBundle'>, { readonly deleted: false }> {
   const day = localDate as DayBundle['localDate'];
   const hlc = stamp(10_000 + index);
   return {
@@ -300,5 +309,64 @@ describe('portable export and import', () => {
     for (const formula of formulas.slice(1)) {
       expect(csv).toContain(`"'${formula}"`);
     }
+  });
+
+  it('parses valid JSON and rejects malformed, stale, duplicate, and invalid records', async () => {
+    const record = dayRecord('2036-01-01', 1, 'synthetic backup fixture');
+    const document = createPortableDocument([record], SCHEMA_VERSION);
+    const valid = await parsePortableFile(
+      new Blob([JSON.stringify(document)], { type: 'application/json' }),
+      SCHEMA_VERSION,
+    );
+    expect(valid).toEqual({ ok: true, document });
+
+    const invalidDate = {
+      ...record,
+      body: { ...record.body, localDate: '2036-02-30' },
+    } as unknown as LogicalRecord;
+    const invalidId = { ...record, logicalId: '' } as LogicalRecord;
+    const duplicate = createPortableDocument([record, record], SCHEMA_VERSION);
+    const wrongFormat = { ...document, format: 'synthetic-wrong-format' };
+    const stale = { ...document, schemaVersion: SCHEMA_VERSION - 1 };
+    const future = { ...document, schemaVersion: SCHEMA_VERSION + 1 };
+
+    for (const candidate of [
+      duplicate,
+      wrongFormat,
+      stale,
+      createPortableDocument([invalidDate], SCHEMA_VERSION),
+      createPortableDocument([invalidId], SCHEMA_VERSION),
+    ]) {
+      await expect(
+        parsePortableFile(new Blob([JSON.stringify(candidate)]), SCHEMA_VERSION),
+      ).resolves.toEqual({ ok: false, error: 'invalid_file' });
+    }
+    await expect(parsePortableFile(new Blob(['{']), SCHEMA_VERSION)).resolves.toEqual({
+      ok: false,
+      error: 'invalid_file',
+    });
+    await expect(
+      parsePortableFile(new Blob([JSON.stringify(future)]), SCHEMA_VERSION),
+    ).resolves.toEqual({ ok: false, error: 'newer_schema' });
+  });
+
+  it('filters non-day, deleted, and absent tracker rows while serializing non-string values', () => {
+    const base = dayRecord('2036-02-01', 1);
+    const numeric = {
+      ...base,
+      body: { ...base.body, weight: 56.5 },
+    } as unknown as LogicalRecord;
+    const deleted = { ...base, deleted: true } as LogicalRecord;
+    const otherEntity = {
+      ...base,
+      entity: 'PeriodOverride',
+    } as unknown as LogicalRecord;
+
+    expect(createTrackerCsv([base, numeric, deleted, otherEntity], 'weight')).toBe(
+      '"localDate","tracker","value"\r\n"2036-02-01","weight","56.5"\r\n',
+    );
+    expect(createTrackerCsv([base], 'mood')).toBe(
+      '"localDate","tracker","value"\r\n',
+    );
   });
 });

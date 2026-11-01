@@ -26,6 +26,7 @@ import { LockScreen } from '../ui/screens/lock/core/lock-screen.tsx';
 import { OnboardingIntro, type OnboardingRole } from '../ui/screens/onboarding/index.ts';
 import { DeleteResultScreen } from '../ui/screens/settings/delete/delete-screen.tsx';
 import { createAppUpdateCoordinator, type AppUpdateCoordinator } from './update-coordinator.ts';
+import { runEngineInWorker } from './engine-runner.ts';
 
 export const APP_AUTO_LOCK_TIMEOUT_MS = 60_000;
 
@@ -274,6 +275,7 @@ export function AppRuntime() {
     return (
       <AppShell
         repositories={resources.repositories}
+        engineRunner={runEngineInWorker}
         {...(onboardingRole === null ? {} : { initialOnboardingRole: onboardingRole })}
         sessionOnboardingComplete={sessionOnboardingComplete}
         onOnboardingComplete={() => setSessionOnboardingComplete(true)}

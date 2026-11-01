@@ -226,6 +226,54 @@ describe('portable repository primitives', () => {
     await expect(repo.mergePortableRecords([local, local])).rejects.toThrow('duplicate record keys');
   });
 
+  it('treats equal records with reordered object keys and preserved array order as identical', async () => {
+    const store = new MemoryRecordStore();
+    const local = {
+      entity: 'DayBundle',
+      logicalId: '2034-05-06' as LogicalId,
+      authorDevice: ownDevice,
+      hlc: stamp(40),
+      deleted: false,
+      body: {
+        localDate: '2034-05-06',
+        sex: [
+          {
+            activity: ['vaginal'],
+            protection: ['external_condom'],
+            comfort: 'comfortable',
+            satisfaction: 'medium',
+          },
+        ],
+        fieldHlc: {},
+      },
+    } as unknown as LogicalRecord<'DayBundle'>;
+    const reordered = {
+      ...local,
+      body: {
+        fieldHlc: {},
+        sex: [
+          {
+            satisfaction: 'medium',
+            comfort: 'comfortable',
+            protection: ['external_condom'],
+            activity: ['vaginal'],
+          },
+        ],
+        localDate: '2034-05-06',
+      },
+    } as unknown as LogicalRecord<'DayBundle'>;
+    store.seed(local);
+    const repo = createSettingsRepo(store, { deviceId: ownDevice }) as SettingsRepo &
+      PortableImportWriter;
+
+    await expect(repo.mergePortableRecords([reordered])).resolves.toEqual({
+      newer: 0,
+      older: 1,
+      conflicts: 0,
+    });
+    expect(store.inspect('DayBundle', local.logicalId)).toEqual(local);
+  });
+
   it('rolls back every staged record when a later write fails', async () => {
     const memory = new MemoryRecordStore();
     const failingStore = new FailingSecondPutStore(memory);

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   runLocalDataWipe,
   WIPE_STEPS,
@@ -49,5 +49,22 @@ describe('local data wipe', () => {
 
     expect(calls).toEqual(WIPE_STEPS);
     expect(result).toEqual({ success: false, failures: ['IndexedDB databases'] });
+  });
+
+  it('does not claim success when the browser storage APIs are unavailable', async () => {
+    vi.stubGlobal('indexedDB', undefined);
+    vi.stubGlobal('navigator', {});
+    vi.stubGlobal('caches', undefined);
+    vi.stubGlobal('localStorage', undefined);
+    vi.stubGlobal('sessionStorage', undefined);
+
+    try {
+      await expect(runLocalDataWipe()).resolves.toEqual({
+        success: false,
+        failures: WIPE_STEPS,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -42,7 +42,9 @@ const indexKeyPromise = crypto.subtle.importKey(
 export interface FixtureApi {
   open(databaseName: string, schemaVersion: number): Promise<string>;
   close(): void;
+  closeRetained(): void;
   put(record: LogicalRecord): Promise<void>;
+  putThenAbort(record: LogicalRecord): Promise<void>;
   get(logicalId: string): Promise<LogicalRecord | undefined>;
   getEntity(entity: EntityName, logicalId: string): Promise<LogicalRecord | undefined>;
   list(): Promise<readonly LogicalRecord[]>;
@@ -189,9 +191,19 @@ const api: FixtureApi = {
     store?.close();
     store = undefined;
   },
+  closeRetained() {
+    store?.close();
+  },
   async put(record) {
     if (!store) throw new Error('Open the database before writing');
     await store.put(record);
+  },
+  async putThenAbort(record) {
+    if (!store) throw new Error('Open the database before writing');
+    await store.transaction(async (transaction) => {
+      await transaction.put(record);
+      throw new Error('synthetic transaction callback failure');
+    });
   },
   async get(logicalId) {
     if (!store) throw new Error('Open the database before reading');

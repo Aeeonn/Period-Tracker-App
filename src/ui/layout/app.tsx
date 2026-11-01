@@ -10,7 +10,7 @@ import {
   type CalendarScreenProps,
 } from '../screens/calendar';
 import type { TodayScreenProps } from '../screens/today';
-import { createTodayScreenProps } from '../screens/today/live-data.ts';
+import { type EngineRunner, createTodayScreenProps } from '../screens/today/live-data.ts';
 import { RepositoriesContext, type Repositories, useRepositories } from './repositories.tsx';
 import { LogScreen } from '../screens/log';
 import { applyThemePreference, SettingsScreen } from '../screens/settings/main/index.ts';
@@ -41,6 +41,7 @@ export interface AppShellProps {
   readonly initialOnboardingRole?: OnboardingRole;
   readonly sessionOnboardingComplete?: boolean;
   readonly onOnboardingComplete?: () => void;
+  readonly engineRunner?: EngineRunner;
 }
 
 const OWNER_TABS: readonly Tab[] = [
@@ -187,7 +188,9 @@ function PlaceholderScreen({ role, tab }: { role: Role; tab: Tab }) {
         </span>
         <p>{copy}</p>
         <p class="shell-placeholder__note">
-          {comingSoon ? 'Your private logs remain yours.' : 'No health data is shown or stored here.'}
+          {comingSoon
+            ? 'Your private logs remain yours.'
+            : 'No health data is shown or stored here.'}
         </p>
       </Card>
     </section>
@@ -238,6 +241,7 @@ export function AppShell({
   initialOnboardingRole,
   sessionOnboardingComplete = false,
   onOnboardingComplete,
+  engineRunner,
 }: AppShellProps) {
   const [sessionOnboardingRole, setSessionOnboardingRole] = useState<OnboardingRole | null>(
     () => initialOnboardingRole ?? null,
@@ -320,7 +324,7 @@ export function AppShell({
       try {
         const props = syntheticPreview
           ? TODAY_PREVIEW_FIXTURE
-          : await createTodayScreenProps(repositories, localClockSnapshot());
+          : await createTodayScreenProps(repositories, localClockSnapshot(), engineRunner);
         if (mounted) {
           setTodayProps(props);
           setTodayLoadFailed(false);
@@ -360,7 +364,7 @@ export function AppShell({
       try {
         const props = syntheticPreview
           ? CALENDAR_PREVIEW_FIXTURE
-          : await createCalendarScreenProps(repositories, localClockSnapshot());
+          : await createCalendarScreenProps(repositories, localClockSnapshot(), engineRunner);
         if (mounted) {
           setCalendarProps(props);
           setCalendarLoadFailed(false);

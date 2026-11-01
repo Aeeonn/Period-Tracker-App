@@ -460,24 +460,27 @@ export function LogScreen({
         </p>
       ) : null}
       {!loading
-        ? TRACKERS.map((tracker) => (
-            <Card
-              key={`${selectedDate}-${tracker}-${editorRevisions[tracker] ?? 0}`}
-              hidden={selectedTracker !== tracker}
-              aria-hidden={selectedTracker !== tracker ? 'true' : undefined}
-              class="log-screen__form-card"
-            >
-              <TrackerEditor
-                tracker={tracker}
-                day={day}
-                disabled={editorDisabled}
-                temperatureUnit={temperatureUnit}
-                onSave={(entries) => void saveEntries(entries)}
-                onClear={() => void clearTracker(tracker)}
-                onDraftChange={reportDraft}
-              />
-            </Card>
-          ))
+        ? TRACKERS.map((tracker) => {
+            const inactive = selectedTracker !== tracker;
+            return (
+              <Card
+                key={`${selectedDate}-${tracker}-${editorRevisions[tracker] ?? 0}`}
+                hidden={inactive}
+                aria-hidden={inactive ? 'true' : undefined}
+                class="log-screen__form-card"
+              >
+                <TrackerEditor
+                  tracker={tracker}
+                  day={day}
+                  disabled={editorDisabled || inactive}
+                  temperatureUnit={temperatureUnit}
+                  onSave={(entries) => void saveEntries(entries)}
+                  onClear={() => void clearTracker(tracker)}
+                  onDraftChange={reportDraft}
+                />
+              </Card>
+            );
+          })
         : null}
     </section>
   );

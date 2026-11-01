@@ -6,6 +6,12 @@ import type { LocalDate, LocalTime } from '../../../contracts/localdate.ts';
 import { evaluateReminders } from '../../../reminders/inapp/index.ts';
 import { runEngine } from '../../../engine/index.ts';
 import { compare, diffDays, parse } from '../../../lib/localdate/index.ts';
+
+export type EngineRunner = (
+  input: Parameters<typeof runEngine>[0],
+) => Promise<ReturnType<typeof runEngine>>;
+
+const runEngineLocally: EngineRunner = async (input) => runEngine(input);
 import type { TodayScreenProps } from './today-screen.tsx';
 
 function firstLocalDate(): LocalDate {
@@ -107,13 +113,15 @@ function latestPeriodStart(
 export function createTodayScreenProps(
   repositories: TodayRepositories,
   clock: TodayClockSnapshot,
+  engineRunner: EngineRunner = runEngineLocally,
 ): Promise<TodayScreenProps> {
-  return loadTodayScreenProps(repositories, clock);
+  return loadTodayScreenProps(repositories, clock, engineRunner);
 }
 
 async function loadTodayScreenProps(
   { logRepo, settingsRepo }: TodayRepositories,
   { today, now }: TodayClockSnapshot,
+  engineRunner: EngineRunner,
 ): Promise<TodayScreenProps> {
   const [profile, contraception, pregnancies, overrides, reminderRules, dayBundles] =
     await Promise.all([
@@ -136,14 +144,15 @@ async function loadTodayScreenProps(
     lifeStage: profile?.lifeStage ?? 'cycle',
     contraception,
   } satisfies Parameters<typeof runEngine>[0]['profile'];
-  const engineOutput = runEngine({
+  const engineInput = {
     today,
     profile: engineProfile,
     dayLogs,
     episodesOverride: overrides,
     pregnancies,
     coupleEntriesAllowedForInsights: [],
-  });
+  } satisfies Parameters<typeof runEngine>[0];
+  const engineOutput = await engineRunner(engineInput);
   const latestStart = latestPeriodStart(engineOutput, today);
   const cycleDay = latestStart === null ? null : diffDays(latestStart, today) + 1;
   const todayLog = dayLogs.find((dayLog) => dayLog.localDate === today);

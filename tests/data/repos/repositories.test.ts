@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Base64Url, DeviceId, LogicalId, PregnancyId, ReminderId } from '../../../src/contracts/brand.ts';
 import type {
   ContraceptionState,
+  DayShareSelection,
   DeviceIdentity,
   Hlc,
   PeriodOverride,
@@ -10,6 +11,7 @@ import type {
   ReminderRule,
   SexEvent,
 } from '../../../src/contracts/entities.ts';
+import { MOOD, SYMPTOMS_BODY } from '../../../src/contracts/enums.ts';
 import type { LocalDate, LocalDateTime, LocalTime } from '../../../src/contracts/localdate.ts';
 import { createLogRepo, createSettingsRepo, compareHlc, createHlcClock } from '../../../src/data/repos/index.ts';
 import { parse } from '../../../src/lib/localdate/index.ts';
@@ -44,6 +46,28 @@ function profile(): Profile {
 }
 
 describe('LogRepo', () => {
+  it('stores and publishes a dated share-selection update with its own HLC', async () => {
+    const store = new MemoryRecordStore();
+    const repo = createLogRepo(store, { deviceId, nowMs: () => 1_800_000_000_000 });
+    const localDate = date('2032-01-03');
+    const selection: DayShareSelection = {
+      symptoms_body: [SYMPTOMS_BODY[0]!],
+      mood: [MOOD[0]!],
+    };
+    const changes: LocalDate[][] = [];
+    const unsubscribe = repo.onChange((change) => changes.push([...change.localDates]));
+
+    await repo.setShareSelection(localDate, selection);
+
+    await expect(repo.getDay(localDate)).resolves.toMatchObject({
+      localDate,
+      shareSelection: selection,
+      fieldHlc: { shareSelection: { deviceId } },
+    });
+    expect(changes).toEqual([[localDate]]);
+    unsubscribe();
+  });
+
   it('clears a tracker as an ordered field tombstone and publishes committed changes', async () => {
     const store = new MemoryRecordStore();
     const repo = createLogRepo(store, { deviceId, nowMs: () => 1_800_000_000_000 });
@@ -101,23 +125,30 @@ describe('LogRepo', () => {
     const first = date('2032-03-01');
     const middle = date('2032-03-02');
     const last = date('2032-03-03');
+    const tombstonedDate = date('2032-03-04');
     await repo.setTracker(last, 'flow', 'light');
     await repo.setTracker(first, 'flow', 'medium');
     await repo.setTracker(middle, 'flow', 'heavy');
+    await repo.setTracker(tombstonedDate, 'flow', 'spotting');
+    const tombstoned = store.inspect('DayBundle', tombstonedDate as unknown as LogicalId);
+    if (!tombstoned) throw new Error('Expected the synthetic day bundle to exist before deletion');
+    await store.delete('DayBundle', tombstonedDate as unknown as LogicalId, tombstoned.hlc);
 
-    expect(await repo.listDays({ start: middle, end: last })).toEqual([
+    expect(await repo.listDays({ start: middle, end: tombstonedDate })).toEqual([
       await repo.getDay(middle),
       await repo.getDay(last),
     ]);
     expect(await repo.listDays({ start: last, end: middle })).toEqual([]);
 
     const override = { localDate: middle, kind: 'start' as const };
+    const earlierOverride = { localDate: first, kind: 'not_start' as const };
     await repo.putOverride(override);
-    expect(await repo.listOverrides()).toEqual([override]);
+    await repo.putOverride(earlierOverride);
+    expect(await repo.listOverrides()).toEqual([earlierOverride, override]);
     const before = store.inspect('PeriodOverride', overrideId(middle, 'start'));
     await repo.removeOverride(override);
     const after = store.inspect('PeriodOverride', overrideId(middle, 'start'));
-    expect(await repo.listOverrides()).toEqual([]);
+    expect(await repo.listOverrides()).toEqual([earlierOverride]);
     expect(after?.deleted).toBe(true);
     if (!before || before.deleted || !after || !after.deleted) {
       throw new Error('Expected an active override followed by its tombstone');
@@ -176,6 +207,81 @@ describe('LogRepo', () => {
 });
 
 describe('SettingsRepo', () => {
+  it('returns contraception, pregnancy, and reminder settings in stable domain order', async () => {
+    const store = new MemoryRecordStore();
+    const repo = createSettingsRepo(store, { deviceId, nowMs: () => 1_800_000_000_000 });
+    const earlier = date('2032-04-04');
+    const later = date('2032-04-05');
+    const contraception: ContraceptionState[] = [
+      {
+        method: 'condoms',
+        startDate: later,
+        regimen: { activeDays: 1, breakDays: 0, continuous: true },
+      },
+      {
+        method: 'implant',
+        startDate: earlier,
+        regimen: { activeDays: 1, breakDays: 0, continuous: true },
+      },
+      {
+        method: 'combined_pill',
+        startDate: later,
+        regimen: { activeDays: 21, breakDays: 7, continuous: false },
+      },
+    ];
+    const pregnancies: PregnancyRecord[] = [
+      { id: 'synthetic-pregnancy-z' as PregnancyId, lmp: earlier, eddSource: 'lmp', fetusCount: 1 },
+      { id: 'synthetic-pregnancy-a' as PregnancyId, lmp: earlier, eddSource: 'lmp', fetusCount: 1 },
+      { id: 'synthetic-pregnancy-m' as PregnancyId, lmp: earlier, eddSource: 'lmp', fetusCount: 1 },
+    ];
+    const reminders: ReminderRule[] = [
+      {
+        id: 'synthetic-reminder-z' as ReminderId,
+        kind: 'daily_symptom_log',
+        localTime: '09:00' as LocalTime,
+        days: [1],
+        condition: 'always',
+        enabled: true,
+      },
+      {
+        id: 'synthetic-reminder-a' as ReminderId,
+        kind: 'daily_symptom_log',
+        localTime: '09:00' as LocalTime,
+        days: [1],
+        condition: 'always',
+        enabled: true,
+      },
+      {
+        id: 'synthetic-reminder-m' as ReminderId,
+        kind: 'daily_symptom_log',
+        localTime: '09:00' as LocalTime,
+        days: [1],
+        condition: 'always',
+        enabled: true,
+      },
+    ];
+
+    for (const state of contraception) await repo.putContraception(state);
+    for (const pregnancy of pregnancies) await repo.putPregnancy(pregnancy);
+    for (const reminder of reminders) await repo.putReminder(reminder);
+
+    await expect(repo.listContraception()).resolves.toEqual([
+      contraception[1],
+      contraception[2],
+      contraception[0],
+    ]);
+    await expect(repo.listPregnancies()).resolves.toEqual([
+      pregnancies[1],
+      pregnancies[2],
+      pregnancies[0],
+    ]);
+    await expect(repo.listReminders()).resolves.toEqual([
+      reminders[1],
+      reminders[2],
+      reminders[0],
+    ]);
+  });
+
   it('upserts profiles and enumerated settings through the RecordStore', async () => {
     const store = new MemoryRecordStore();
     const repo = createSettingsRepo(store, { deviceId, nowMs: () => 1_800_000_000_000 });

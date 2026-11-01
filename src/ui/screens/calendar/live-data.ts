@@ -3,7 +3,7 @@ import type { DayBundle } from '../../../contracts/entities.ts';
 import type { LogRepo, SettingsRepo } from '../../../contracts/store.ts';
 import type { LocalDate, LocalTime } from '../../../contracts/localdate.ts';
 import { parse } from '../../../lib/localdate/index.ts';
-import { createTodayScreenProps } from '../today/live-data.ts';
+import { type EngineRunner, createTodayScreenProps } from '../today/live-data.ts';
 import type { CalendarScreenProps } from './calendar-screen.tsx';
 
 export interface CalendarRepositories {
@@ -31,9 +31,10 @@ const LAST_LOCAL_DATE = requiredLocalDate('9999-12-31');
 export async function createCalendarScreenProps(
   repositories: CalendarRepositories,
   clock: CalendarClockSnapshot,
+  engineRunner?: EngineRunner,
 ): Promise<CalendarScreenProps> {
   const [todayProps, allDays] = await Promise.all([
-    createTodayScreenProps(repositories, clock),
+    createTodayScreenProps(repositories, clock, engineRunner),
     repositories.logRepo.listDays({ start: FIRST_LOCAL_DATE, end: LAST_LOCAL_DATE }),
   ]);
   const dayLogs: readonly DayBundle[] = allDays;

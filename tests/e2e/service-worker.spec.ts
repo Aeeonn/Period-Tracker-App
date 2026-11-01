@@ -4,7 +4,7 @@ import { extname, join, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { expect, test, type Page } from '@playwright/test';
 import { writePrecacheWorker } from '../../tools/build-precache';
-import { setupOrUnlockApp } from './helpers/lock.ts';
+import { configureThroughUi, fillConfirmation, setupOrUnlockApp } from './helpers/lock.ts';
 
 interface SyntheticWriteFixture {
   synthetic: true;
@@ -26,6 +26,7 @@ declare global {
 }
 
 const TRACE_KEY = 'synthetic-service-worker-trace';
+const syntheticPassphrase = 'synthetic harbor glimmer 74';
 const MIME_TYPES: Readonly<Record<string, string>> = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -128,6 +129,46 @@ async function loadSyntheticFixture(): Promise<SyntheticWriteFixture> {
     throw new Error('The service-worker write fixture must be explicitly synthetic.');
   }
   return fixture as SyntheticWriteFixture;
+}
+
+async function finishOwnerOnboarding(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Welcome to your cycle companion' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
+  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
+  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
+  const recovery = await configureThroughUi(page, syntheticPassphrase);
+  await fillConfirmation(page, recovery.code, recovery.positions);
+  await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gentle reminders' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Who runs the app/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
+async function setupOrUnlockCurrentApp(page: Page): Promise<void> {
+  const welcomeHeading = page.getByRole('heading', { name: 'Welcome to your cycle companion' });
+  const createHeading = page.getByRole('heading', { name: 'Create your lock' });
+  const unlockHeading = page.getByRole('heading', { name: 'Unlock this device' });
+  await expect(welcomeHeading.or(createHeading).or(unlockHeading)).toBeVisible();
+  if (await welcomeHeading.isVisible()) {
+    await finishOwnerOnboarding(page);
+  } else {
+    await setupOrUnlockApp(page);
+  }
+}
+
+async function openSyntheticPreviewAfterSetup(page: Page, appOrigin: string): Promise<void> {
+  await page.goto(`${appOrigin}/?today=synthetic`);
+  await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+  await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
 }
 
 async function waitForAppController(page: Page): Promise<void> {
@@ -241,7 +282,8 @@ test('T-SW-01 @sw cold navigation renders the installed shell after the origin g
   }, TRACE_KEY);
 
   await page.goto(appOrigin);
-  await setupOrUnlockApp(page);
+  await setupOrUnlockCurrentApp(page);
+  await openSyntheticPreviewAfterSetup(page, appOrigin);
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await waitForAppController(page);
   const v1Cache = await page.evaluate(
@@ -252,8 +294,8 @@ test('T-SW-01 @sw cold navigation renders the installed shell after the origin g
   await page.evaluate(() => fetch('/__test/offline', { cache: 'no-store' }));
   await page.close();
   const coldPage = await context.newPage();
-  await coldPage.goto(appOrigin);
-  await setupOrUnlockApp(coldPage);
+  await coldPage.goto(`${appOrigin}/?today=synthetic`);
+  await setupOrUnlockCurrentApp(coldPage);
   await expect(coldPage.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(coldPage.getByText('Preview — synthetic data only')).toBeVisible();
 });
@@ -278,7 +320,7 @@ test('T-SW-02 @sw waits for the pending app write before activating v2 and prese
   }, TRACE_KEY);
 
   await page.goto(appOrigin);
-  await setupOrUnlockApp(page);
+  await setupOrUnlockCurrentApp(page);
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await waitForAppController(page);
   await openSyntheticStore(page);

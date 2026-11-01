@@ -7,13 +7,40 @@ let vite: ViteDevServer | undefined;
 let origin = '';
 const pageErrors = new WeakMap<Page, string[]>();
 
+type OnboardingRole = 'owner' | 'partner';
+
+async function continueWelcomeToLock(page: Page, role: OnboardingRole): Promise<void> {
+  await expect(page.getByRole('heading', { name: 'Welcome to your cycle companion' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
+  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
+  await page
+    .getByRole('button', { name: role === 'owner' ? "I'm tracking my cycle" : "I'm the partner" })
+    .click();
+}
+
+async function finishOnboardingAfterLock(page: Page, role: OnboardingRole): Promise<void> {
+  if (role === 'owner') {
+    await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Gentle reminders' })).toBeVisible();
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  }
+  await expect(page.getByRole('heading', { name: /Who runs the app/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
+}
+
 async function openApp(page: Page, query = ''): Promise<void> {
   await page.goto(`${origin}/${query}`);
+  const role = query.includes('role=partner') ? 'partner' : 'owner';
+  await continueWelcomeToLock(page, role);
   await expect(page.getByTestId('lock-screen')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Create your lock' })).toBeVisible();
 }
 
-async function configureApp(page: Page): Promise<void> {
+async function configureApp(page: Page, role: OnboardingRole = 'owner'): Promise<void> {
   await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
   await page.getByRole('button', { name: 'Create passphrase' }).click();
   const code = (await page.getByTestId('recovery-code').textContent())?.trim();
@@ -28,7 +55,16 @@ async function configureApp(page: Page): Promise<void> {
       .fill(canonical[position - 1]!);
   }
   await page.getByRole('button', { name: 'Confirm recovery code' }).click();
+  await finishOnboardingAfterLock(page, role);
   await expect(page.locator('.shell-root')).toBeVisible();
+}
+
+async function openSyntheticPreviewAfterSetup(page: Page): Promise<void> {
+  await page.goto(`${origin}/?today=synthetic`);
+  await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+  await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
 }
 
 async function seedSchemaZeroDatabase(page: Page): Promise<void> {
@@ -87,6 +123,7 @@ test('P0 shell keeps the synthetic preview and owner routes after the lock gate'
   await openApp(page);
   await expect(page.locator('.shell-root')).toHaveCount(0);
   await configureApp(page);
+  await openSyntheticPreviewAfterSetup(page);
   await expect(page.getByText('Preview — synthetic data only')).toBeVisible();
 
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
@@ -104,7 +141,7 @@ test('P0 shell keeps the synthetic preview and owner routes after the lock gate'
 
 test('P0 shell routes the partner preview without exposing owner-only tabs', async ({ page }) => {
   await openApp(page, '?role=partner');
-  await configureApp(page);
+  await configureApp(page, 'partner');
 
   await expect(page.locator('.shell-root')).toHaveAttribute('data-role', 'partner');
   await expect(page.getByRole('navigation', { name: 'Partner navigation' })).toBeVisible();
