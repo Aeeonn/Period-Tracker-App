@@ -10,6 +10,8 @@ This log records approved choices separately from completed evidence and pending
 
 ## Completed evidence
 
+- **2026-10-31 — `p1-integration-publish-transfer` — main `6bad8db`:** complete P1 integration, approved development-only coverage tooling and production-CSP Worker correction. Independent batched review plus scoped F1 PASS re-pointed by exact full-tree/cumulative-patch identity: `~/firstmate/data/p1-integration-publish-transfer/review-repoint-6bad8db.md`. Fresh check406/fullE2E196/132-source coverage81.17% overall and all existing critical groups95%+; size/TZ/backtest/bench/licenses PASS. Production audit0; inherited development15 findings/no new IDs. Original branches and historical Berlin timeout/count-error evidence retained. Main-only guarded publication verified; fresh synthetic preview/phase verification/sign-off not yet complete.
+
 - **2026-10-02 — `flo-plan` — main `ccc7be6`:** Stage C planning documents; no separate verify report.
 - **2026-10-02 — `flo-plan-fixes` — main `4dba4fa`:** Stage E plan corrections; no separate verify report.
 - **2026-10-02 — `p0-agents-skills` — main `8ff2d5e`:** project instructions and reusable skills; no separate verify report. Awaiting `p0-lowrisk-review`.
