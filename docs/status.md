@@ -36,7 +36,9 @@ _Last updated: 2026-11-04._ Update this file whenever work merges or plans chang
   - add a preview-only reset action for its sticky error state;
   - make the Delete All screen copy mention that it clears both local stores.
 - **Deferred engine features** (owner, 2026-10-30): pause predictions during pregnancy or postpartum, and support pregnancy without a last-period date.
-- **Primary checkout `node_modules` is out of sync with the lockfile.** Vitest 4.1.11 is installed instead of 4.1.12, and `@vitest/coverage-v8`, `fake-indexeddb` and `happy-dom` are missing. `npm run dev` works, but `npm run check` needs `npm ci --ignore-scripts`, which restores the approved lockfile.
+- **Primary checkout `node_modules` is out of sync with the lockfile.** Vitest 4.1.11 is installed instead of 4.1.12, and `@vitest/coverage-v8`, `fake-indexeddb` and `happy-dom` are missing. `npm run dev` works, but `npm run check` needs `npm ci --ignore-scripts`, which restores the approved lockfile. This also restores the coverage provider, so line coverage has not yet been measured in the primary checkout.
+- **Older P0 lock E2E specs** were written before onboarding came first (`2eaf45f`). If they fail in the P1 phase check, fix their setup steps; keep the lock assertions and do not change routing or security behaviour.
+- **Documentation debt:** the synthetic data generator is already v2 with no skipped seeds (`08dc10b`). Text that still describes v1 or skipped seeds (for example around A18) is out of date, not an open decision.
 
 ## After the P1 gate: P2 couple features
 
