@@ -10,6 +10,7 @@ This file lists the project owner's standing decisions in plain language. It rep
 - Use a short-lived branch for each change, then fast-forward `main`.
 - **Push `main` to GitHub after each verified merge** (standing approval). Push only `main`.
 - For sensitive areas (see [AGENTS.md](../AGENTS.md#sensitive-changes-and-review)), decide per change whether an independent review agent is warranted. The default is yes for anything non-trivial. Other work gets tests and self-review.
+- Non-sensitive work does not need a reviewer (owner, 2026-11-04). The bar is that it works, meets the task's goal and is implemented properly, shown by tests and the `check` gate.
 - Review findings block merging only for correctness, security, data-loss or spec defects. Nits become follow-ups (from [ADR-0012](adr/0012-lighter-review-and-testing.md)).
 - Run targeted tests while working and `npm run check` before merging. Full E2E, the time-zone matrix, coverage, the backtest and benchmarks run at phase end (ADR-0012).
 - The owner prefers to keep moving rather than wait on reports. Don't stop for confirmation on routine, in-scope work; ask only for the items listed in [AGENTS.md](../AGENTS.md#ask-the-owner-first).
