@@ -1,7 +1,16 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { openDatabase, writeMetaValue } from '../../../src/data/store/idb.ts';
-import { DATABASE_NAME } from '../../../src/data/store/schema.ts';
+import {
+  openDatabase,
+  requestResult,
+  transactionDone,
+  writeMetaValue,
+} from '../../../src/data/store/idb.ts';
+import {
+  DATABASE_NAME,
+  META_STORE,
+  PREVIEW_DATABASE_NAME,
+} from '../../../src/data/store/schema.ts';
 import { LOCK_META_KEY } from '../../../src/lock/core/persistence.ts';
 import { runLocalDataWipe } from '../../../src/data/wipe/index.ts';
 
@@ -67,8 +76,22 @@ describe('browser-backed local data wipe', () => {
     }
   }
 
+  async function readLockMaterial(name: string): Promise<unknown> {
+    const database = await openDatabase({ databaseName: name, initialSchemaVersion: 1 });
+    try {
+      const transaction = database.transaction(META_STORE, 'readonly');
+      const done = transactionDone(transaction);
+      const lock: unknown = await requestResult(transaction.objectStore(META_STORE).get(LOCK_META_KEY));
+      await done;
+      return lock;
+    } finally {
+      database.close();
+    }
+  }
+
   it('erases lock-bearing app storage, deletes every database, and clears supported browser stores', async () => {
     await seedDatabase(DATABASE_NAME, true);
+    await seedDatabase(PREVIEW_DATABASE_NAME, true);
     await seedDatabase('synthetic-secondary-database');
 
     await expect(runLocalDataWipe()).resolves.toEqual({ success: true, failures: [] });
@@ -122,6 +145,9 @@ describe('browser-backed local data wipe', () => {
   });
 
   it('fails closed when the browser cannot enumerate every IndexedDB database', async () => {
+    await seedDatabase(DATABASE_NAME, true);
+    await seedDatabase(PREVIEW_DATABASE_NAME, true);
+    const listDatabases = factory.databases.bind(factory);
     vi.spyOn(factory, 'databases').mockRejectedValue(
       new Error('synthetic database inventory unavailable'),
     );
@@ -131,9 +157,12 @@ describe('browser-backed local data wipe', () => {
       failures: ['IndexedDB databases'],
     });
     expect(factory.databases).toHaveBeenCalledOnce();
+    await expect(listDatabases()).resolves.toEqual([]);
   });
 
   it('fails closed when IndexedDB lacks the database inventory method', async () => {
+    await seedDatabase(DATABASE_NAME, true);
+    await seedDatabase(PREVIEW_DATABASE_NAME, true);
     vi.stubGlobal(
       'indexedDB',
       {
@@ -148,6 +177,43 @@ describe('browser-backed local data wipe', () => {
       failures: ['IndexedDB databases'],
     });
     await expect(factory.databases()).resolves.toEqual([]);
+  });
+
+  it('erases preview lock material even when preview database deletion fails', async () => {
+    await seedDatabase(PREVIEW_DATABASE_NAME, true);
+    const originalDelete = factory.deleteDatabase.bind(factory);
+    vi.spyOn(factory, 'deleteDatabase').mockImplementation((name) => {
+      if (name === PREVIEW_DATABASE_NAME) throw new Error('synthetic preview deletion failure');
+      return originalDelete(name);
+    });
+
+    await expect(runLocalDataWipe()).resolves.toEqual({
+      success: false,
+      failures: ['IndexedDB databases'],
+    });
+
+    await expect(readLockMaterial(PREVIEW_DATABASE_NAME)).resolves.toBeUndefined();
+  });
+
+  it('still erases preview lock material if the secured database cannot be opened', async () => {
+    await seedDatabase(DATABASE_NAME, true);
+    await seedDatabase(PREVIEW_DATABASE_NAME, true);
+    const originalOpen = factory.open.bind(factory);
+    const originalDelete = factory.deleteDatabase.bind(factory);
+    vi.spyOn(factory, 'open').mockImplementation((name, version) => {
+      if (name === DATABASE_NAME) throw new Error('synthetic secured database failure');
+      return originalOpen(name, version);
+    });
+    vi.spyOn(factory, 'deleteDatabase').mockImplementation((name) => {
+      if (name === PREVIEW_DATABASE_NAME) throw new Error('synthetic preview deletion failure');
+      return originalDelete(name);
+    });
+
+    await expect(runLocalDataWipe()).resolves.toEqual({
+      success: false,
+      failures: ['Crypto-erasure', 'IndexedDB databases'],
+    });
+    await expect(readLockMaterial(PREVIEW_DATABASE_NAME)).resolves.toBeUndefined();
   });
 
   it('reports unsupported browser cleanup APIs without skipping other wipe steps', async () => {

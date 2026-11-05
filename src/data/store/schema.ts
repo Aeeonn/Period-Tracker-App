@@ -1,6 +1,7 @@
 import type { RecordType } from '../../contracts/enums.ts';
 
 export const DATABASE_NAME = 'app';
+export const PREVIEW_DATABASE_NAME = 'app-unlocked-preview';
 export const SCHEMA_VERSION = 1;
 export const META_STORE = 'meta';
 export const RECORDS_STORE = 'records';

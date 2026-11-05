@@ -5,6 +5,7 @@ import './onboarding.css';
 
 export interface OnboardingIntroProps {
   readonly onRoleSelected: (role: OnboardingRole) => void;
+  readonly unlockedPreview?: boolean;
 }
 
 type IntroStep = 'welcome' | 'install' | 'role';
@@ -18,7 +19,10 @@ function standaloneMode(): boolean {
   return isStandaloneDisplayMode(displayMode, iosStandalone);
 }
 
-export function OnboardingIntro({ onRoleSelected }: OnboardingIntroProps) {
+export function OnboardingIntro({
+  onRoleSelected,
+  unlockedPreview = false,
+}: OnboardingIntroProps) {
   const [step, setStep] = useState<IntroStep>('welcome');
   const standalone = standaloneMode();
 
@@ -27,6 +31,12 @@ export function OnboardingIntro({ onRoleSelected }: OnboardingIntroProps) {
   return (
     <main class="onboarding-root" data-onboarding-step={step}>
       <section class="onboarding-panel" aria-labelledby="onboarding-title">
+        {unlockedPreview ? (
+          <p class="onboarding-warning" role="note">
+            Unlocked development preview: no passphrase protection. Use synthetic data only; do not
+            enter real information.
+          </p>
+        ) : null}
         <p class="onboarding-eyebrow">A little space for your cycle</p>
         {step === 'welcome' ? (
           <>

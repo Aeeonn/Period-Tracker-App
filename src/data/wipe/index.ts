@@ -2,10 +2,11 @@ import type { WrappedKey } from '../../contracts/crypto.ts';
 import { encodeBase64Url } from '../../crypto/primitives/encoding.ts';
 import { randomBytes } from '../../crypto/primitives/webcrypto.ts';
 import { LOCK_META_KEY, type LockConfiguration } from '../../lock/core/persistence.ts';
-import { DATABASE_NAME, META_STORE, type MetaRow } from '../store/schema.ts';
+import { DATABASE_NAME, META_STORE, PREVIEW_DATABASE_NAME, type MetaRow } from '../store/schema.ts';
 import { openDatabase, requestResult, transactionDone } from '../store/idb.ts';
 
 export const DELETE_ALL_REQUEST_EVENT = 'flo:delete-all-request';
+const KNOWN_DATABASE_NAMES = [DATABASE_NAME, PREVIEW_DATABASE_NAME] as const;
 
 export const WIPE_STEPS = [
   'Crypto-erasure',
@@ -56,13 +57,13 @@ function overwrittenLockConfiguration(): LockConfiguration {
   };
 }
 
-async function eraseLockMetadata(): Promise<void> {
+async function eraseLockMetadata(databaseName: string): Promise<void> {
   if (typeof globalThis.indexedDB === 'undefined') {
     throw new Error('IndexedDB is unavailable.');
   }
 
   const database = await openDatabase({
-    databaseName: DATABASE_NAME,
+    databaseName,
     initialSchemaVersion: 1,
   });
   try {
@@ -91,6 +92,18 @@ async function eraseLockMetadata(): Promise<void> {
   }
 }
 
+async function eraseKnownLockMetadata(): Promise<void> {
+  let failed = false;
+  for (const databaseName of KNOWN_DATABASE_NAMES) {
+    try {
+      await eraseLockMetadata(databaseName);
+    } catch {
+      failed = true;
+    }
+  }
+  if (failed) throw new Error('Some local lock material could not be erased.');
+}
+
 function deleteDatabase(factory: IDBFactory, name: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const request = factory.deleteDatabase(name);
@@ -113,7 +126,7 @@ async function deleteAllDatabases(): Promise<void> {
     throw new Error('IndexedDB is unavailable.');
   }
   const factory = globalThis.indexedDB;
-  let names: string[] = [DATABASE_NAME];
+  let names: string[] = [...KNOWN_DATABASE_NAMES];
   let inventoryComplete = true;
   try {
     if (typeof factory.databases !== 'function') {
@@ -121,7 +134,7 @@ async function deleteAllDatabases(): Promise<void> {
     } else {
       const databases = await factory.databases();
       names = [
-        ...new Set([...databases.flatMap((database) => database.name ?? []), DATABASE_NAME]),
+        ...new Set([...databases.flatMap((database) => database.name ?? []), ...KNOWN_DATABASE_NAMES]),
       ];
     }
   } catch {
@@ -204,7 +217,7 @@ async function unregisterAllServiceWorkers(): Promise<void> {
 
 function browserOperations(): LocalWipeOperations {
   return {
-    eraseKeyMaterial: eraseLockMetadata,
+    eraseKeyMaterial: eraseKnownLockMetadata,
     deleteIndexedDbDatabases: deleteAllDatabases,
     clearOpfs: clearOpfsStorage,
     clearCacheStorage: clearAppCaches,

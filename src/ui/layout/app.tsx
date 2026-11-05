@@ -42,6 +42,7 @@ export interface AppShellProps {
   readonly sessionOnboardingComplete?: boolean;
   readonly onOnboardingComplete?: () => void;
   readonly engineRunner?: EngineRunner;
+  readonly unlockedPreview?: boolean;
 }
 
 const OWNER_TABS: readonly Tab[] = [
@@ -242,6 +243,7 @@ export function AppShell({
   sessionOnboardingComplete = false,
   onOnboardingComplete,
   engineRunner,
+  unlockedPreview = false,
 }: AppShellProps) {
   const [sessionOnboardingRole, setSessionOnboardingRole] = useState<OnboardingRole | null>(
     () => initialOnboardingRole ?? null,
@@ -416,15 +418,26 @@ export function AppShell({
     return (
       <RepositoriesContext.Provider value={repositories}>
         {sessionOnboardingRole === null && !hasRoleInRoute ? (
-          <OnboardingIntro onRoleSelected={setSessionOnboardingRole} />
-        ) : (
-          <OnboardingScreen
-            role={role}
-            onComplete={() => {
-              setOnboardingStatus('complete');
-              onOnboardingComplete?.();
-            }}
+          <OnboardingIntro
+            onRoleSelected={setSessionOnboardingRole}
+            unlockedPreview={unlockedPreview}
           />
+        ) : (
+          <>
+            {unlockedPreview ? (
+              <p class="onboarding-warning" role="note">
+                Unlocked development preview: no passphrase protection. Use synthetic data only; do
+                not enter real information.
+              </p>
+            ) : null}
+            <OnboardingScreen
+              role={role}
+              onComplete={() => {
+                setOnboardingStatus('complete');
+                onOnboardingComplete?.();
+              }}
+            />
+          </>
         )}
       </RepositoriesContext.Provider>
     );
@@ -485,7 +498,9 @@ export function AppShell({
         <main class="shell-main shell-container" tabIndex={0}>
           <div class="shell-preview-banner" role="note">
             <span class="shell-preview-banner__dot" aria-hidden="true" />
-            Preview — synthetic data only
+            {unlockedPreview
+              ? 'Unlocked development preview: no passphrase protection. Use synthetic data only; do not enter real information.'
+              : 'Preview — synthetic data only'}
           </div>
           {updateNotice ? (
             <div role="status" aria-live="polite">

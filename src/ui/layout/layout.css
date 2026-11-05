@@ -360,3 +360,14 @@
     scroll-behavior: auto;
   }
 }
+
+.app-runtime-preview-warning {
+  max-inline-size: 32rem;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+}

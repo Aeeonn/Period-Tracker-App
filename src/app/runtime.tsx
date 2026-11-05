@@ -27,6 +27,12 @@ import { OnboardingIntro, type OnboardingRole } from '../ui/screens/onboarding/i
 import { DeleteResultScreen } from '../ui/screens/settings/delete/delete-screen.tsx';
 import { createAppUpdateCoordinator, type AppUpdateCoordinator } from './update-coordinator.ts';
 import { runEngineInWorker } from './engine-runner.ts';
+import {
+  initializeUnlockedPreview,
+  isUnlockedPreviewEnabled,
+  PREVIEW_DATABASE_NAME,
+  type PreviewBootstrapFailure,
+} from './unlocked-preview.ts';
 
 export const APP_AUTO_LOCK_TIMEOUT_MS = 60_000;
 
@@ -57,13 +63,34 @@ declare global {
   }
 }
 
-function initialLockService(): LockService {
-  return createLockService({ persistence: new IndexedDbLockPersistence(DATABASE_NAME) });
+function initialLockService(databaseName: string): LockService {
+  return createLockService({ persistence: new IndexedDbLockPersistence(databaseName) });
+}
+
+function previewFailureMessage(reason: PreviewBootstrapFailure): string {
+  switch (reason) {
+    case 'cancelled':
+      return 'Opening the unlocked preview was interrupted. No data was reset.';
+    case 'lock_unavailable':
+      return 'The unlocked preview could not coordinate other browser tabs. No data was reset.';
+    case 'storage_unavailable':
+      return 'The unlocked preview credential storage is unavailable. No data was reset or overwritten.';
+    case 'state_unavailable':
+      return 'The unlocked preview could not read its saved setup safely. No data was reset.';
+    case 'inconsistent_state':
+      return 'The unlocked preview credential and preview store do not match. No data was reset or overwritten.';
+    case 'setup_failed':
+      return 'The unlocked preview could not finish its lock setup. No existing data was reset.';
+    case 'unlock_failed':
+      return 'The unlocked preview could not unlock its preview store. No data was reset.';
+  }
 }
 
 export function AppRuntime() {
+  const unlockedPreview = isUnlockedPreviewEnabled();
+  const databaseName = unlockedPreview ? PREVIEW_DATABASE_NAME : DATABASE_NAME;
   const serviceRef = useRef<LockService | null>(null);
-  if (serviceRef.current === null) serviceRef.current = initialLockService();
+  if (serviceRef.current === null) serviceRef.current = initialLockService(databaseName);
   const service = serviceRef.current;
 
   const [runtimeState, setRuntimeState] = useState<RuntimeState>('starting');
@@ -73,6 +100,12 @@ export function AppRuntime() {
   const [onboardingRole, setOnboardingRole] = useState<OnboardingRole | null>(null);
   const [sessionOnboardingComplete, setSessionOnboardingComplete] = useState(false);
   const resourcesRef = useRef<AppRuntimeResources | null>(null);
+  const showAppRef = useRef<() => void>(() => undefined);
+  const resumePreviewRef = useRef<() => void>(() => undefined);
+  const restartStatusRef = useRef<'ready' | 'saving' | 'restarting'>('ready');
+  const previewResumeInProgress = useRef(false);
+  const previewIntroPending = useRef(false);
+  const preventPreviewResume = useRef(false);
   const deleteInProgress = useRef(false);
   const deleteRequest = useRef<() => void>(() => undefined);
   const [deleteResult, setDeleteResult] = useState<LocalWipeResult | null>(null);
@@ -81,39 +114,56 @@ export function AppRuntime() {
   useEffect(() => {
     let mounted = true;
     let windowReady = false;
+    let resumePreview: () => void = () => undefined;
     let stopAutoLock: () => void = () => undefined;
+    const previewAbort = new AbortController();
     const coordinator = createAppUpdateCoordinator({
       onPreparing: () => {
+        restartStatusRef.current = 'saving';
         if (mounted) setRestartStatus('saving');
       },
       onLocked: () => {
+        restartStatusRef.current = 'restarting';
         if (mounted) setRestartStatus('restarting');
         service.lock('manual');
       },
       onCancelled: () => {
+        restartStatusRef.current = 'ready';
         if (mounted) setRestartStatus('ready');
+        if (unlockedPreview && !service.isUnlocked()) resumePreview();
       },
     });
     const unsubscribe = service.onLock(() => {
       const resources = resourcesRef.current;
       resources?.lifecycle.close();
       if (resources) resources.repositories = null;
-      if (mounted && windowReady) {
-        setRuntimeError(null);
-        setRuntimeState('locked');
+      if (!mounted || !windowReady) return;
+      setRuntimeError(null);
+      if (
+        unlockedPreview &&
+        !deleteInProgress.current &&
+        !preventPreviewResume.current &&
+        restartStatusRef.current === 'ready'
+      ) {
+        resumePreview();
+        return;
       }
+      if (unlockedPreview && preventPreviewResume.current && !deleteInProgress.current) return;
+      setRuntimeState('locked');
     });
 
-    try {
-      stopAutoLock = attachAutoLock(service, { timeoutMs: APP_AUTO_LOCK_TIMEOUT_MS });
-    } catch {
-      setRuntimeError('This device could not start the app lock.');
-      setRuntimeState('error');
-      return () => {
-        mounted = false;
-        unsubscribe();
-        coordinator.dispose();
-      };
+    if (!unlockedPreview) {
+      try {
+        stopAutoLock = attachAutoLock(service, { timeoutMs: APP_AUTO_LOCK_TIMEOUT_MS });
+      } catch {
+        setRuntimeError('This device could not start the app lock.');
+        setRuntimeState('error');
+        return () => {
+          mounted = false;
+          unsubscribe();
+          coordinator.dispose();
+        };
+      }
     }
 
     const handleDeleteRequest = () => deleteRequest.current();
@@ -122,7 +172,7 @@ export function AppRuntime() {
     const lifecycle = createLockStoreLifecycle(service, async (keys) => {
       const crypto = createCryptoApi();
       const migrations = createMigrationRunner({
-        databaseName: DATABASE_NAME,
+        databaseName,
         schemaVersion: SCHEMA_VERSION,
         steps: MIGRATIONS,
         crypto,
@@ -136,7 +186,7 @@ export function AppRuntime() {
       }
 
       const store = await openRecordStore({
-        databaseName: DATABASE_NAME,
+        databaseName,
         schemaVersion: SCHEMA_VERSION,
         crypto,
         indexKey: keys.indexKey,
@@ -156,23 +206,88 @@ export function AppRuntime() {
     const resources: AppRuntimeResources = { coordinator, lifecycle, repositories: null };
     resourcesRef.current = resources;
 
+    resumePreview = () => {
+      if (
+        !mounted ||
+        !windowReady ||
+        restartStatusRef.current !== 'ready' ||
+        previewResumeInProgress.current ||
+        preventPreviewResume.current ||
+        deleteInProgress.current
+      ) {
+        return;
+      }
+      let finishWrite: () => void;
+      try {
+        finishWrite = coordinator.beginWrite();
+      } catch {
+        if (restartStatusRef.current !== 'ready') return;
+        preventPreviewResume.current = true;
+        if (service.isUnlocked()) service.lock('manual');
+        setRuntimeError('The unlocked preview could not coordinate its storage safely.');
+        setRuntimeState('error');
+        return;
+      }
+      previewResumeInProgress.current = true;
+      setRuntimeError(null);
+      setRuntimeState('opening');
+      void initializeUnlockedPreview(service, { signal: previewAbort.signal })
+        .then((result) => {
+          if (!mounted) return;
+          if (result.status === 'error') {
+            preventPreviewResume.current = true;
+            setRuntimeError(previewFailureMessage(result.reason));
+            setRuntimeState('error');
+            return;
+          }
+          if (result.firstRun && !syntheticPreview) previewIntroPending.current = true;
+          if (restartStatusRef.current !== 'ready') return;
+          if (previewIntroPending.current) {
+            setRuntimeState('onboarding');
+          } else {
+            showAppRef.current();
+          }
+        })
+        .catch(() => {
+          if (!mounted) return;
+          preventPreviewResume.current = true;
+          if (service.isUnlocked()) service.lock('manual');
+          setRuntimeError('The unlocked preview could not start safely. No data was reset.');
+          setRuntimeState('error');
+        })
+        .finally(() => {
+          previewResumeInProgress.current = false;
+          finishWrite();
+        });
+    };
+    resumePreviewRef.current = resumePreview;
+
     void coordinator
       .start()
       .then(async () => {
         if (!mounted) return;
-        const setupState = await service.setupState();
-        if (!mounted) return;
-        windowReady = true;
-        window.floAppUpdate = { beginWrite: coordinator.beginWrite };
-        setRuntimeState(
-          setupState === 'not_configured' && !syntheticPreview ? 'onboarding' : 'locked',
-        );
+        if (unlockedPreview) {
+          windowReady = true;
+          window.floAppUpdate = { beginWrite: coordinator.beginWrite };
+          resumePreview();
+        } else {
+          const setupState = await service.setupState();
+          if (!mounted) return;
+          windowReady = true;
+          window.floAppUpdate = { beginWrite: coordinator.beginWrite };
+          setRuntimeState(
+            setupState === 'not_configured' && !syntheticPreview ? 'onboarding' : 'locked',
+          );
+        }
         void registerServiceWorker({
           writeCoordinator: coordinator,
           onUpdateReady: (notice) => {
             if (!mounted) return;
             setUpdateNotice(notice);
-            setRestartStatus('ready');
+            if (!unlockedPreview || restartStatusRef.current === 'ready') {
+              restartStatusRef.current = 'ready';
+              setRestartStatus('ready');
+            }
           },
         }).catch(() => undefined);
       })
@@ -185,12 +300,14 @@ export function AppRuntime() {
     return () => {
       mounted = false;
       windowReady = false;
+      previewAbort.abort();
+      resumePreviewRef.current = () => undefined;
       window.removeEventListener(DELETE_ALL_REQUEST_EVENT, handleDeleteRequest);
       stopAutoLock();
       if (window.floAppUpdate?.beginWrite === coordinator.beginWrite) {
         delete window.floAppUpdate;
       }
-      if (service.isUnlocked()) service.lock('cold_start');
+      if (unlockedPreview || service.isUnlocked()) service.lock('cold_start');
       unsubscribe();
       lifecycle.dispose();
       coordinator.dispose();
@@ -223,6 +340,13 @@ export function AppRuntime() {
       })
       .catch(() => {
         if (!service.isUnlocked()) return;
+        if (unlockedPreview) {
+          preventPreviewResume.current = true;
+          service.lock('manual');
+          setRuntimeError('The unlocked preview store could not be opened safely. No data was reset.');
+          setRuntimeState('error');
+          return;
+        }
         service.lock('manual');
         setRuntimeError('The encrypted store could not be opened safely. Try unlocking again.');
         setRuntimeState('locked');
@@ -231,6 +355,15 @@ export function AppRuntime() {
 
   const beginLockSetup = (role: OnboardingRole) => {
     setOnboardingRole(role);
+    if (unlockedPreview) {
+      previewIntroPending.current = false;
+      if (service.isUnlocked() && restartStatusRef.current === 'ready') {
+        showAppRef.current();
+      } else {
+        resumePreviewRef.current();
+      }
+      return;
+    }
     setRuntimeState('onboarding-lock');
   };
 
@@ -269,6 +402,8 @@ export function AppRuntime() {
     return <DeleteResultScreen result={deleteResult} onContinue={continueToFreshSetup} />;
   }
 
+  showAppRef.current = showApp;
+
   if (runtimeState === 'ready') {
     const resources = resourcesRef.current;
     if (!resources || resources.repositories === null) return null;
@@ -282,12 +417,13 @@ export function AppRuntime() {
         updateNotice={updateNotice}
         restartStatus={restartStatus}
         cancelRestart={() => resources.coordinator.cancelRestart()}
+        unlockedPreview={unlockedPreview}
       />
     );
   }
 
   if (runtimeState === 'onboarding') {
-    return <OnboardingIntro onRoleSelected={beginLockSetup} />;
+    return <OnboardingIntro onRoleSelected={beginLockSetup} unlockedPreview={unlockedPreview} />;
   }
 
   if (runtimeState === 'error') {
@@ -302,7 +438,31 @@ export function AppRuntime() {
     return (
       <main class="app-runtime-message">
         <p role="status">
-          {runtimeState === 'starting' ? 'Starting this device…' : 'Opening the encrypted store…'}
+          {runtimeState === 'starting'
+            ? 'Starting this device…'
+            : unlockedPreview
+              ? 'Opening the unlocked preview store…'
+              : 'Opening the encrypted store…'}
+        </p>
+        {unlockedPreview ? (
+          <p class="app-runtime-preview-warning" role="note">
+            Unlocked development preview: no passphrase protection. Use synthetic data only.
+          </p>
+        ) : null}
+      </main>
+    );
+  }
+
+  if (runtimeState === 'locked' && unlockedPreview) {
+    return (
+      <main class="app-runtime-message">
+        <p role="status">
+          {restartStatus === 'restarting'
+            ? 'The app is locked while the update restarts.'
+            : 'Reopening the unlocked preview…'}
+        </p>
+        <p class="app-runtime-preview-warning" role="note">
+          Unlocked development preview: no passphrase protection. Use synthetic data only.
         </p>
       </main>
     );

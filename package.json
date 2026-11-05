@@ -7,6 +7,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "dev": "vite --mode unlocked-preview",
+    "dev:secured": "vite",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format:check": "prettier --check package.json package-lock.json tsconfig.json vite.config.ts vitest.config.ts playwright.config.ts eslint.config.js .prettierrc tools/allowed-licenses.json tools/*.ts tests/golden/README.md",
