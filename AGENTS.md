@@ -30,7 +30,7 @@ In `task-briefs.md` and `backlog.md`, use the goals, owned areas, interfaces and
 
 - The repository lives in WSL Ubuntu-24.04 at `/home/justi/code/flo` (Windows: `\\wsl.localhost\Ubuntu-24.04\home\justi\code\flo`). Run `node`, `npm` and `git` **inside WSL**; Windows npm cannot resolve the tools on the UNC path.
 - From PowerShell, run single commands like this: `wsl.exe --cd '\\wsl.localhost\Ubuntu-24.04\home\justi\code\flo' -- bash -lic 'npm run check'`.
-- For multi-line scripts, pipe a single-quoted here-string and `cd` first, because WSL shells may start in another directory:
+- For multi-line scripts, pipe a single-quoted here-string. Start the script with `cd /home/justi/code/flo` (WSL shells may start elsewhere) and `. ~/.nvm/nvm.sh` (Node comes from nvm and is not on `PATH` in a non-interactive shell; `npx` may otherwise resolve to Windows):
   `@'` … `'@ | wsl.exe -- bash -lc "tr -d '\r' | bash -l -s"`.
   Inline `wsl bash -lc "..."` mangles `$`, quotes and `;`. Keep piped scripts ASCII (PowerShell 5 pipes ASCII to native programs). Give commands that read stdin (for example `cmd.exe`) `</dev/null` inside a piped script.
 - Files created from Windows tools on `\\wsl.localhost` paths can get CRLF line endings. Normalise new files (`sed -i 's/\r$//' <file>` or Prettier) before committing; scripts otherwise fail with `bash\r`.
