@@ -2,6 +2,8 @@
 
 _Adapted for Pi + Herdr + Firstmate on WSL2 Ubuntu._
 
+> **History (2026-11-04):** This is the original planning prompt. The Pi/Herdr/Firstmate workflow it assumes is retired ([ADR-0015](docs/adr/0015-normal-agentic-development.md)). Work from [AGENTS.md](AGENTS.md) instead.
+
 ## 1. Your role
 
 You are the lead planner for a personal software project. Execution runs on Firstmate: the first mate (a Pi session) dispatches Pi crewmates into Herdr panes, each in its own git worktree. Section 1a explains how this prompt maps onto that setup. Work with the judgment of a senior product engineer who also understands:

@@ -1,5 +1,9 @@
 # Period-Tracker-App
 
+Flo is a private, local-first cycle-tracking web app for iPhone. **Contributors and coding agents: start with [AGENTS.md](AGENTS.md)**, then [docs/status.md](docs/status.md) and [docs/decisions.md](docs/decisions.md).
+
+Use synthetic data only in development, tests and previews. A synthetic preview must be deployed with an explicit non-`main` alias: `tools/deploy/pages-preview.sh app --branch <alias>`. Without `--branch`, the script deploys to the Pages production branch.
+
 ## Unlocked development preview
 
 `npm run dev` starts the explicitly named `unlocked-preview` mode. It keeps the encrypted record-store pipeline, but automatically creates and stores a random preview-only lock credential in this browser. The credential is not a security boundary: the preview has **no passphrase protection**. Use synthetic data only; never enter real health information.

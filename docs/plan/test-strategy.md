@@ -112,6 +112,8 @@
 
 ## 4. Definition of Ready (task)
 
+> **Since 2026-11-04 ([ADR-0015](../adr/0015-normal-agentic-development.md)):** briefs, routes, models, `<task>-verify` items and per-wave reviews no longer apply. Use [AGENTS.md](../../AGENTS.md#definition-of-done) for readiness and done; the test and review-severity rules in this section still hold.
+
 A task is Ready when all of these hold:
 
 - A brief exists in [task-briefs.md](task-briefs.md) with:
@@ -129,6 +131,8 @@ A task is Ready when all of these hold:
 - Required credentials or approvals exist. Otherwise the task is _blocked_, which does not count as a failed round.
 
 ## 5. Definition of Done (task)
+
+> **Since 2026-11-04 ([ADR-0015](../adr/0015-normal-agentic-development.md)):** briefs, routes, models, `<task>-verify` items and per-wave reviews no longer apply. Use [AGENTS.md](../../AGENTS.md#definition-of-done) for readiness and done; the test and review-severity rules in this section still hold.
 
 A task is Done when all of these hold:
 

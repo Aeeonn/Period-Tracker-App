@@ -1,14 +1,22 @@
 # Progress and decisions
 
-This log records approved choices separately from completed evidence and pending permissions. The authoritative plan and execution gates are in [`docs/plan/plan.md`](plan/plan.md), [`task-briefs.md`](plan/task-briefs.md), and [`agent-operating-model.md`](plan/agent-operating-model.md).
+This log records approved choices separately from completed evidence and pending permissions. The authoritative plan is [`docs/plan/plan.md`](plan/plan.md). Since 2026-11-04, the current state and next steps are in [`status.md`](status.md), and the owner's standing decisions are in [`decisions.md`](decisions.md). Entries before that date use Firstmate-era terms ("captain", `-verify` items, `~/firstmate` report paths); those reports remain outside the repository as history.
 
 ## Approved choices
+
+- **2026-11-04 — Normal agentic development:** the Firstmate-style workflow is retired ([ADR-0015](adr/0015-normal-agentic-development.md)). The workflow now uses a feature branch, a fast-forward to `main` and an automatic push of `main`, with an independent review for sensitive changes. Owner decisions were migrated to [decisions.md](decisions.md).
 
 - **2026-10-02 — Plan approval:** retain encrypted backup/restore, joint hosting custody, and Canadian guidance. The approval of plan defaults alone did not authorize infrastructure or operational actions; the separately approved pinned local dependency set is recorded below.
 - Canadian guidance is selected, but **Canadian localization is not ready for P1**: content needs cited Canadian sources and independent review first.
 - Optional administrative help remains exploratory only. It is not permission to access or edit private data, operate an account, change records, or bypass category consent.
 
 ## Completed evidence
+
+- **2026-11-04 — `retire-firstmate`:** removed the Firstmate agents, orchestration skills and `tools/agent-ops`. Added [AGENTS.md](../AGENTS.md), [status.md](status.md), [decisions.md](decisions.md), ADR-0015, the `flo-reviewer` agent and the `sensitive-change-review` skill. Documentation and agent configuration only.
+
+- **2026-11-04 — `p1-demo-redeploy-navigation` record — main `7f3b536`:** brought the partial P1 preview redeployment record onto `main` ([deploy/p1-demo.md](deploy/p1-demo.md)): https://e056cc9b.flo-preview-cm6.pages.dev from `34b38d5`. Its OPFS delete-all and offline-reload limits are still open.
+
+- **2026-11-04 — `dev-unlocked-preview` — main `8f383cb`:** `npm run dev` now runs an unlocked development mode with a separate synthetic-only database. The passphrase and recovery code are skipped there, while secured builds are unchanged. Independent review PASS: `~/firstmate/data/dev-unlocked-preview-verify/report.md`; its low-severity follow-ups are in [status.md](status.md). Checked on desktop Edge and in WebKit iPhone emulation, in both modes.
 
 - **2026-10-31 — `p1-preview-navigation-fix` — main `3c96d61`:** reviewed compatible redirected SW navigation response plus coupled controller-readiness/route-aware smoke procedure. Scope4 paths, build/check410/size PASS; independent scoped units4, WebKit10 and adjacent headers/network16 PASS with failing-base/passing-fixed Pages308 counterfactual. Report: `~/firstmate/data/p1-preview-navigation-fix-verify/report.md`. No dependency/CSP/deletion/engine/crypto changes. Guarded publication verified; fresh live preview/smoke and independent phase package follow, OPFS/native offline limits not waived.
 

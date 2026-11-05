@@ -1,5 +1,7 @@
 # Flo backlog
 
+> **Retired 2026-11-04 ([ADR-0015](../adr/0015-normal-agentic-development.md)).** The Firstmate-style workflow described here is no longer used. Follow [AGENTS.md](../../AGENTS.md) instead. This board is **frozen** as of that date and `backlog.py` was removed. The live list of current work and next steps is [docs/status.md](../status.md). Item ids and `blocked-by` dependencies below remain a useful reference.
+
 **Source of truth for Flo work items since 2026-10-28.** It replaces Firstmate's `tasks-axi` backlog (`~/firstmate/data/backlog.md`) for Flo, because the VS Code Copilot orchestrator ([ADR-0011](../adr/0011-vscode-copilot-orchestration.md)) cannot drive Pi, Herdr or `tasks-axi`. Items were migrated on 2026-10-28 from [backlog-import.md](backlog-import.md) (structure, routes, owned paths) and the Firstmate backlog and archive (status). Task briefs, reports and status logs stay outside the repository in `~/firstmate/data/<id>/` and `~/firstmate/state/<id>.status`, so verifier reports never live in reviewed source and Firstmate can take over again.
 
 ## Rules

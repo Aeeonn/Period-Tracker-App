@@ -1,5 +1,7 @@
 # Agent operating model (Step 9)
 
+> **Retired 2026-11-04 ([ADR-0015](../adr/0015-normal-agentic-development.md)).** The Firstmate-style workflow described here is no longer used. Follow [AGENTS.md](../../AGENTS.md) instead. This file is kept as history; its roles, worktree slots, routing and landing rules no longer apply.
+
 **Status:** Revised 2026-10-30 for the lighter review and testing policy ([ADR-0012](../adr/0012-lighter-review-and-testing.md)); Copilot orchestration is recorded in [ADR-0011](../adr/0011-vscode-copilot-orchestration.md). The six selected changes narrow high-risk review, set its severity and closure rules, waive review for clean rebases, lighten per-task test runs, and establish standing landing approvals. The three-round cap and escalation after two failed rounds remain unchanged.
 
 **One orchestrator, no new services.** The orchestrator is a VS Code Copilot chat running the `flo-orchestrator` agent. Workers are Copilot subagents. The backlog is [backlog.md](backlog.md). Tooling is a few bash and python scripts inside skills. Nothing runs between turns.

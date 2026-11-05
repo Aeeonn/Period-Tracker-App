@@ -1,5 +1,7 @@
 # Task briefs — P0–P2.5 (Step 9/10)
 
+> **Retired 2026-11-04 ([ADR-0015](../adr/0015-normal-agentic-development.md)).** The Firstmate-style workflow described here is no longer used. Follow [AGENTS.md](../../AGENTS.md) instead. The per-item goals, scope, acceptance criteria and test commands below are still the best specification for each remaining item; ignore the brief, route, model, worktree and status-file mechanics.
+
 **Status:** Stage E revision, 2026-10-02 (Stage C draft corrected after the Stage D critique; see [stage-e-resolution.md](stage-e-resolution.md)); common sections updated 2026-10-28 for VS Code Copilot orchestration ([ADR-0011](../adr/0011-vscode-copilot-orchestration.md)). These briefs are written for the work _after_ approval. Each one is self-contained by reference: it points to plan files by path rather than pasting them. The orchestrator turns each into a launch brief from the [`task-brief`](../../.agents/skills/task-brief/SKILL.md) templates, which add the worktree-isolation assertion, the status protocol and the Definition of Done. Task-specific text below that mentions Pi, `pi --list-models` or Firstmate scripts describes completed Phase 0 work and is kept as history.
 
 ## Common sections (apply to every brief below)

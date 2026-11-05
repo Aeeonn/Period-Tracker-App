@@ -279,6 +279,8 @@ Full strategy: [test-strategy.md](test-strategy.md).
 
 ## 13. Agent operating model, model/credit policy and board
 
+> **Superseded 2026-11-04 by [ADR-0015](../adr/0015-normal-agentic-development.md).** Development now follows [AGENTS.md](../../AGENTS.md): one agent, a feature branch fast-forwarded to `main`, and an independent review for sensitive changes. This section is kept as history.
+
 Full model: [agent-operating-model.md](agent-operating-model.md) and [ADR-0009](../adr/0009-agent-operating-model-on-firstmate.md).
 
 > **Update 2026-10-28 ([ADR-0011](../adr/0011-vscode-copilot-orchestration.md)).** Pi can no longer sign in, so the mechanisms in this section moved to VS Code Copilot. The orchestrator is the `flo-orchestrator` agent. Workers are the `flo-builder`, `flo-verifier`, `flo-researcher`, `flo-critic` and `flo-planner` subagents. The board is [backlog.md](backlog.md). Landing uses `land.sh` (guarded fast-forward, then a main-only upload to the captain's GitHub repository). The worker limit is **10**. The verifier sandbox was superseded by ordinary review with "isolation not enforced". The routing rules, fix-round limits and landing discipline below are unchanged; the text below is kept as approved.

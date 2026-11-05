@@ -1,6 +1,6 @@
 # ADR-0012: Lighter review and testing
 
-- **Status:** Accepted (captain decision, 2026-10-30).
+- **Status:** Accepted (captain decision, 2026-10-30). Amended by [ADR-0015](0015-normal-agentic-development.md) (2026-11-04): the review and test policy stays, but the model routing, `<task>-verify` items and per-wave batched reviews no longer apply.
 - **Context:** Several P0/P1 items needed multiple review rounds. `p0-lock-contract` took five rounds, including a FAIL for a low-severity type-only issue; the relay spike also incurred repeated approvals and renewed reviews after rebases. The per-task full test burden slowed delivery.
 - **Decision:**
   - Reserve a dedicated Opus `<task>-verify` for prediction/medical engine algorithms, crypto and keys, pairing and sync merge, consent enforcement, migrations and backup/restore, and medical content. Relay glue, CSP/header tweaks, settings, UI, docs and preview deploys use builder gates plus one batched rule-5 Luna review per wave.
