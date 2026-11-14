@@ -35,6 +35,7 @@ function recordsForDevice(
   identity: Awaited<ReturnType<SettingsRepo['getDeviceIdentity']>>,
 ): readonly LogicalRecord[] {
   return records.filter((record) => {
+    if (record.entity === 'DeviceIdentity') return false;
     if (identity?.role === 'partner' && !PARTNER_EXPORT_ENTITIES.has(record.entity)) return false;
     // AP-08 allows either person to export the readable couple space before unpairing.
     return true;
@@ -44,6 +45,7 @@ function recordsForDevice(
 function importSummary(
   documentSchemaVersion: number,
   records: readonly LogicalRecord[],
+  skippedDeviceIdentities: number,
   result: { readonly newer: number; readonly older: number; readonly conflicts: number },
 ): ImportSummary {
   const countsByEntity: Partial<Record<EntityName, number>> = {};
@@ -53,6 +55,7 @@ function importSummary(
   return {
     schemaVersion: documentSchemaVersion,
     countsByEntity,
+    skippedDeviceIdentities,
     newer: result.newer,
     older: result.older,
     conflicts: result.conflicts,
@@ -94,12 +97,14 @@ export function createPortableBackupService(
     async importJson(file, options) {
       const parsed = await parsePortableFile(file, SCHEMA_VERSION);
       if (!parsed.ok) return { ok: false, error: parsed.error };
-      const merge = await importWriter.mergePortableRecords(parsed.document.records, {
+      const records = parsed.document.records.filter((record) => record.entity !== 'DeviceIdentity');
+      const skippedDeviceIdentities = parsed.document.records.length - records.length;
+      const merge = await importWriter.mergePortableRecords(records, {
         dryRun: options.dryRun,
       });
       return {
         ok: true,
-        summary: importSummary(parsed.document.schemaVersion, parsed.document.records, merge),
+        summary: importSummary(parsed.document.schemaVersion, records, skippedDeviceIdentities, merge),
         applied: !options.dryRun,
       };
     },

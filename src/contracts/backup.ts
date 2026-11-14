@@ -17,6 +17,13 @@ export const PARTNER_BACKUP_EXCLUDED_ENTITIES = [
   'ShareEpochKey',
 ] as const satisfies readonly EntityName[];
 
+/** Device-local or derived records that are never part of a portable file. */
+export const PORTABLE_EXCLUDED_ENTITIES = [
+  'DeviceIdentity',
+  'Projection',
+  'ShareEpochKey',
+] as const satisfies readonly EntityName[];
+
 export type BackupSecret =
   | { readonly kind: 'passphrase'; readonly passphrase: string }
   | { readonly kind: 'recovery_code'; readonly code: string };
@@ -29,6 +36,7 @@ export interface ExportFile {
 export interface ImportSummary {
   readonly schemaVersion: number;
   readonly countsByEntity: Readonly<Partial<Record<EntityName, number>>>;
+  readonly skippedDeviceIdentities: number;
   readonly newer: number;
   readonly older: number;
   readonly conflicts: number;

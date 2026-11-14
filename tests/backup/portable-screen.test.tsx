@@ -3,6 +3,7 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DeviceId, LogicalId } from '../../src/contracts/brand.ts';
+import type { DeviceIdentity } from '../../src/contracts/entities.ts';
 import type { LogicalRecord } from '../../src/contracts/store.ts';
 import { SCHEMA_VERSION } from '../../src/data/store/schema.ts';
 import { createLogRepo, createSettingsRepo } from '../../src/data/repos/index.ts';
@@ -198,6 +199,36 @@ describe('portable data screen', () => {
       units: { temp: 'celsius', weight: 'kg' },
     });
     expect(root.querySelector('[aria-label="Import preview summary"]')).not.toBeNull();
+  });
+
+  it('explains that a device identity from an older export is skipped', async () => {
+    const { root } = fixture();
+    const foreignDevice = 'foreign-portable-device' as DeviceId;
+    const identity: LogicalRecord<'DeviceIdentity'> = {
+      entity: 'DeviceIdentity',
+      logicalId: foreignDevice as unknown as LogicalId,
+      authorDevice: foreignDevice,
+      hlc: { wallMs: 1_800_000_000_000, counter: 0, deviceId: foreignDevice },
+      deleted: false,
+      body: {
+        deviceId: foreignDevice,
+        role: 'owner',
+        signPub: 'synthetic-signing-key' as DeviceIdentity['signPub'],
+        agreePub: 'synthetic-agreement-key' as DeviceIdentity['agreePub'],
+        displayName: 'Synthetic owner',
+        createdAt: '2024-01-01T09:00' as DeviceIdentity['createdAt'],
+      },
+    };
+    const document = createPortableDocument([identity, profileRecord()], SCHEMA_VERSION);
+    const file = new File([JSON.stringify(document)], 'synthetic-legacy-export.json', {
+      type: 'application/json',
+    });
+
+    await selectFile(root, file);
+
+    expect(root.querySelector('[aria-label="Import preview summary"]')?.textContent).toContain(
+      '1 device identity from this export was skipped because each device keeps its own identity.',
+    );
   });
 
   it('uses the native share sheet when available and presents safe export errors', async () => {

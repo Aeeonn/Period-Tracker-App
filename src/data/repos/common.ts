@@ -1,7 +1,7 @@
 import type { DeviceId, LogicalId } from '../../contracts/brand.ts';
-import { PARTNER_BACKUP_EXCLUDED_ENTITIES } from '../../contracts/backup.ts';
+import { PORTABLE_EXCLUDED_ENTITIES } from '../../contracts/backup.ts';
 import type { EntityMap, EntityName } from '../../contracts/entities.ts';
-import { ENTITY_NAMES, ENTITY_RECORD_TYPE } from '../../contracts/store.ts';
+import { ENTITY_NAMES } from '../../contracts/store.ts';
 import type {
   LogicalRecord,
   RecordStore,
@@ -78,10 +78,7 @@ export async function putEntity<E extends EntityName>(
 }
 
 function isExcludedFromPortableExport(entity: EntityName): boolean {
-  return (
-    ENTITY_RECORD_TYPE[entity] === 'proj' ||
-    PARTNER_BACKUP_EXCLUDED_ENTITIES.some((excluded) => excluded === entity)
-  );
+  return PORTABLE_EXCLUDED_ENTITIES.some((excluded) => excluded === entity);
 }
 
 export async function listPortableRecords(store: RecordStore): Promise<readonly LogicalRecord[]> {

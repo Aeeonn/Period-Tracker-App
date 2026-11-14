@@ -198,6 +198,14 @@ export function PortableDataScreen({ onBack }: PortableDataScreenProps) {
               <h3>Dry-run summary</h3>
               <p>Schema version {summary.schemaVersion}</p>
               <p>{summary.newer} newer, {summary.older} older, {summary.conflicts} conflicts</p>
+              {summary.skippedDeviceIdentities > 0 ? (
+                <p>
+                  {summary.skippedDeviceIdentities} device identity
+                  {summary.skippedDeviceIdentities === 1 ? '' : ' records'} from this export
+                  {summary.skippedDeviceIdentities === 1 ? ' was' : ' were'} skipped because each
+                  device keeps its own identity.
+                </p>
+              ) : null}
               <ul>
                 {Object.entries(summary.countsByEntity).map(([entity, count]) => (
                   <li key={entity}>{entity}: {count}</li>

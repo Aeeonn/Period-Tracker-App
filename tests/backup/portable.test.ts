@@ -9,7 +9,10 @@ import type {
   ReminderRule,
 } from '../../src/contracts/entities.ts';
 import type { LogicalRecord } from '../../src/contracts/store.ts';
+import type { OpenRecordStore } from '../../src/data/store/store.ts';
+import { ensureDeviceIdentity } from '../../src/app/device-identity.ts';
 import { createLogRepo, createSettingsRepo } from '../../src/data/repos/index.ts';
+import { logicalId } from '../../src/data/repos/common.ts';
 import { SCHEMA_VERSION } from '../../src/data/store/schema.ts';
 import { addDays, parse } from '../../src/lib/localdate/index.ts';
 import { createPortableBackupService, type PortableBackupRepositories } from '../../src/backup/portable/service.ts';
@@ -22,6 +25,8 @@ import { MemoryRecordStore } from '../data/repos/memory-record-store.ts';
 
 const ownDevice = 'synthetic-export-device' as DeviceId;
 const remoteDevice = 'synthetic-remote-device' as DeviceId;
+const initializedDevice = '123e4567-e89b-42d3-a456-426614174000' as DeviceId;
+const foreignDevice = '223e4567-e89b-42d3-a456-426614174000' as DeviceId;
 
 function stamp(wallMs: number, deviceId = ownDevice): Hlc {
   return { wallMs, counter: 0, deviceId };
@@ -39,7 +44,10 @@ function profile(theme: Profile['theme'] = 'light'): Profile {
   };
 }
 
-function seedIdentity(store: MemoryRecordStore, deviceId: DeviceId, role: DeviceIdentity['role']): void {
+function identityRecord(
+  deviceId: DeviceId,
+  role: DeviceIdentity['role'],
+): LogicalRecord<'DeviceIdentity'> {
   const identity: DeviceIdentity = {
     deviceId,
     role,
@@ -48,14 +56,27 @@ function seedIdentity(store: MemoryRecordStore, deviceId: DeviceId, role: Device
     displayName: `Synthetic ${role}`,
     createdAt: '2024-01-01T09:00' as DeviceIdentity['createdAt'],
   };
-  store.seed({
+  return {
     entity: 'DeviceIdentity',
-    logicalId: deviceId as unknown as LogicalId,
+    logicalId: logicalId(deviceId),
     authorDevice: deviceId,
     hlc: stamp(1, deviceId),
     deleted: false,
     body: identity,
-  });
+  };
+}
+
+function seedIdentity(store: MemoryRecordStore, deviceId: DeviceId, role: DeviceIdentity['role']): void {
+  store.seed(identityRecord(deviceId, role));
+}
+
+class OpenMemoryRecordStore extends MemoryRecordStore implements OpenRecordStore {
+  readonly status = 'READY' as const;
+  readonly schemaVersion = 1;
+  readonly databaseVersion = 1;
+  readonly readOnly = false;
+
+  close(): void {}
 }
 
 function repositories(store: MemoryRecordStore, deviceId: DeviceId): PortableBackupRepositories {
@@ -134,16 +155,25 @@ describe('portable export and import', () => {
     expect(exported.fileName).toBe('data-export.json');
     expect(document.schemaVersion).toBe(SCHEMA_VERSION);
     expect(document.engineVersion).toMatch(/^cycle-engine\//u);
-    expect(document.records).toHaveLength(731);
+    expect(document.records).toHaveLength(730);
+    expect(document.records.every((record) => record.entity === 'DayBundle')).toBe(true);
 
     const restored = new MemoryRecordStore();
     const restoredService = createPortableBackupService(repositories(restored, ownDevice));
     const blob = new Blob([await exported.file.text()], { type: 'application/json' });
     const preview = await restoredService.importJson(blob, { dryRun: true });
-    expect(preview).toMatchObject({ ok: true, applied: false, summary: { newer: 731 } });
+    expect(preview).toMatchObject({
+      ok: true,
+      applied: false,
+      summary: { newer: 730, skippedDeviceIdentities: 0 },
+    });
     expect(await restored.list('DayBundle')).toHaveLength(0);
     const result = await restoredService.importJson(blob, { dryRun: false });
-    expect(result).toMatchObject({ ok: true, applied: true, summary: { newer: 731 } });
+    expect(result).toMatchObject({
+      ok: true,
+      applied: true,
+      summary: { newer: 730, skippedDeviceIdentities: 0 },
+    });
 
     const restoredExport = await restoredService.exportJson();
     expect(await parseJson(restoredExport.file)).toEqual(document);
@@ -151,6 +181,40 @@ describe('portable export and import', () => {
     expect(csv.fileName).toBe('data-export-flow.csv');
     expect(csv.file.type).toContain('text/csv');
     expect((await csv.file.text()).match(/\r\n/gu)).toHaveLength(731);
+  });
+
+  it('skips foreign device identities from older exports and preserves the local identity after import', async () => {
+    const store = new OpenMemoryRecordStore();
+    seedIdentity(store, initializedDevice, 'owner');
+    const day = dayRecord('2024-02-02', 2);
+    const legacy = createPortableDocument(
+      [identityRecord(foreignDevice, 'owner'), day],
+      SCHEMA_VERSION,
+    );
+    const file = new Blob([JSON.stringify(legacy)], { type: 'application/json' });
+    const service = createPortableBackupService(repositories(store, initializedDevice));
+
+    const preview = await service.importJson(file, { dryRun: true });
+    expect(preview).toMatchObject({
+      ok: true,
+      applied: false,
+      summary: {
+        countsByEntity: { DayBundle: 1 },
+        skippedDeviceIdentities: 1,
+        newer: 1,
+      },
+    });
+    expect(await store.list('DeviceIdentity')).toHaveLength(1);
+    expect(await store.list('DayBundle')).toHaveLength(0);
+
+    await expect(service.importJson(file, { dryRun: false })).resolves.toMatchObject({
+      ok: true,
+      applied: true,
+      summary: { skippedDeviceIdentities: 1, newer: 1 },
+    });
+    await expect(ensureDeviceIdentity(store)).resolves.toBe(initializedDevice);
+    expect(await store.list('DeviceIdentity')).toHaveLength(1);
+    expect(await store.list('DayBundle')).toEqual([day]);
   });
 
   it('rejects malformed, partial, and newer-schema files without writing any records', async () => {
@@ -273,7 +337,6 @@ describe('portable export and import', () => {
     expect(document.records.map((record) => record.entity)).toEqual([
       'CoupleEntry',
       'CoupleEntry',
-      'DeviceIdentity',
       'Profile',
       'ReminderRule',
     ]);
