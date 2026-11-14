@@ -208,7 +208,7 @@ Couple entries and control messages go through an append log on the relay. Proje
 | Entity | Key fields |
 |---|---|
 | `DeviceIdentity` | deviceId, role (owner\|partner), signPub, agreePub, displayName, createdAt |
-| `Profile` | birthYear?, typicalCycleLength?, typicalPeriodLength?, goal (track\|avoid_pregnancy\|ttc), lifeStage, units {temp °C\|°F, weight kg\|lb}, weekStart, theme (system\|light\|dark), lockTimeoutSec, quickHideEnabled |
+| `Profile` | birthYear?, typicalCycleLength?, typicalPeriodLength?, goal (track\|avoid_pregnancy\|ttc), lifeStage, units {temp °C\|°F, weight kg\|lb}, weekStart, theme (system\|light\|dark), lockTimeoutSec, quickHideEnabled, recentContentCards? (encrypted A17 display history; not a sharing category) |
 | `DayBundle` | localDate, per-tracker fields (below), per-field hlc |
 | `PeriodOverride` | localDate, kind (start\|not_start\|exclude_cycle\|confirm_long_cycle) |
 | `ContraceptionState` | method, startDate, endDate?, regimen {activeDays, breakDays, continuous} |

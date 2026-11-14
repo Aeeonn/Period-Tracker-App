@@ -78,12 +78,24 @@ function isBoolean(value: unknown): value is boolean {
   return typeof value === 'boolean';
 }
 
-function isOneOf<T extends readonly (string | number)[]>(value: unknown, values: T): value is T[number] {
+function isOneOf<T extends readonly (string | number)[]>(
+  value: unknown,
+  values: T,
+): value is T[number] {
   return values.some((candidate) => candidate === value);
 }
 
 function isLocalDate(value: unknown): boolean {
   return isString(value) && parseLocalDate(value) !== null;
+}
+
+function isRecentContentCard(value: unknown): boolean {
+  return (
+    isObject(value) &&
+    hasExactKeys(value, ['cardId', 'shownOn']) &&
+    isNonEmptyString(value.cardId) &&
+    isLocalDate(value.shownOn)
+  );
 }
 
 function isLocalDateTime(value: unknown): boolean {
@@ -101,7 +113,10 @@ function isLocalTime(value: unknown): boolean {
 function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const keys = Object.keys(value).sort();
   const sortedExpected = [...expected].sort();
-  return keys.length === sortedExpected.length && keys.every((key, index) => key === sortedExpected[index]);
+  return (
+    keys.length === sortedExpected.length &&
+    keys.every((key, index) => key === sortedExpected[index])
+  );
 }
 
 function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
@@ -112,7 +127,10 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function isArrayOfOneOf<T extends readonly (string | number)[]>(value: unknown, values: T): boolean {
+function isArrayOfOneOf<T extends readonly (string | number)[]>(
+  value: unknown,
+  values: T,
+): boolean {
   return Array.isArray(value) && value.every((item) => isOneOf(item, values));
 }
 
@@ -153,10 +171,14 @@ function isSexEvent(value: unknown): boolean {
 }
 
 function isTestsLog(value: unknown): boolean {
-  if (!isObject(value) || !hasOnlyKeys(value, ['pregnancy', 'lh', 'sti', 'emergency_contraception'])) {
+  if (
+    !isObject(value) ||
+    !hasOnlyKeys(value, ['pregnancy', 'lh', 'sti', 'emergency_contraception'])
+  ) {
     return false;
   }
-  if (value.pregnancy !== undefined && !isOneOf(value.pregnancy, PREGNANCY_TEST_RESULT)) return false;
+  if (value.pregnancy !== undefined && !isOneOf(value.pregnancy, PREGNANCY_TEST_RESULT))
+    return false;
   if (value.lh !== undefined && !isOneOf(value.lh, LH_TEST_RESULT)) return false;
   if (
     value.sti !== undefined &&
@@ -271,7 +293,9 @@ function isDayBundle(value: Record<string, unknown>): boolean {
     return false;
   }
   return TRACKERS.every(
-    (tracker) => !Object.prototype.hasOwnProperty.call(value, tracker) || isTrackerValue(tracker, value[tracker]),
+    (tracker) =>
+      !Object.prototype.hasOwnProperty.call(value, tracker) ||
+      isTrackerValue(tracker, value[tracker]),
   );
 }
 
@@ -291,7 +315,14 @@ function isEntityBody(entity: EntityName, value: unknown): boolean {
   switch (entity) {
     case 'DeviceIdentity':
       return (
-        hasExactKeys(value, ['deviceId', 'role', 'signPub', 'agreePub', 'displayName', 'createdAt']) &&
+        hasExactKeys(value, [
+          'deviceId',
+          'role',
+          'signPub',
+          'agreePub',
+          'displayName',
+          'createdAt',
+        ]) &&
         isNonEmptyString(value.deviceId) &&
         isOneOf(value.role, DEVICE_ROLES) &&
         isNonEmptyString(value.signPub) &&
@@ -301,7 +332,19 @@ function isEntityBody(entity: EntityName, value: unknown): boolean {
       );
     case 'Profile':
       return (
-        hasOnlyKeys(value, ['birthYear', 'typicalCycleLength', 'typicalPeriodLength', 'goal', 'lifeStage', 'units', 'weekStart', 'theme', 'lockTimeoutSec', 'quickHideEnabled']) &&
+        hasOnlyKeys(value, [
+          'birthYear',
+          'typicalCycleLength',
+          'typicalPeriodLength',
+          'goal',
+          'lifeStage',
+          'units',
+          'weekStart',
+          'theme',
+          'lockTimeoutSec',
+          'quickHideEnabled',
+          'recentContentCards',
+        ]) &&
         (value.birthYear === undefined || isInteger(value.birthYear)) &&
         (value.typicalCycleLength === undefined || isInteger(value.typicalCycleLength)) &&
         (value.typicalPeriodLength === undefined || isInteger(value.typicalPeriodLength)) &&
@@ -314,7 +357,10 @@ function isEntityBody(entity: EntityName, value: unknown): boolean {
         isOneOf(value.weekStart, ISO_WEEKDAYS) &&
         isOneOf(value.theme, THEMES) &&
         isInteger(value.lockTimeoutSec) &&
-        isBoolean(value.quickHideEnabled)
+        isBoolean(value.quickHideEnabled) &&
+        (value.recentContentCards === undefined ||
+          (Array.isArray(value.recentContentCards) &&
+            value.recentContentCards.every(isRecentContentCard)))
       );
     case 'DayBundle':
       return isDayBundle(value);
@@ -339,7 +385,16 @@ function isEntityBody(entity: EntityName, value: unknown): boolean {
       );
     case 'PregnancyRecord':
       return (
-        hasOnlyKeys(value, ['id', 'lmp', 'edd', 'eddSource', 'ivf', 'fetusCount', 'endedOn', 'outcome']) &&
+        hasOnlyKeys(value, [
+          'id',
+          'lmp',
+          'edd',
+          'eddSource',
+          'ivf',
+          'fetusCount',
+          'endedOn',
+          'outcome',
+        ]) &&
         isNonEmptyString(value.id) &&
         (value.lmp === undefined || isLocalDate(value.lmp)) &&
         (value.edd === undefined || isLocalDate(value.edd)) &&
@@ -394,7 +449,15 @@ function isEntityBody(entity: EntityName, value: unknown): boolean {
       );
     case 'PredictionSnapshot':
       return (
-        hasOnlyKeys(value, ['engineVersion', 'paramsHash', 'madeOn', 'center', 'lo', 'hi', 'actualStart']) &&
+        hasOnlyKeys(value, [
+          'engineVersion',
+          'paramsHash',
+          'madeOn',
+          'center',
+          'lo',
+          'hi',
+          'actualStart',
+        ]) &&
         isNonEmptyString(value.engineVersion) &&
         isNonEmptyString(value.paramsHash) &&
         isLocalDate(value.madeOn) &&
@@ -452,9 +515,7 @@ function isLogicalRecord(value: unknown): value is LogicalRecord {
     return false;
   }
   if (value.deleted === true) {
-    return (
-      hasExactKeys(value, ['entity', 'logicalId', 'authorDevice', 'hlc', 'deleted'])
-    );
+    return hasExactKeys(value, ['entity', 'logicalId', 'authorDevice', 'hlc', 'deleted']);
   }
   return (
     value.deleted === false &&
@@ -462,7 +523,6 @@ function isLogicalRecord(value: unknown): value is LogicalRecord {
     isEntityBody(entity, value.body)
   );
 }
-
 
 function isPortableDocument(value: unknown): value is PortableDocument {
   if (
@@ -485,7 +545,10 @@ function isPortableDocument(value: unknown): value is PortableDocument {
   return true;
 }
 
-export function createPortableDocument(records: readonly LogicalRecord[], schemaVersion: number): PortableDocument {
+export function createPortableDocument(
+  records: readonly LogicalRecord[],
+  schemaVersion: number,
+): PortableDocument {
   return {
     format: PORTABLE_FORMAT,
     schemaVersion,
@@ -498,18 +561,17 @@ export type ParsedPortableFile =
   | { readonly ok: true; readonly document: PortableDocument }
   | { readonly ok: false; readonly error: 'invalid_file' | 'newer_schema' };
 
-export async function parsePortableFile(file: Blob, schemaVersion: number): Promise<ParsedPortableFile> {
+export async function parsePortableFile(
+  file: Blob,
+  schemaVersion: number,
+): Promise<ParsedPortableFile> {
   let value: unknown;
   try {
     value = JSON.parse(await file.text()) as unknown;
   } catch {
     return { ok: false, error: 'invalid_file' };
   }
-  if (
-    isObject(value) &&
-    isInteger(value.schemaVersion) &&
-    value.schemaVersion > schemaVersion
-  ) {
+  if (isObject(value) && isInteger(value.schemaVersion) && value.schemaVersion > schemaVersion) {
     return { ok: false, error: 'newer_schema' };
   }
   if (!isPortableDocument(value) || value.schemaVersion !== schemaVersion) {
@@ -531,17 +593,13 @@ export function createTrackerCsv(
   records: readonly LogicalRecord[],
   tracker: (typeof TRACKERS)[number],
 ): string {
-  const lines = [
-    ['localDate', 'tracker', 'value'].map(canonicalCell).join(','),
-  ];
+  const lines = [['localDate', 'tracker', 'value'].map(canonicalCell).join(',')];
   for (const record of records) {
     if (record.entity !== 'DayBundle' || record.deleted) continue;
     const day = record.body;
     if (!Object.prototype.hasOwnProperty.call(day, tracker)) continue;
     const value = (day as unknown as Record<string, unknown>)[tracker];
-    lines.push(
-      [day.localDate, tracker, trackerValueText(value)].map(canonicalCell).join(','),
-    );
+    lines.push([day.localDate, tracker, trackerValueText(value)].map(canonicalCell).join(','));
   }
   return `${lines.join('\r\n')}\r\n`;
 }

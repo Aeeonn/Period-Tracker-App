@@ -236,15 +236,13 @@ test('T-UX-01 @today the week strip follows a Sunday week-start preference', asy
   const week = page.getByRole('list', { name: 'Week around today' });
   const fertility = TODAY_PREVIEW_FIXTURE.engineOutput.fertility;
   expect(fertility.kind).toBe('fertility');
-  if (fertility.kind !== 'fertility') throw new Error('The preview fixture must estimate fertility.');
+  if (fertility.kind !== 'fertility')
+    throw new Error('The preview fixture must estimate fertility.');
   const saturday = '2026-10-24' as LocalDate;
   expect(compare(saturday, fertility.coreWindow.start)).toBeGreaterThanOrEqual(0);
   expect(compare(saturday, fertility.coreWindow.end)).toBeLessThanOrEqual(0);
 
-  await expect(week.getByRole('listitem').first()).toHaveAttribute(
-    'aria-label',
-    'Sunday, Oct 18',
-  );
+  await expect(week.getByRole('listitem').first()).toHaveAttribute('aria-label', 'Sunday, Oct 18');
   await expect(week.getByRole('listitem').last()).toHaveAttribute(
     'aria-label',
     'Saturday, Oct 24, estimated fertile day',
@@ -291,6 +289,10 @@ test('T-UX-04 @today an EMERGENCY warning fixture cannot be dismissed while acti
   const dismiss = page.getByTestId('today-warning-dismiss-W-01');
   await expect(warning).toBeVisible();
   await expect(warning).toContainText('Emergency');
+  await expect(warning).toContainText(
+    'Very heavy bleeding with chest pain, breathlessness, or dizziness needs emergency care now.',
+  );
+  await expect(warning.getByRole('link').first()).toBeVisible();
   await expect(dismiss).toBeDisabled();
   await dismiss.evaluate((button) => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -385,9 +387,8 @@ test('Today @today keeps selectable synthetic data in the preview app shell', as
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(page.locator('.shell-preview-banner')).toContainText('synthetic data only');
   await expect(page.getByText('Next period: around Nov 8')).toBeVisible();
-  await expect(page.getByText('A reviewed education card will appear here when available.')).toHaveCount(
-    0,
-  );
+  await expect(page.getByTestId('today-content-card')).toContainText('Cycle basics');
+  await expect(page.getByTestId('today-content-card').getByRole('link')).toBeVisible();
   await expect(page.getByText('Static preview', { exact: true })).toHaveCount(0);
 });
 

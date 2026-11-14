@@ -28,9 +28,7 @@ import type { ClaimEvidence, CoreCardDefinition, SourceId } from './cards/core/t
 
 const REVIEWED_ON = '2026-10-28';
 
-export interface RegisteredSource extends ContentSource {
-  readonly publisher: string;
-}
+export type RegisteredSource = ContentSource;
 
 function localDate(value: string): LocalDate {
   const parsed = parse(value);

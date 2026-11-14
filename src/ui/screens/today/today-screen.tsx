@@ -1,5 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
+import type { ContentCardId } from '../../../contracts/brand.ts';
+import type { ContentSource } from '../../../contracts/content.ts';
 import type { DueReminder } from '../../../contracts/reminders.ts';
 import type { EngineOutput } from '../../../contracts/engine-api.ts';
 import type {
@@ -7,9 +9,12 @@ import type {
   Flow,
   IsoWeekday,
   Tracker,
+  WarningRuleId,
   WarningSeverity,
 } from '../../../contracts/enums.ts';
 import type { LocalDate, LocalDateRange } from '../../../contracts/localdate.ts';
+import { contentSourcesById, crisisResources } from '../../../content/index.ts';
+import type { RegisteredSource } from '../../../content/index.ts';
 import { addDays, compare, diffDays, epochDay } from '../../../lib/localdate/index.ts';
 import { Button, Card, Sheet, Toast } from '../../components/base';
 import { RepositoriesContext } from '../../layout/repositories.tsx';
@@ -31,8 +36,10 @@ import './today.css';
 
 export interface TodayContentSlot {
   readonly title: string;
+  readonly cardId?: ContentCardId;
+  readonly cardTitle: string | null;
   readonly paragraphs: readonly string[];
-  readonly sourceNote: string;
+  readonly sources: readonly ContentSource[];
 }
 
 export interface TodayScreenProps {
@@ -48,6 +55,7 @@ export interface TodayScreenProps {
   readonly pinnedTrackers?: readonly Tracker[];
   readonly weekStart?: IsoWeekday;
   readonly onOpenLog?: (() => void) | undefined;
+  readonly onContentShown?: (cardId: ContentCardId, shownOn: LocalDate) => Promise<void>;
 }
 
 type WhyTopic = 'prediction' | 'chance';
@@ -85,6 +93,56 @@ const SEVERITY_LABELS: Record<WarningSeverity, string> = {
   DISCUSS: 'Discuss with a clinician',
   INFO: 'Information',
 };
+
+const WARNING_COPY: Partial<Record<WarningRuleId, string>> = {
+  'W-01':
+    'Very heavy bleeding with chest pain, breathlessness, or dizziness needs emergency care now.',
+  'W-02': 'The heavy-bleeding details you logged may be worth discussing with a clinician.',
+  'W-03': 'A period lasting longer than 7 days can be a reason to discuss with a clinician.',
+  'W-04':
+    'A cycle shorter than 21 days or longer than 35 days can be a reason to discuss with a clinician.',
+  'W-05': 'Your cycle lengths vary; you may want to discuss this pattern with a clinician.',
+  'W-06':
+    'It has been more than 90 days since your last period. If pregnancy is possible, you may want to take a pregnancy test and discuss this gap with a clinician.',
+  'W-07': 'Bleeding after sex or between periods can be worth discussing with a clinician.',
+};
+
+function warningCopy(ruleId: WarningRuleId): string | null {
+  if (ruleId === 'W-11') return null;
+  const copy = WARNING_COPY[ruleId];
+  if (!copy) throw new Error(`Missing Today copy for warning ${ruleId}.`);
+  return copy;
+}
+
+function warningSources(sourceIds: readonly string[]): readonly RegisteredSource[] {
+  return sourceIds.map((sourceId) => {
+    const source = contentSourcesById[sourceId];
+    if (!source) throw new Error(`Unknown warning source: ${sourceId}`);
+    return source;
+  });
+}
+
+function SourceLinks({
+  className,
+  sources,
+}: {
+  readonly className: string;
+  readonly sources: readonly ContentSource[];
+}) {
+  if (sources.length === 0) return null;
+  return (
+    <ul class={className} aria-label="Sources">
+      {sources.map((source) => (
+        <li key={source.url}>
+          <a href={source.url} rel="noopener noreferrer" target="_blank">
+            {source.publisher}: {source.title} (opens in a new tab)
+          </a>
+          <span> (accessed {source.accessed})</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function formatLocalDate(value: LocalDate): string {
   const parts = value.split('-');
@@ -128,10 +186,7 @@ function weekdayIndex(value: LocalDate): number {
   return (((Number(epochDay(value)) + 4) % 7) + 7) % 7;
 }
 
-export function weekDates(
-  today: LocalDate,
-  weekStart: IsoWeekday = 1,
-): readonly LocalDate[] {
+export function weekDates(today: LocalDate, weekStart: IsoWeekday = 1): readonly LocalDate[] {
   const firstWeekday = weekStart % 7;
   const offset = (weekdayIndex(today) - firstWeekday + 7) % 7;
   return Array.from({ length: 7 }, (_, index) => addDays(today, index - offset));
@@ -420,10 +475,8 @@ function CycleRing({
                 ? MONTH_LABELS[Number(date.slice(5, 7)) - 1]
                 : null;
             const isPeriod = predictionRange !== null && dateInRange(date, predictionRange);
-            const coreFertilityRange =
-              fertility.kind === 'fertility' ? fertility.coreWindow : null;
-            const isFertile =
-              coreFertilityRange !== null && dateInRange(date, coreFertilityRange);
+            const coreFertilityRange = fertility.kind === 'fertility' ? fertility.coreWindow : null;
+            const isFertile = coreFertilityRange !== null && dateInRange(date, coreFertilityRange);
             const ariaParts = [WEEKDAY_NAMES[dayIndex], formatLocalDate(date)];
             if (isToday) ariaParts.push('today');
             if (isPeriod) ariaParts.push('predicted period window');
@@ -465,6 +518,10 @@ interface WarningNoticeProps {
 function WarningNotice({ onDismiss, warning }: WarningNoticeProps) {
   const severityClass = warning.severity.toLowerCase().replace(/_/gu, '-');
   const severityLabel = SEVERITY_LABELS[warning.severity];
+  const copy = warningCopy(warning.ruleId);
+  const sources = warningSources(warning.sourceIds);
+  const crisisResource = warning.ruleId === 'W-11' ? crisisResources['W-11'] : undefined;
+  const crisisNumber = crisisResource?.number.replaceAll('-', '');
 
   return (
     <Card
@@ -481,7 +538,26 @@ function WarningNotice({ onDismiss, warning }: WarningNoticeProps) {
           </span>
           <strong class="today-warning__severity">{severityLabel}</strong>
         </div>
-        <p>A clinician guidance alert is active. Talk to a clinician.</p>
+        {crisisResource ? (
+          <section class="today-warning__crisis-support" aria-label="Canada crisis support">
+            <p>{crisisResource.immediateDanger}</p>
+            <p>
+              If you are in {crisisResource.country}, call or text {crisisResource.number} for
+              support. Available {crisisResource.availability}.
+            </p>
+            <div class="today-warning__crisis-actions">
+              {crisisResource.channels.includes('call') && crisisNumber ? (
+                <a href={`tel:${crisisNumber}`}>Call {crisisResource.number}</a>
+              ) : null}
+              {crisisResource.channels.includes('text') && crisisNumber ? (
+                <a href={`sms:${crisisNumber}`}>Text {crisisResource.number}</a>
+              ) : null}
+            </div>
+          </section>
+        ) : (
+          <p class="today-warning__message">{copy}</p>
+        )}
+        <SourceLinks className="today-warning__sources" sources={sources} />
         <Button
           class="today-warning__dismiss"
           data-testid={`today-warning-dismiss-${warning.ruleId}`}
@@ -509,6 +585,7 @@ export function TodayScreen({
   pinnedTrackers = DEFAULT_PINNED_TRACKERS,
   weekStart = 1,
   onOpenLog,
+  onContentShown,
 }: TodayScreenProps) {
   const repositories = useContext(RepositoriesContext);
   const logRepo = logRepoOverride === undefined ? (repositories?.logRepo ?? null) : logRepoOverride;
@@ -531,6 +608,7 @@ export function TodayScreen({
   const [toastOpen, setToastOpen] = useState(false);
   const [dismissedWarnings, setDismissedWarnings] = useState<ReadonlySet<string>>(() => new Set());
   const [showStillBleeding, setShowStillBleeding] = useState(stillBleeding);
+  const [contentSaveError, setContentSaveError] = useState('');
   const currentFlow = flowOverride === null ? flowToday : flowOverride.value;
   const openQuickLog = () => {
     setInitialQuickLogTracker(undefined);
@@ -552,13 +630,24 @@ export function TodayScreen({
     setShowStillBleeding(stillBleeding);
   }, [flowToday, loggedToday, cycleDay, stillBleeding]);
 
+  useEffect(() => {
+    let active = true;
+    setContentSaveError('');
+    if (!contentSlot.cardId || !onContentShown) return undefined;
+    void onContentShown(contentSlot.cardId, today).catch(() => {
+      if (active) setContentSaveError('This card’s recent display could not be saved.');
+    });
+    return () => {
+      active = false;
+    };
+  }, [contentSlot.cardId, onContentShown, today]);
+
   const prediction = engineOutput.prediction;
   const noLoggedData = prediction.kind === 'suppressed' && prediction.reason === 'no_data';
   const predictionExplanation = explanationText(engineOutput);
   const predictionBasis = explanationBasis(engineOutput);
   const chanceCategory = engineOutput.chanceByDay[today] ?? 'NO_DATA_YET';
-  const calendarOnlyEstimate =
-    prediction.kind === 'prediction' && prediction.cyclesUsed < 3;
+  const calendarOnlyEstimate = prediction.kind === 'prediction' && prediction.cyclesUsed < 3;
   const predictionText =
     prediction.kind === 'prediction'
       ? `Next period: around ${formatLocalDate(prediction.center)}`
@@ -847,14 +936,22 @@ export function TodayScreen({
       ) : null}
 
       {contentSlot.paragraphs.length > 0 ? (
-        <Card class="today-content-slot" heading={contentSlot.title}>
+        <Card
+          class="today-content-slot"
+          data-testid="today-content-card"
+          heading={contentSlot.title}
+        >
+          {contentSlot.cardTitle ? <h3>{contentSlot.cardTitle}</h3> : null}
           {contentSlot.paragraphs.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
-          {contentSlot.sourceNote ? (
-            <p class="today-content-slot__source">{contentSlot.sourceNote}</p>
-          ) : null}
+          <SourceLinks className="today-content-slot__sources" sources={contentSlot.sources} />
         </Card>
+      ) : null}
+      {contentSaveError ? (
+        <p class="today-screen__error" role="alert">
+          {contentSaveError}
+        </p>
       ) : null}
 
       <Sheet

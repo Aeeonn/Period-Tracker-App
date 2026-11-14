@@ -24,6 +24,7 @@ describe('content text serialization', () => {
       phaseTags: [],
       sources: [
         {
+          publisher: 'Synthetic publisher',
           title: 'Synthetic fixture source',
           url: 'https://example.test/synthetic-rendering',
           accessed: syntheticDate(),

@@ -11,6 +11,7 @@
 import type {
   Base64Url,
   CoupleEntryId,
+  ContentCardId,
   DeviceId,
   KeyId,
   PregnancyId,
@@ -100,6 +101,11 @@ export interface UnitPreferences {
   readonly weight: WeightUnit;
 }
 
+export interface RecentContentCard {
+  readonly cardId: ContentCardId;
+  readonly shownOn: LocalDate;
+}
+
 export interface Profile {
   readonly birthYear?: number;
   readonly typicalCycleLength?: number;
@@ -111,6 +117,7 @@ export interface Profile {
   readonly theme: Theme;
   readonly lockTimeoutSec: number;
   readonly quickHideEnabled: boolean;
+  readonly recentContentCards?: readonly RecentContentCard[];
 }
 
 /* ------------------------------------------------------------------------ */

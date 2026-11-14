@@ -161,10 +161,11 @@ export interface FertilityEstimate {
   readonly methodDoesNotChangeOvulation: boolean;
 }
 
-/** A11 warning card. Not a diagnosis; every card says "talk to a clinician". */
+/** A11 warning card with source ids; not a diagnosis. */
 export interface WarningCard {
   readonly ruleId: WarningRuleId;
   readonly severity: WarningSeverity;
+  readonly sourceIds: readonly string[];
   /** EMERGENCY cards and W-11 cannot be dismissed while the condition holds. */
   readonly dismissible: boolean;
   /** Start of the episode or cycle that scopes dismissal. */

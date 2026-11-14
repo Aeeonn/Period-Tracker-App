@@ -666,7 +666,12 @@ refresh when a new log is saved (FLO-DOC behaviour: stories refresh on log, R2 ย
 
 Cards are original text with citations ([ux-spec.md ยง8](ux-spec.md#8-original-educational-content-plan)).
 
-**Test vector TV-I1.** Today is a period day with "cramps" logged. Candidates are `cramps-basics` (symptom cramps, phase period), `cycle-phases-intro` (general) and `fertile-window-uncertainty` (phase fertile). Expected pick: `cramps-basics`, with score 5.
+For Today card scoring, the current phase is `period` during an active period episode;
+otherwise it is `fertile` only when unsuppressed A4 fertility output contains today in
+`possibleBand`; outside those cases it is `null`. This phase tag affects content selection only
+and is not a fertility or pregnancy-chance display.
+
+**Test vector TV-I1.** Today is a period day with "cramps" logged. Candidates are `period-pain-when-to-get-help` (symptom cramps, phase period), `cycle-basics` (general) and `fertile-window-uncertainty` (phase fertile). Expected pick: `period-pain-when-to-get-help`, with score 5.
 
 ## A18. Accuracy measurement and backtesting
 

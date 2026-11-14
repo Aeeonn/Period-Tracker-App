@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import type { ContentCardId } from '../../contracts/brand.ts';
 import type { LocalDate, LocalTime } from '../../contracts/localdate.ts';
 import { todayLocal } from '../../lib/localdate/index.ts';
 import { Button, Card } from '../components/base';
@@ -10,7 +11,11 @@ import {
   type CalendarScreenProps,
 } from '../screens/calendar';
 import type { TodayScreenProps } from '../screens/today';
-import { type EngineRunner, createTodayScreenProps } from '../screens/today/live-data.ts';
+import {
+  type EngineRunner,
+  createTodayScreenProps,
+  rememberTodayContentCard,
+} from '../screens/today/live-data.ts';
 import { RepositoriesContext, type Repositories, useRepositories } from './repositories.tsx';
 import { LogScreen } from '../screens/log';
 import { applyThemePreference, SettingsScreen } from '../screens/settings/main/index.ts';
@@ -266,6 +271,11 @@ export function AppShell({
   const [calendarProps, setCalendarProps] = useState<CalendarScreenProps | null>(null);
   const [calendarLoadFailed, setCalendarLoadFailed] = useState(false);
   const themeRevision = useRef(0);
+  const onContentShown = useCallback(
+    (cardId: ContentCardId, shownOn: LocalDate) =>
+      rememberTodayContentCard(repositories.settingsRepo, cardId, shownOn),
+    [repositories.settingsRepo],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -322,13 +332,15 @@ export function AppShell({
   useEffect(() => {
     if (onboardingStatus !== 'complete' || role !== 'owner' || selectedTab?.id !== 'today') return;
     let mounted = true;
-    const refreshToday = async () => {
+    const refreshToday = async (refreshContent = false) => {
       try {
         const props = syntheticPreview
           ? TODAY_PREVIEW_FIXTURE
-          : await createTodayScreenProps(repositories, localClockSnapshot(), engineRunner);
+          : await createTodayScreenProps(repositories, localClockSnapshot(), engineRunner, {
+              refreshContent,
+            });
         if (mounted) {
-          setTodayProps(props);
+          setTodayProps(syntheticPreview ? props : { ...props, onContentShown });
           setTodayLoadFailed(false);
         }
       } catch {
@@ -338,15 +350,17 @@ export function AppShell({
         }
       }
     };
-    const unsubscribe = repositories.logRepo.onChange(() => void refreshToday());
-    window.addEventListener('focus', refreshToday);
+    const onLogChange = () => void refreshToday(true);
+    const onFocus = () => void refreshToday();
+    const unsubscribe = repositories.logRepo.onChange(onLogChange);
+    window.addEventListener('focus', onFocus);
     void refreshToday();
     return () => {
       mounted = false;
       unsubscribe();
-      window.removeEventListener('focus', refreshToday);
+      window.removeEventListener('focus', onFocus);
     };
-  }, [repositories, role, selectedTab?.id, syntheticPreview, onboardingStatus]);
+  }, [repositories, role, selectedTab?.id, syntheticPreview, onboardingStatus, onContentShown]);
 
   const openLogTab = (date?: LocalDate) => {
     setLogSelectedDate(date);

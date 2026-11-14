@@ -729,6 +729,9 @@
 - **Acceptance (Given/When/Then):**
   - Given any EngineOutput fixture, When Today renders, Then a window and 'Why?' are shown for every prediction (T-UX-02)
   - Given an EMERGENCY warning fixture, When the user tries to dismiss, Then it stays visible while the condition persists
+  - Given W-01..W-07, When Today renders, Then rule-specific copy and cited sources are shown
+  - Given W-11, When Today renders, Then Canada-scoped 9-8-8 call/text and 9-1-1 guidance appears and the active warning stays non-dismissible
+  - Given an A17 card is selected, When Today renders, Then its sourced content is shown; the shown card remains stable on reload and new logs refresh the selection
 - **Commands:** `npm run check`; `npm run e2e -- --grep @today`
 - **Tests:** T-UX-01, T-UX-02, T-UX-04 ([test-strategy.md §2](test-strategy.md#2-test-catalogue-ids-referenced-by-the-plan))
 - **Constitution/sections:** 4.4, 4.7
@@ -744,7 +747,7 @@
 - **Reference vectors:** TV-I1 (in [algorithms-spec.md](algorithms-spec.md))
 - **Acceptance (Given/When/Then):**
   - Given every card, When T-CONTENT-01 runs, Then each has ≥1 source, lastReviewed and passes copy lint
-  - Given TV-I1, When selection runs, Then cramps-basics is chosen
+  - Given TV-I1, When selection runs, Then period-pain-when-to-get-help is chosen
   - Given a card body containing `<script>` and `onerror=` payloads, When rendered, Then they appear as text and nothing executes (T-SEC-06, cards)
 - **Commands:** `npm run test`; `npm run check`
 - **Tests:** T-CONTENT-01, T-UX-03, T-CON-14, T-SEC-06 ([test-strategy.md §2](test-strategy.md#2-test-catalogue-ids-referenced-by-the-plan))
@@ -826,6 +829,7 @@
 - **Owns:** `src/backup/portable/**`
 - **Acceptance (Given/When/Then):**
   - Given a 2-year synthetic dataset, When exported and imported into a fresh store, Then data is equal (T-BAK-01)
+  - Given a Profile with recentContentCards, When exported and imported, Then card IDs/dates round-trip and malformed history entries are rejected
   - Given a malformed or newer-version file, When imported, Then nothing is written and a clear error is shown
   - Given a store that also holds synthetic `proj` records, category keys and couple entries written by another device, When exported, Then the files contain none of the projections or keys, and couple entries follow the AP-08 export rule (T-BAK-04)
 - **Commands:** `npm run test -- backup`; `npm run e2e -- --grep @export`

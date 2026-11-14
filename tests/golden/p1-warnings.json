@@ -434,7 +434,11 @@
           "dismissible": true,
           "scopeStart": "2026-06-01",
           "evidenceDates": ["2026-06-01"],
-          "sourceIds": ["PCOS_INTERNATIONAL_GUIDELINE_2023", "ACOG_ABNORMAL_BLEEDING"]
+          "sourceIds": [
+            "PCOS_INTERNATIONAL_GUIDELINE_2023",
+            "ACOG_ABNORMAL_BLEEDING",
+            "CANADA_PREGNANCY_TEST"
+          ]
         }
       ]
     },

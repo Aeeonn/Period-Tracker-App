@@ -7,7 +7,12 @@ import type {
   ReminderRule,
 } from '../../../../src/contracts/entities.ts';
 import type { LocalDate, LocalTime } from '../../../../src/contracts/localdate.ts';
-import { createTodayScreenProps } from '../../../../src/ui/screens/today/live-data.ts';
+import type { SettingsRepo } from '../../../../src/contracts/store.ts';
+import { contentCardId } from '../../../../src/content/cards/core/types.ts';
+import {
+  createTodayScreenProps,
+  rememberTodayContentCard,
+} from '../../../../src/ui/screens/today/live-data.ts';
 import { addDays, parse } from '../../../../src/lib/localdate/index.ts';
 
 function date(value: string): LocalDate {
@@ -210,5 +215,108 @@ describe('live Today data', () => {
     expect(result.stillBleeding).toBe(true);
     expect(result.loggedToday).toEqual(['Flow: Medium', 'Symptoms: Cramps']);
     expect(result.reminders).toEqual([{ ruleId: rule.id, kind: 'custom' }]);
+  });
+
+  it('selects a sourced card from recent symptoms and phase, while respecting the 14-day history', async () => {
+    const profile: Profile = {
+      goal: 'track',
+      lifeStage: 'cycle',
+      units: { temp: 'celsius', weight: 'kg' },
+      weekStart: 1,
+      theme: 'light',
+      lockTimeoutSec: 300,
+      quickHideEnabled: false,
+    };
+    const periodDays = Array.from({ length: 4 }, (_, offset) =>
+      day(addDays(date('2026-03-29'), offset), { flow: 'medium' }),
+    );
+    const currentLog = day(clock.today, { flow: 'medium', symptoms_body: ['cramps'] });
+    const todayRepositories = repositories([...periodDays, currentLog], [], profile);
+
+    const selected = await createTodayScreenProps(todayRepositories, clock);
+    expect(selected.contentSlot.cardId).toBe(contentCardId('period-pain-when-to-get-help'));
+    expect(selected.contentSlot.cardTitle).toBe('When period pain needs attention');
+    expect(selected.contentSlot.sources[0]).toMatchObject({
+      publisher: 'National Health Service (NHS)',
+      title: 'Period pain (reviewed 18 March 2026)',
+    });
+
+    const recentlyShownProfile: Profile = {
+      ...profile,
+      recentContentCards: [
+        {
+          cardId: contentCardId('period-pain-when-to-get-help'),
+          shownOn: addDays(clock.today, -1),
+        },
+      ],
+    };
+    const afterRepeatSuppression = await createTodayScreenProps(
+      repositories([...periodDays, currentLog], [], recentlyShownProfile),
+      clock,
+    );
+    expect(afterRepeatSuppression.contentSlot.cardId).not.toBe(
+      contentCardId('period-pain-when-to-get-help'),
+    );
+
+    const shownTodayProfile: Profile = {
+      ...profile,
+      recentContentCards: [{ cardId: contentCardId('cycle-basics'), shownOn: clock.today }],
+    };
+    const stableTodayCard = await createTodayScreenProps(
+      repositories([...periodDays, currentLog], [], shownTodayProfile),
+      clock,
+    );
+    expect(stableTodayCard.contentSlot.cardId).toBe(contentCardId('cycle-basics'));
+
+    const refreshedCard = await createTodayScreenProps(
+      repositories([...periodDays, currentLog], [], shownTodayProfile),
+      clock,
+      undefined,
+      { refreshContent: true },
+    );
+    expect(refreshedCard.contentSlot.cardId).not.toBe(contentCardId('cycle-basics'));
+  });
+
+  it('keeps only the recent 14-day card history when recording a displayed card', async () => {
+    let profile: Profile | undefined = {
+      goal: 'track',
+      lifeStage: 'cycle',
+      units: { temp: 'celsius', weight: 'kg' },
+      weekStart: 1,
+      theme: 'light',
+      lockTimeoutSec: 300,
+      quickHideEnabled: false,
+      recentContentCards: [
+        { cardId: contentCardId('cycle-basics'), shownOn: addDays(clock.today, -1) },
+        { cardId: contentCardId('fertile-window-uncertainty'), shownOn: addDays(clock.today, -15) },
+      ],
+    };
+    let writes = 0;
+    const settingsRepo: Pick<SettingsRepo, 'getProfile' | 'putProfile'> = {
+      async getProfile() {
+        return profile;
+      },
+      async putProfile(nextProfile) {
+        writes += 1;
+        profile = nextProfile;
+      },
+    };
+
+    await rememberTodayContentCard(
+      settingsRepo,
+      contentCardId('how-predictions-work'),
+      clock.today,
+    );
+    expect(profile?.recentContentCards).toEqual([
+      { cardId: contentCardId('cycle-basics'), shownOn: addDays(clock.today, -1) },
+      { cardId: contentCardId('how-predictions-work'), shownOn: clock.today },
+    ]);
+
+    await rememberTodayContentCard(
+      settingsRepo,
+      contentCardId('how-predictions-work'),
+      clock.today,
+    );
+    expect(writes).toBe(1);
   });
 });

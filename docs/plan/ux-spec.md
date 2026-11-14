@@ -85,7 +85,12 @@ flowchart TB
 
   Each choice saves instantly, with an "Undo" toast. e2e test T-UX-01 checks the tap counts.
 - **During a recorded period:** an extra prompt card "Still bleeding today? · Yes, light · Yes, medium · Yes, heavy · Stopped". This answers her request for period logging reminders.
-- **Clinician-guidance cards** sit at the top only when triggered (A11). They have a severity colour plus an icon and text, so colour is never the only signal. EMERGENCY cards cannot be dismissed while the condition persists.
+- **Clinician-guidance cards** sit at the top only when triggered (A11). They have a severity colour
+  plus an icon and text, so colour is never the only signal. Each rule shows its specific guidance
+  and cited sources. EMERGENCY cards cannot be dismissed while the condition persists. W-11 labels
+  its Canada-specific scope, offers 9-8-8 call/text links, and directs immediate danger to 9-1-1.
+- **Education card:** Today selects an A17 card and displays its cited source links. The shown card
+  remains stable on reload; saving a new log refreshes the selection.
 
 ### 3.3 Quick log sheet and log detail
 

@@ -12,6 +12,7 @@ function date(value: string) {
 }
 
 const SYNTHETIC_SOURCE = {
+  publisher: 'Synthetic publisher',
   title: 'Synthetic selection source',
   url: 'https://example.test/synthetic-content',
   accessed: date('2026-10-28'),
@@ -51,15 +52,15 @@ function context(overrides: Partial<CardSelectionContext> = {}): CardSelectionCo
 }
 
 describe('A17 deterministic card selection', () => {
-  it('TV-I1 selects cramps-basics at score 5', () => {
+  it('TV-I1 selects the period-pain card at score 5', () => {
     const cards = [
-      fixture('cramps-basics', { symptoms: ['cramps'], phases: ['period'] }),
-      fixture('cycle-phases-intro'),
+      fixture('period-pain-when-to-get-help', { symptoms: ['cramps'], phases: ['period'] }),
+      fixture('cycle-basics'),
       fixture('fertile-window-uncertainty', { phases: ['fertile'] }),
     ];
 
     expect(createContentIndex(cards).select(context())).toEqual({
-      cardId: contentCardId('cramps-basics'),
+      cardId: contentCardId('period-pain-when-to-get-help'),
       score: 5,
     });
   });

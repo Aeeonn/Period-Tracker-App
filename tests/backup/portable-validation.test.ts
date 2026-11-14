@@ -51,11 +51,7 @@ import { createPortableDocument, parsePortableFile } from '../../src/backup/port
 const DEVICE_ID = 'synthetic-portable-validation-device' as DeviceId;
 const syntheticHlc = { wallMs: 1_800_000_000_000, counter: 0, deviceId: DEVICE_ID };
 
-function record(
-  entity: LogicalRecord['entity'],
-  logicalId: string,
-  body: unknown,
-): LogicalRecord {
+function record(entity: LogicalRecord['entity'], logicalId: string, body: unknown): LogicalRecord {
   return {
     entity,
     logicalId: logicalId as LogicalId,
@@ -135,6 +131,7 @@ function supportedRecords(): LogicalRecord[] {
       theme: THEMES[0],
       lockTimeoutSec: 300,
       quickHideEnabled: false,
+      recentContentCards: [{ cardId: 'cycle-basics', shownOn: '2038-01-03' }],
     }),
     record('DayBundle', 'day', fullDayBody()),
     record('PeriodOverride', 'period-override', {
@@ -257,6 +254,31 @@ describe('portable record schema validation', () => {
         body: { ...profile.body, extra: true },
       } as LogicalRecord,
       {
+        ...profile,
+        body: { ...profile.body, recentContentCards: 'not-an-array' },
+      } as unknown as LogicalRecord,
+      {
+        ...profile,
+        body: {
+          ...profile.body,
+          recentContentCards: [{ cardId: '', shownOn: '2038-01-03' }],
+        },
+      } as unknown as LogicalRecord,
+      {
+        ...profile,
+        body: {
+          ...profile.body,
+          recentContentCards: [{ cardId: 'cycle-basics', shownOn: '2038-02-30' }],
+        },
+      } as unknown as LogicalRecord,
+      {
+        ...profile,
+        body: {
+          ...profile.body,
+          recentContentCards: [{ cardId: 'cycle-basics', shownOn: '2038-01-03', extra: true }],
+        },
+      } as unknown as LogicalRecord,
+      {
         ...day,
         body: { ...day.body, flow: 'unknown' },
       } as unknown as LogicalRecord,
@@ -294,17 +316,22 @@ describe('portable record schema validation', () => {
   });
 
   it('rejects non-finite JSON numbers and future schemas without importing them', async () => {
-    const finiteNumberFailure = JSON.stringify(createPortableDocument([
-      record('Profile', 'profile-infinity', {
-        goal: 'track',
-        lifeStage: 'cycle',
-        units: { temp: 'celsius', weight: 'kg' },
-        weekStart: 1,
-        theme: 'system',
-        lockTimeoutSec: 1e309,
-        quickHideEnabled: false,
-      }),
-    ], SCHEMA_VERSION)).replace('"lockTimeoutSec":null', '"lockTimeoutSec":1e309');
+    const finiteNumberFailure = JSON.stringify(
+      createPortableDocument(
+        [
+          record('Profile', 'profile-infinity', {
+            goal: 'track',
+            lifeStage: 'cycle',
+            units: { temp: 'celsius', weight: 'kg' },
+            weekStart: 1,
+            theme: 'system',
+            lockTimeoutSec: 1e309,
+            quickHideEnabled: false,
+          }),
+        ],
+        SCHEMA_VERSION,
+      ),
+    ).replace('"lockTimeoutSec":null', '"lockTimeoutSec":1e309');
     await expect(
       parsePortableFile(new Blob([finiteNumberFailure]), SCHEMA_VERSION),
     ).resolves.toEqual({ ok: false, error: 'invalid_file' });

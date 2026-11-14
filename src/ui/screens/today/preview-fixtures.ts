@@ -3,6 +3,8 @@ import type { EngineInput, EngineOutput } from '../../../contracts/engine-api.ts
 import { SUPPRESSION_CHANCE_CATEGORY, SUPPRESSION_REASONS } from '../../../contracts/enums.ts';
 import type { SuppressionReason } from '../../../contracts/enums.ts';
 import type { LocalDate } from '../../../contracts/localdate.ts';
+import { contentCardId } from '../../../content/cards/core/types.ts';
+import { contentIndex } from '../../../content/index.ts';
 import { runEngine } from '../../../engine/index.ts';
 import { addDays, parse } from '../../../lib/localdate/index.ts';
 import type { TodayScreenProps } from './today-screen.tsx';
@@ -32,10 +34,15 @@ const input: EngineInput = {
 };
 
 const engineOutput = runEngine(input);
+const previewCard = contentIndex.get(contentCardId('cycle-basics'));
+if (!previewCard) throw new Error('The synthetic preview education card is missing.');
+
 const contentSlot = {
   title: 'Did you know?',
-  paragraphs: [],
-  sourceNote: '',
+  cardId: previewCard.id,
+  cardTitle: previewCard.title,
+  paragraphs: previewCard.body,
+  sources: previewCard.sources,
 } as const;
 
 export const TODAY_PREVIEW_FIXTURE: TodayScreenProps = {
@@ -56,6 +63,7 @@ const emergencyOutput: EngineOutput = {
       dismissible: false,
       scopeStart: today,
       evidenceDates: [today],
+      sourceIds: ['ACOG_ABNORMAL_BLEEDING'],
     },
   ],
 };

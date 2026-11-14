@@ -15,7 +15,11 @@ import { createLogRepo, createSettingsRepo } from '../../src/data/repos/index.ts
 import { logicalId } from '../../src/data/repos/common.ts';
 import { SCHEMA_VERSION } from '../../src/data/store/schema.ts';
 import { addDays, parse } from '../../src/lib/localdate/index.ts';
-import { createPortableBackupService, type PortableBackupRepositories } from '../../src/backup/portable/service.ts';
+import {
+  createPortableBackupService,
+  type PortableBackupRepositories,
+} from '../../src/backup/portable/service.ts';
+import { contentCardId } from '../../src/content/cards/core/types.ts';
 import {
   createPortableDocument,
   createTrackerCsv,
@@ -66,7 +70,22 @@ function identityRecord(
   };
 }
 
-function seedIdentity(store: MemoryRecordStore, deviceId: DeviceId, role: DeviceIdentity['role']): void {
+function profileRecord(body: Profile): LogicalRecord<'Profile'> {
+  return {
+    entity: 'Profile',
+    logicalId: logicalId('profile'),
+    authorDevice: ownDevice,
+    hlc: stamp(2),
+    deleted: false,
+    body,
+  };
+}
+
+function seedIdentity(
+  store: MemoryRecordStore,
+  deviceId: DeviceId,
+  role: DeviceIdentity['role'],
+): void {
   store.seed(identityRecord(deviceId, role));
 }
 
@@ -136,6 +155,40 @@ function parseJson(file: Blob): Promise<unknown> {
 }
 
 describe('portable export and import', () => {
+  it('round-trips recent card display history in a Profile record', async () => {
+    const shownOn = parse('2024-01-02');
+    if (!shownOn) throw new Error('Invalid synthetic card display LocalDate');
+    const source = new MemoryRecordStore();
+    seedIdentity(source, ownDevice, 'owner');
+    source.seed(
+      profileRecord({
+        ...profile(),
+        recentContentCards: [{ cardId: contentCardId('cycle-basics'), shownOn }],
+      }),
+    );
+
+    const exported = await createPortableBackupService(
+      repositories(source, ownDevice),
+    ).exportJson();
+    const restored = new MemoryRecordStore();
+    seedIdentity(restored, ownDevice, 'owner');
+    const service = createPortableBackupService(repositories(restored, ownDevice));
+    const result = await service.importJson(
+      new Blob([await exported.file.text()], { type: 'application/json' }),
+      { dryRun: false },
+    );
+
+    expect(result).toMatchObject({ ok: true, applied: true });
+    const restoredProfiles = await restored.list('Profile');
+    const restoredProfile = restoredProfiles.find((record) => !record.deleted);
+    if (!restoredProfile || restoredProfile.deleted) {
+      throw new Error('Portable profile with card history was not restored.');
+    }
+    expect(restoredProfile.body).toMatchObject({
+      recentContentCards: [{ cardId: 'cycle-basics', shownOn: '2024-01-02' }],
+    });
+  });
+
   it('round-trips a synthetic two-year dataset through JSON and emits a per-tracker CSV', async () => {
     const source = new MemoryRecordStore();
     seedIdentity(source, ownDevice, 'owner');
@@ -147,7 +200,7 @@ describe('portable export and import', () => {
 
     const sourceService = createPortableBackupService(repositories(source, ownDevice));
     const exported = await sourceService.exportJson();
-    const document = await parseJson(exported.file) as {
+    const document = (await parseJson(exported.file)) as {
       readonly schemaVersion: number;
       readonly engineVersion: string;
       readonly records: readonly LogicalRecord[];
@@ -312,7 +365,14 @@ describe('portable export and import', () => {
     });
     store.seed(dayRecord('2024-02-02', 2, 'synthetic private tracker canary'));
     store.seed(coupleRecord('own-couple-entry', ownDevice, ownDevice, 'synthetic own entry'));
-    store.seed(coupleRecord('other-couple-entry', remoteDevice, remoteDevice, 'synthetic other entry canary'));
+    store.seed(
+      coupleRecord(
+        'other-couple-entry',
+        remoteDevice,
+        remoteDevice,
+        'synthetic other entry canary',
+      ),
+    );
     store.seed({
       entity: 'Projection',
       logicalId: 'projection-canary' as LogicalId,
@@ -428,8 +488,6 @@ describe('portable export and import', () => {
     expect(createTrackerCsv([base, numeric, deleted, otherEntity], 'weight')).toBe(
       '"localDate","tracker","value"\r\n"2036-02-01","weight","56.5"\r\n',
     );
-    expect(createTrackerCsv([base], 'mood')).toBe(
-      '"localDate","tracker","value"\r\n',
-    );
+    expect(createTrackerCsv([base], 'mood')).toBe('"localDate","tracker","value"\r\n');
   });
 });

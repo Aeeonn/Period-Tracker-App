@@ -8,6 +8,7 @@ import type { CyclePhase, LifeStage, SymptomBody } from './enums.ts';
 import type { LocalDate } from './localdate.ts';
 
 export interface ContentSource {
+  readonly publisher: string;
   readonly title: string;
   readonly url: string;
   readonly accessed: LocalDate;

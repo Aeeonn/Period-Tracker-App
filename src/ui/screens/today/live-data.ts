@@ -1,18 +1,27 @@
-import type { DayLog } from '../../../contracts/entities.ts';
+import type { ContentCardId } from '../../../contracts/brand.ts';
+import type { ContentCard } from '../../../contracts/content.ts';
+import type { DayLog, Profile } from '../../../contracts/entities.ts';
 import type { DueReminder } from '../../../contracts/reminders.ts';
 import type { LogRepo, SettingsRepo } from '../../../contracts/store.ts';
-import type { Flow, IsoWeekday } from '../../../contracts/enums.ts';
+import type {
+  CyclePhase,
+  Flow,
+  IsoWeekday,
+  LifeStage,
+  SymptomBody,
+} from '../../../contracts/enums.ts';
 import type { LocalDate, LocalTime } from '../../../contracts/localdate.ts';
 import { evaluateReminders } from '../../../reminders/inapp/index.ts';
 import { runEngine } from '../../../engine/index.ts';
 import { compare, diffDays, parse } from '../../../lib/localdate/index.ts';
+import { contentIndex } from '../../../content/index.ts';
+import type { TodayScreenProps } from './today-screen.tsx';
 
 export type EngineRunner = (
   input: Parameters<typeof runEngine>[0],
 ) => Promise<ReturnType<typeof runEngine>>;
 
 const runEngineLocally: EngineRunner = async (input) => runEngine(input);
-import type { TodayScreenProps } from './today-screen.tsx';
 
 function firstLocalDate(): LocalDate {
   const value = parse('0000-01-01');
@@ -35,11 +44,107 @@ export interface TodayClockSnapshot {
   readonly now: LocalTime;
 }
 
-const CONTENT_SLOT = {
+const CONTENT_RECENCY_DAYS = 14;
+
+const EMPTY_CONTENT_SLOT = {
   title: 'Did you know?',
+  cardTitle: null,
   paragraphs: [],
-  sourceNote: '',
+  sources: [],
 } as const;
+
+function recentSymptoms(dayLogs: readonly DayLog[], today: LocalDate): readonly SymptomBody[] {
+  const symptoms = new Set<SymptomBody>();
+  for (const dayLog of dayLogs) {
+    const ageDays = diffDays(dayLog.localDate, today);
+    if (ageDays < 0 || ageDays >= 3) continue;
+    for (const symptom of dayLog.symptoms_body ?? []) symptoms.add(symptom);
+  }
+  return [...symptoms];
+}
+
+function recentCardIds(
+  history: Profile['recentContentCards'],
+  today: LocalDate,
+): readonly ContentCardId[] {
+  return [
+    ...new Set(
+      (history ?? [])
+        .filter((entry) => {
+          const ageDays = diffDays(entry.shownOn, today);
+          return ageDays >= 0 && ageDays < CONTENT_RECENCY_DAYS;
+        })
+        .map((entry) => entry.cardId),
+    ),
+  ];
+}
+
+function contentPhase(
+  engineOutput: ReturnType<typeof runEngine>,
+  currentEpisode: boolean,
+  today: LocalDate,
+): CyclePhase | null {
+  if (currentEpisode) return 'period';
+  const fertility = engineOutput.fertility;
+  if (
+    fertility.kind === 'fertility' &&
+    compare(today, fertility.possibleBand.start) >= 0 &&
+    compare(today, fertility.possibleBand.end) <= 0
+  ) {
+    return 'fertile';
+  }
+  return null;
+}
+
+function selectTodayCard(
+  profile: Profile | undefined,
+  today: LocalDate,
+  lifeStage: LifeStage,
+  engineOutput: ReturnType<typeof runEngine>,
+  currentEpisode: boolean,
+  dayLogs: readonly DayLog[],
+  refreshContent: boolean,
+): ContentCard | undefined {
+  const history = profile?.recentContentCards ?? [];
+  if (!refreshContent) {
+    for (let index = history.length - 1; index >= 0; index -= 1) {
+      const entry = history[index];
+      if (entry?.shownOn !== today) continue;
+      const existing = contentIndex.get(entry.cardId);
+      if (existing?.modes.includes(lifeStage) && existing.sources.length > 0) return existing;
+      break;
+    }
+  }
+
+  const selection = contentIndex.select({
+    today,
+    lifeStage,
+    currentPhase: contentPhase(engineOutput, currentEpisode, today),
+    recentSymptoms: recentSymptoms(dayLogs, today),
+    recentlyShown: recentCardIds(history, today),
+  });
+  return selection ? contentIndex.get(selection.cardId) : undefined;
+}
+
+export async function rememberTodayContentCard(
+  settingsRepo: Pick<SettingsRepo, 'getProfile' | 'putProfile'>,
+  cardId: ContentCardId,
+  shownOn: LocalDate,
+): Promise<void> {
+  const profile = await settingsRepo.getProfile();
+  if (profile === undefined) return;
+
+  const history = (profile.recentContentCards ?? []).filter((entry) => {
+    const ageDays = diffDays(entry.shownOn, shownOn);
+    return ageDays >= 0 && ageDays < CONTENT_RECENCY_DAYS;
+  });
+  if (history.some((entry) => entry.cardId === cardId && entry.shownOn === shownOn)) return;
+
+  await settingsRepo.putProfile({
+    ...profile,
+    recentContentCards: [...history, { cardId, shownOn }],
+  });
+}
 
 function displayValue(value: string): string {
   return value.replaceAll('_', ' ').replace(/(^|\s)\p{L}/gu, (letter) => letter.toUpperCase());
@@ -114,14 +219,16 @@ export function createTodayScreenProps(
   repositories: TodayRepositories,
   clock: TodayClockSnapshot,
   engineRunner: EngineRunner = runEngineLocally,
+  options: { readonly refreshContent?: boolean } = {},
 ): Promise<TodayScreenProps> {
-  return loadTodayScreenProps(repositories, clock, engineRunner);
+  return loadTodayScreenProps(repositories, clock, engineRunner, options.refreshContent === true);
 }
 
 async function loadTodayScreenProps(
   { logRepo, settingsRepo }: TodayRepositories,
   { today, now }: TodayClockSnapshot,
   engineRunner: EngineRunner,
+  refreshContent: boolean,
 ): Promise<TodayScreenProps> {
   const [profile, contraception, pregnancies, overrides, reminderRules, dayBundles] =
     await Promise.all([
@@ -162,6 +269,24 @@ async function loadTodayScreenProps(
       compare(episode.start, today) <= 0 &&
       compare(today, episode.end) <= 0,
   );
+  const selectedCard = selectTodayCard(
+    profile,
+    today,
+    engineProfile.lifeStage,
+    engineOutput,
+    currentEpisode,
+    dayLogs,
+    refreshContent,
+  );
+  const contentSlot = selectedCard
+    ? {
+        title: 'Did you know?',
+        cardId: selectedCard.id,
+        cardTitle: selectedCard.title,
+        paragraphs: selectedCard.body,
+        sources: selectedCard.sources,
+      }
+    : EMPTY_CONTENT_SLOT;
   const reminders: readonly DueReminder[] = evaluateReminders({
     today,
     now,
@@ -175,7 +300,7 @@ async function loadTodayScreenProps(
     today,
     cycleDay,
     stillBleeding: currentEpisode && todayLog?.flow !== 'none',
-    contentSlot: CONTENT_SLOT,
+    contentSlot,
     loggedToday: loggedTodaySummary(todayLog),
     weekStart: profile?.weekStart ?? (1 as IsoWeekday),
     ...(todayLog?.flow === undefined ? {} : { flowToday: todayLog.flow as Flow }),
