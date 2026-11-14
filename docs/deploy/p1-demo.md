@@ -1,8 +1,8 @@
 # P1 preview deployment record — phase gate pending
 
-The latest synthetic preview's served-byte and deployed-origin header/network checks passed. This
-is not P1 phase approval. The interactive smoke evidence retained below is from an older revision;
-the latest deployment has not had a fresh interactive or real-iPhone smoke.
+The latest synthetic preview's served-byte and deployed-origin header/network checks passed. A
+fresh browser-only interactive smoke is recorded below as partial; this is not P1 phase approval.
+No real-iPhone smoke has been run.
 
 ## Latest deployment — 2026-12-19
 
@@ -33,15 +33,37 @@ the latest deployment has not had a fresh interactive or real-iPhone smoke.
   0 browser errors, and an activated/controlling service worker; requests stayed on the deployed
   first-party origin. Exact approved security headers were verified on `/` and `/sw.js`.
   Application HSTS was omitted on the Pages host; platform HSTS was not simulated.
-- These checks cover deployed bytes, headers and network policy only. The latest revision has not
-  had a fresh interactive A/B/C smoke or real-iPhone smoke; offline loading, export/import and
-  delete-all behavior on this exact revision remain unverified.
+- These deployment checks cover bytes, headers and network policy; the separate current-revision
+  interactive smoke below is partial. Real-iPhone behavior remains unverified.
+
+## Latest live synthetic smoke — partial
+
+- `npx tsx tools/deploy/current-preview-smoke.ts`: one-off Playwright driver against this
+  deployment, run with fresh contexts for both WebKit iPhone descriptors and removed afterward.
+  It exited 1 because offline reload failed on both descriptors; the other outcomes are listed
+  below.
+- All app data entered was synthetic. Export/import used a fresh target context; no export contents
+  or identifiers are recorded here. These are emulated WebKit results, not physical-iPhone proof.
+
+| Scenario | WebKit descriptor | Observed outcome |
+|---|---|---|
+| A — online navigation | iPhone SE | **PASS, limited.** `?today=synthetic` returned 200; after lock setup Today and the synthetic-data banner were visible. The service worker activated and controlled the page; online reload and restore rendered Today. No page errors were captured. |
+| A — online navigation | iPhone 13 | **PASS, limited.** Same observed result as iPhone SE. |
+| B — offline and restore | iPhone SE | **PARTIAL.** Offline `page.reload()` failed with `WebKit encountered an internal error` while waiting for `domcontentloaded`. After restoring network, the synthetic Today page reopened. |
+| B — offline and restore | iPhone 13 | **PARTIAL.** Same offline reload error; online restore reopened Today. |
+| C — export/import/wipe | iPhone SE | **PARTIAL.** A synthetic JSON export contained 4 records. Import into a fresh context succeeded; Flow and Cramps were visible. Delete All showed **“Some cleanup could not be confirmed”** and listed `OPFS`. Afterward, local/session storage, IndexedDB databases, Cache Storage and service-worker registrations were empty; the read-only OPFS probe raised `UnknownError: The operation failed for an unknown transient reason (e.g. out of memory).` |
+| C — export/import/wipe | iPhone 13 | **PARTIAL.** Same export count, import result, Delete All warning, empty observed stores and OPFS probe error as iPhone SE. |
+
+This smoke confirms the older offline and OPFS observations also occur on the current deployment.
+It does not establish why WebKit failed the offline reload, whether cleanup completely removed
+OPFS data, or physical flash erasure. The owner must decide whether to investigate/fix these before
+the gate or retain them as unresolved P1 limitations. Both physical-phone smoke checks remain open.
 
 ## Previous deployment (34b38d5) — interactive smoke partial
 
 This historical record is for an older deployment and is not validation of the latest revision.
-Its partial offline and delete-all observations remain unresolved; they have not been retested on
-the latest deployment.
+The same offline and OPFS outcomes were reproduced on the latest deployment above; this section
+preserves the older run's detailed context.
 
 ### Deployment identity
 

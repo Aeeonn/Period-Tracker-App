@@ -32,11 +32,12 @@ _Last updated: 2026-12-19._ Update this file whenever work merges or plans chang
      is still outstanding; these command results alone do not close the gate.
 2. **Preview and demo.** The latest synthetic preview is https://0adba595.flo-preview-cm6.pages.dev
    (branch alias https://p1-gate-0171a80.flo-preview-cm6.pages.dev, revision `0171a80`).
-   Byte equality and deployed-origin header/network checks passed; see
-   [docs/deploy/p1-demo.md](deploy/p1-demo.md). No fresh interactive or real-iPhone smoke has run
-   against this revision. The older interactive record remains partial: offline behavior was
-   unproved and delete-all displayed an OPFS cleanup warning. Ask the owner whether to investigate
-   and fix these before the gate or present them as known P1 limitations; do not claim them passed.
+   Byte equality and deployed-origin header/network checks passed. Fresh synthetic WebKit smoke
+   also passed online navigation and export/import on both descriptors, but offline reload failed
+   with an internal WebKit error and Delete All reported OPFS cleanup unconfirmed; observed
+   non-OPFS stores were empty. See [docs/deploy/p1-demo.md](deploy/p1-demo.md). These are emulated
+   devices, not real iPhones. Ask the owner whether to investigate/fix the findings or carry them
+   as unresolved P1 limitations; neither is accepted or fixed yet.
 3. **P1 gate.** Complete the current-revision demo package, screenshots and both-phone real-iPhone
    smoke checklist ([test-strategy.md §7](plan/test-strategy.md#7-real-iphone-smoke-checklist-both-phones-at-every-phase-demo-synthetic-data-only)),
    record known issues, then wait for the owner's decision before starting P2.
