@@ -27,6 +27,7 @@ This file lists the project owner's standing decisions in plain language. It rep
 - **Visual direction** (2026-10-30): soft, inviting and supportive, not techy. Use purple tones and gradients, plus interactive, easy-to-read and fun data visuals such as a cycle ring with days-until and pastel stat tiles. A pastel Dribbble cycle-app shot was inspiration only; do not copy it.
 - **Motion** (2026-10-28): the final version should have satisfying animations and popups or sheets, with accessibility, reduced-motion support and correct focus handling. This does not authorise an animation framework or new dependencies.
 - **Clinical guidance:** Canadian guidance is selected. Canadian-localised medical content needs cited Canadian sources and an independent review before it ships.
+- **W-11 local crisis support** (2026-11-13): Canada is the target region. Use Canada-specific 9-8-8 (call/text) and 9-1-1 resources; independent medical-content review is required before merge.
 - **Admin help:** an optional administrative-help idea is exploratory only. It grants no hidden decryption, private-log access, forced edits or consent bypass.
 
 ## Prediction engine rulings (2026-10-30)

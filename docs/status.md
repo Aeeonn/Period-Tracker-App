@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-04._ Update this file whenever work merges or plans change. Keep it short: current state, what's next and open follow-ups. Put history in [progress.md](progress.md).
+_Last updated: 2026-11-13._ Update this file whenever work merges or plans change. Keep it short: current state, what's next and open follow-ups. Put history in [progress.md](progress.md).
 
 ## Current state
 
@@ -9,20 +9,21 @@ _Last updated: 2026-11-04._ Update this file whenever work merges or plans chang
   - the engine (episodes, cycle prediction and warnings);
   - logging forms;
   - Today, Calendar and the cycle ring;
-  - export/import and delete-all;
-  - education cards;
+  - export/import and delete-all; portable files exclude device identities, and legacy imports skip and disclose them (`0bd7009`);
+  - the cited core education-card catalog and A17 selector; Today display and warning integration remain open;
   - the visual refresh and daily-use polish;
   - the service-worker navigation fix (`3c96d61`).
 - **Development convenience:** `npm run dev` now runs an unlocked development mode with a separate synthetic-only database (`8f383cb`). See the [README](../README.md).
 
 ## Next up: finish P1
 
-1. **Preview demo record.** The latest synthetic preview is https://app.flo-preview-cm6.pages.dev (immutable deploy `https://e056cc9b.flo-preview-cm6.pages.dev`, built from `34b38d5`). [docs/deploy/p1-demo.md](deploy/p1-demo.md) records it honestly as **partial**:
+1. **Today safety/content integration.** The live screen still uses generic warning copy and does not display the A17 card. Wire rule-specific sourced guidance and card display. W-11 uses Canada-only 9-8-8/9-1-1 resources and needs independent content review before merge.
+2. **Preview demo record.** The latest synthetic preview is https://app.flo-preview-cm6.pages.dev (immutable deploy `https://e056cc9b.flo-preview-cm6.pages.dev`, built from `34b38d5`). [docs/deploy/p1-demo.md](deploy/p1-demo.md) records it honestly as **partial**:
    - On real WebKit, delete-all can fail OPFS `getDirectory` with `UnknownError`, and the app correctly shows an “could not confirm” warning.
    - Offline reload acceptance is still unverified.
-     Decide whether these limits need a fix or can be documented as known issues for the gate.
-2. **P1 phase check.** On the integrated `main`, run `npm run build`, `npm run check`, `npm run e2e`, `npm run test:tz`, coverage, `npm run backtest` and `npm run bench`. Then run one independent review of the P1 package against the [roadmap P1 exit criteria](plan/roadmap.md#p1--core-tracking-her). Item spec: `### p1-phase-verify` in [task-briefs.md](plan/task-briefs.md).
-3. **P1 gate.** Prepare a short demo package: what's new, the preview URL, known issues and what's next. Include a brief real-iPhone smoke check. The owner then decides whether to continue to P2.
+   Decide whether these limits need a fix or can be documented as known issues for the gate.
+3. **P1 phase check.** On the integrated `main`, run `npm run build`, `npm run check`, `npm run e2e`, `npm run test:tz`, coverage, `npm run backtest` and `npm run bench`. Then run one independent review of the P1 package against the [roadmap P1 exit criteria](plan/roadmap.md#p1--core-tracking-her). Item spec: `### p1-phase-verify` in [task-briefs.md](plan/task-briefs.md).
+4. **P1 gate.** Prepare a short demo package: what's new, the preview URL, known issues and what's next. Include a brief real-iPhone smoke check. The owner then decides whether to continue to P2.
 
 ## Open follow-ups
 
@@ -36,7 +37,6 @@ _Last updated: 2026-11-04._ Update this file whenever work merges or plans chang
   - add a preview-only reset action for its sticky error state;
   - make the Delete All screen copy mention that it clears both local stores.
 - **Deferred engine features** (owner, 2026-10-30): pause predictions during pregnancy or postpartum, and support pregnancy without a last-period date.
-- **Primary checkout `node_modules` is out of sync with the lockfile.** Vitest 4.1.11 is installed instead of 4.1.12, and `@vitest/coverage-v8`, `fake-indexeddb` and `happy-dom` are missing. `npm run dev` works, but `npm run check` needs `npm ci --ignore-scripts`, which restores the approved lockfile. This also restores the coverage provider, so line coverage has not yet been measured in the primary checkout.
 - **Older P0 lock E2E specs** were written before onboarding came first (`2eaf45f`). If they fail in the P1 phase check, fix their setup steps; keep the lock assertions and do not change routing or security behaviour.
 - **Documentation debt:** the synthetic data generator is already v2 with no skipped seeds (`08dc10b`). Text that still describes v1 or skipped seeds (for example around A18) is out of date, not an open decision.
 
