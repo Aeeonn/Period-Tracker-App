@@ -50,16 +50,24 @@ the diagnosis below that the Playwright WebKit failures came from the automation
 - **Demo:** with made-up data, set up the app, log a period and symptom, inspect Today and Calendar,
   try export/import and Delete All, and try Face ID and the lock timeout. The
   [roadmap](../plan/roadmap.md#p1--core-tracking-her) lists the full P1 demo.
+- **Screenshots:** [Today](p1-screenshots/today.png) and [Calendar](p1-screenshots/calendar.png),
+  captured from the main address with its synthetic fixture in an isolated Playwright WebKit
+  iPhone 13 emulation. They are illustrations, not real-iPhone evidence.
 - **Evidence:** the earlier integrated P1 checks and real-iPhone results are recorded in
   [status.md](../status.md#next-up-finish-p1) and above. For the later Face ID change,
   `npm run build && npm run check` passed with 462 unit tests, `npm run test:crypto` passed, and
   the affected browser specs passed serially. The default parallel full E2E run had seven
-  iPhone 13 timeouts; the affected specs subsequently passed serially. The later owner-reported
-  phone checks are above. These results cover different revisions and are not a completed
-  final-revision phase verification.
-- **Known issues and limits:** final-revision phase verification and screenshots remain to be
-  completed. The owner confirmed the requested phone checks generally, not each detailed assertion
-  in the full smoke checklist. Further Face ID and accessibility follow-ups are listed in
+  iPhone 13 timeouts; the affected specs subsequently passed serially. A later full
+  `npm run e2e -- --workers=1` passed all 218 tests on the same app code. A fresh
+  `npm run check` passed 462 tests. The five-zone `npm run test:tz` passed on retry; its first
+  attempt timed out in one passkey test in the fifth zone. The initial coverage run also timed
+  out in an engine property test, and a one-worker rerun timed out on two engine properties.
+  Coverage passed with one worker and a 30-second test timeout. Details and the remaining phase
+  verification work are below; the owner-reported phone checks are above.
+- **Known issues and limits:** final-revision phase verification remains to be completed. The
+  owner confirmed the requested phone checks generally, not each detailed assertion
+  in the full smoke checklist. Test-run timeouts occurred as described above; these are not
+  treated as proof of the cause. Further Face ID and accessibility follow-ups are listed in
   [status.md](../status.md#open-follow-ups). Neither automated testing nor the reported phone checks
   establish clinical accuracy or guarantee physical storage erasure.
 - **Decisions:** the owner approved early Face ID and a production-address deployment of the
@@ -68,6 +76,33 @@ the diagnosis below that the Playwright WebKit failures came from the automation
   [ADR-0016](../adr/0016-passkey-face-id-unlock.md).
 - **What's next:** complete the phase evidence and demo package, then present the P1 gate for the
   owner's decision. P2 couple features remain gated.
+
+## Current P1 verification evidence — 2026-11-14
+
+The app code checked here is the same as deployed revision `c9ced53`; subsequent changes through
+`c77865c` were documentation only. The full browser run began at `ff79b1d`. This is a compilation
+of evidence, not a completed independent phase review or approval.
+
+| Check | Result and limitations |
+| --- | --- |
+| `npm run check` | PASS: 62 files, 462 tests, plus typecheck, lint, dependency, copy, secret, synthetic-data and size checks. |
+| `npm run e2e -- --workers=1` | PASS: 218 tests on emulated iPhone SE and iPhone 13. An earlier default-parallel run had 7 timeouts. |
+| `npm run test:tz` | PASS on retry: 462 tests in each of five zones. The first attempt passed four zones and had one passkey-test timeout in Los Angeles. |
+| `npx vitest run --coverage --maxWorkers=1 --testTimeout=30000` | PASS: 462 tests; overall line coverage 81.98%, engine 97.75%, crypto 95.82%, data 95.14%, backup 95.10%. P2 share, sync and pairing have no source yet. Default coverage and one-worker coverage with the default timeout had engine-property timeouts. The 30-second limit was a command-line adjustment, not a source or configuration change. |
+| `npm run backtest` | PASS: generator v2, synthetic seeds 1–1,000, no skipped scenarios; all five gated targets met. This does not establish real-world accuracy. |
+| `npm run bench` | PASS: 730 synthetic rows, 20 samples, mean 359.53 ms and p95 472.99 ms against the 1.5 s target; passphrase KDF excluded. |
+| Live headers/network | `BASE_URL=https://flo-preview-cm6.pages.dev npx playwright test tests/e2e/p0-headers.spec.ts tests/e2e/p0-network.spec.ts --grep '@headers\|@network' --workers=1`: 12 passed, 4 expected local-only checks skipped. Four passes checked live headers/network on both descriptors; other passes used local fixtures. |
+
+The synthetic backtest's gated targets were: stable MAE for 3–5 prior cycles 2.413 versus
+2.530 days maximum; stable MAE for 6+ cycles 2.210 versus 2.377 days maximum; stable 6+ cycle
+window coverage 82.81% versus a 70% minimum; drift MAE 2.675 versus the 3.160-day baseline;
+and outlier MAE 3.020 versus 3.257 days maximum. Stable strata 0–2, skipped-logs, irregular
+and post-pill scenarios are report-only.
+
+Still needed: synthesize the full roadmap criteria and applicable reviews on the current code;
+resolve or explicitly present the detailed smoke-checklist gaps; and obtain the owner's P1 gate
+decision. The timeout-adjusted coverage result is recorded alongside, not in place of, the two
+failed attempts.
 
 ## Latest deployment — 2026-12-19
 

@@ -43,8 +43,8 @@ _Last updated: 2026-11-14._ Update this file whenever work merges or plans chang
    VoiceOver/large-text and Face ID checks passed on both phones
    ([record](deploy/p1-demo.md#additional-owner-reported-checks--2026-11-14)). The integrated
    phase report/review and [draft demo package](deploy/p1-demo.md#p1-demo-package--draft-2026-11-14)
-   (including screenshots) remain incomplete; the report must distinguish the owner's general
-   confirmation from the detailed smoke-checklist assertions.
+   remain incomplete; the package now includes synthetic WebKit-emulation screenshots. The report
+   must distinguish the owner's general confirmation from the detailed smoke-checklist assertions.
    Then wait for the owner's decision before starting P2.
 
 ## Open follow-ups
@@ -55,7 +55,11 @@ _Last updated: 2026-11-14._ Update this file whenever work merges or plans chang
   - neutral passkey name in the Passwords app (`Flo unlock`), for discretion;
   - Settings "unavailable" copy over-states the Home Screen requirement; record iCloud Keychain sync of the passkey in the T3 notes;
   - a malformed passkey field should not block passphrase unlock; restored `lockTimeoutSec` values outside 0/60/300/900 should snap to an offered choice.
-- **E2E under parallel load:** the full `npm run e2e` run had 7 iPhone 13 click timeouts (PBKDF2 under parallel workers); all passed with `--workers=1`. Watch for flakiness.
+- **Test timeouts:** a parallel full E2E run had 7 iPhone 13 timeouts; a later full serial run
+  passed all 218 tests. The first current five-zone matrix attempt timed out on a passkey test
+  in the fifth zone; the complete matrix passed on retry. The initial coverage run and a serial
+  retry had engine-property test timeouts; coverage passed with one worker and a 30-second test
+  timeout. The causes are not established.
 
 - **`p1-export-import-followups`** (`src/backup/portable/**`):
   - handle older schema versions before the first schema bump;
