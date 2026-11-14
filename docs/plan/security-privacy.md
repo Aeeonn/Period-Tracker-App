@@ -117,8 +117,9 @@ flowchart TB
 - **Future protection.** Anything created after a rotation uses keys his phone never received. If his phone is compromised later, an attacker can get only what he could already see.
 - **Passkey (optional).**
   - Setup: WebAuthn `create` with `extensions.prf.eval.first = salt_prf`, then a `get` with the same salt → 32-byte output → `KEK_prf`.
-  - The relying-party ID is the app's domain. **Changing the hosting domain breaks passkeys.** Passkeys are therefore offered only after the domain is fixed (AP-10).
-  - Offline and after-restore behaviour is **untested** (FB-07).
+  - The relying-party ID is the page's hostname. **Changing the hosting domain breaks passkeys.** The owner accepted offering Face ID before the domain is fixed (AP-10): each preview link needs its own Face ID setup, and the passphrase always still works ([ADR-0016](../adr/0016-passkey-face-id-unlock.md)).
+  - User verification is required, but iOS may accept the device passcode instead of Face ID. Settings warns that anyone who knows the iPhone's passcode could open Flo.
+  - Offline and after-restore behaviour is **untested** on a real phone (FB-07).
 - **Recovery.**
   - Forgotten passphrase: unlock with the recovery code or a passkey, then set a new passphrase. This re-wraps the LMK; the data is not re-encrypted.
   - All unlock methods lost: the data is **unrecoverable by design**. Setup explains this, and asks her to confirm the recovery code before it continues.

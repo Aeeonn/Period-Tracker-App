@@ -1,7 +1,8 @@
 import type { LockService } from '../../contracts/lock.ts';
 
 export interface AutoLockOptions {
-  readonly timeoutMs?: number;
+  /** A fixed timeout, or a getter read each time the page becomes hidden. */
+  readonly timeoutMs?: number | (() => number);
   readonly document?: Pick<
     Document,
     'visibilityState' | 'addEventListener' | 'removeEventListener'
@@ -14,12 +15,26 @@ export interface AutoLockOptions {
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
+function isValidTimeout(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
 /** Locks on cold start and after a continuous hidden interval reaches the configured timeout. */
 export function attachAutoLock(service: LockService, options: AutoLockOptions = {}): () => void {
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0) {
+  const configuredTimeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  if (typeof configuredTimeout === 'number' && !isValidTimeout(configuredTimeout)) {
     throw new RangeError('Auto-lock timeout must be a non-negative integer');
   }
+  const readTimeout = (): number => {
+    if (typeof configuredTimeout === 'number') return configuredTimeout;
+    try {
+      const value = configuredTimeout();
+      return isValidTimeout(value) ? value : DEFAULT_TIMEOUT_MS;
+    } catch {
+      return DEFAULT_TIMEOUT_MS;
+    }
+  };
+  let timeoutMs = readTimeout();
   const documentRef = options.document ?? globalThis.document;
   if (!documentRef) throw new DOMException('Document is unavailable', 'NotSupportedError');
   const monotonicNow = options.monotonicNow ?? (() => globalThis.performance?.now() ?? Date.now());
@@ -61,6 +76,7 @@ export function attachAutoLock(service: LockService, options: AutoLockOptions = 
     if (hiddenAtMonotonic !== null) return;
     hiddenAtMonotonic = monotonicNow();
     hiddenAtWall = wallNow();
+    timeoutMs = readTimeout();
     if (timeoutMs === 0) {
       lockForTimeout();
       return;

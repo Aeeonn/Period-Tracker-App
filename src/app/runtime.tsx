@@ -22,6 +22,8 @@ import {
 } from '../lock/core/index.ts';
 import { registerServiceWorker, type UpdateReadyNotice } from '../sw/client.ts';
 import { AppShell } from '../ui/layout/app.tsx';
+import { LockControlsContext, type LockControls } from '../ui/layout/lock-controls.tsx';
+import { createPasskeyAuthenticator } from '../lock/passkey/index.ts';
 import { LockScreen } from '../ui/screens/lock/core/lock-screen.tsx';
 import { OnboardingIntro, type OnboardingRole } from '../ui/screens/onboarding/index.ts';
 import { DeleteResultScreen } from '../ui/screens/settings/delete/delete-screen.tsx';
@@ -35,6 +37,14 @@ import {
 } from './unlocked-preview.ts';
 
 export const APP_AUTO_LOCK_TIMEOUT_MS = 60_000;
+/** The "Lock after inactivity" choices offered in Settings (security-privacy.md T3). */
+export const LOCK_TIMEOUT_CHOICES_SEC: readonly number[] = [0, 60, 300, 900];
+
+export function lockTimeoutMsForSetting(seconds: unknown): number | undefined {
+  return typeof seconds === 'number' && LOCK_TIMEOUT_CHOICES_SEC.includes(seconds)
+    ? seconds * 1000
+    : undefined;
+}
 
 type RuntimeState =
   | 'starting'
@@ -92,6 +102,19 @@ export function AppRuntime() {
   const serviceRef = useRef<LockService | null>(null);
   if (serviceRef.current === null) serviceRef.current = initialLockService(databaseName);
   const service = serviceRef.current;
+  const lockTimeoutMsRef = useRef(APP_AUTO_LOCK_TIMEOUT_MS);
+  const lockControlsRef = useRef<LockControls | null>(null);
+  if (lockControlsRef.current === null && !unlockedPreview) {
+    lockControlsRef.current = {
+      service,
+      passkeys: createPasskeyAuthenticator(),
+      onLockTimeoutChange: (seconds) => {
+        const timeoutMs = lockTimeoutMsForSetting(seconds);
+        if (timeoutMs !== undefined) lockTimeoutMsRef.current = timeoutMs;
+      },
+    };
+  }
+  const lockControls = lockControlsRef.current;
 
   const [runtimeState, setRuntimeState] = useState<RuntimeState>('starting');
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
@@ -154,7 +177,7 @@ export function AppRuntime() {
 
     if (!unlockedPreview) {
       try {
-        stopAutoLock = attachAutoLock(service, { timeoutMs: APP_AUTO_LOCK_TIMEOUT_MS });
+        stopAutoLock = attachAutoLock(service, { timeoutMs: () => lockTimeoutMsRef.current });
       } catch {
         setRuntimeError('This device could not start the app lock.');
         setRuntimeState('error');
@@ -332,9 +355,26 @@ export function AppRuntime() {
           return;
         }
         const hlcClock = createHlcClock(deviceId);
+        const settingsRepo = createSettingsRepo(store, { deviceId, hlcClock });
+        if (!unlockedPreview) {
+          try {
+            const profile = await settingsRepo.getProfile();
+            const timeoutMs = lockTimeoutMsForSetting(profile?.lockTimeoutSec);
+            if (timeoutMs !== undefined) lockTimeoutMsRef.current = timeoutMs;
+          } catch {
+            // Keep the current timeout; the profile screen reports its own read errors.
+          }
+          if (
+            resourcesRef.current !== resources ||
+            !service.isUnlocked() ||
+            resources.lifecycle.current !== store
+          ) {
+            return;
+          }
+        }
         resources.repositories = {
           logRepo: createLogRepo(store, { deviceId, hlcClock }),
-          settingsRepo: createSettingsRepo(store, { deviceId, hlcClock }),
+          settingsRepo,
         };
         setRuntimeState('ready');
       })
@@ -408,17 +448,19 @@ export function AppRuntime() {
     const resources = resourcesRef.current;
     if (!resources || resources.repositories === null) return null;
     return (
-      <AppShell
-        repositories={resources.repositories}
-        engineRunner={runEngineInWorker}
-        {...(onboardingRole === null ? {} : { initialOnboardingRole: onboardingRole })}
-        sessionOnboardingComplete={sessionOnboardingComplete}
-        onOnboardingComplete={() => setSessionOnboardingComplete(true)}
-        updateNotice={updateNotice}
-        restartStatus={restartStatus}
-        cancelRestart={() => resources.coordinator.cancelRestart()}
-        unlockedPreview={unlockedPreview}
-      />
+      <LockControlsContext.Provider value={lockControls}>
+        <AppShell
+          repositories={resources.repositories}
+          engineRunner={runEngineInWorker}
+          {...(onboardingRole === null ? {} : { initialOnboardingRole: onboardingRole })}
+          sessionOnboardingComplete={sessionOnboardingComplete}
+          onOnboardingComplete={() => setSessionOnboardingComplete(true)}
+          updateNotice={updateNotice}
+          restartStatus={restartStatus}
+          cancelRestart={() => resources.coordinator.cancelRestart()}
+          unlockedPreview={unlockedPreview}
+        />
+      </LockControlsContext.Provider>
     );
   }
 
@@ -477,8 +519,9 @@ export function AppRuntime() {
       ) : null}
       <LockScreen
         service={service}
-        autoLockTimeoutMs={APP_AUTO_LOCK_TIMEOUT_MS}
+        autoLockTimeoutMs={lockTimeoutMsRef.current}
         onUnlocked={showApp}
+        {...(lockControls ? { passkeys: lockControls.passkeys } : {})}
       />
     </>
   );

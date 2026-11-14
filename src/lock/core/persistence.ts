@@ -17,6 +17,46 @@ export interface LockConfiguration {
     readonly salt: Base64Url;
     readonly wrapped: WrappedKey;
   };
+  /** Optional Face ID unlock (SR-03): the LMK wrapped under HKDF(passkey PRF output, salt). */
+  readonly passkey?: LockPasskeyWrap;
+}
+
+export interface LockPasskeyWrap {
+  readonly credentialId: Base64Url;
+  /** 32-byte WebAuthn PRF input. */
+  readonly prfSalt: Base64Url;
+  /** 16-byte HKDF salt. */
+  readonly salt: Base64Url;
+  readonly wrapped: WrappedKey;
+}
+
+const MAX_CREDENTIAL_ID_BYTES = 1023;
+
+function isValidPasskeyWrap(value: unknown): boolean {
+  if (
+    !isObject(value) ||
+    typeof value.credentialId !== 'string' ||
+    typeof value.prfSalt !== 'string' ||
+    typeof value.salt !== 'string' ||
+    !isWrappedKey(value.wrapped)
+  ) {
+    return false;
+  }
+  try {
+    const credentialId = decodeBase64Url(value.credentialId);
+    return (
+      credentialId.length > 0 &&
+      credentialId.length <= MAX_CREDENTIAL_ID_BYTES &&
+      decodeBase64Url(value.prfSalt).length === 32 &&
+      decodeBase64Url(value.salt).length === 16
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isValidPasskeyCredentialLength(length: number): boolean {
+  return length > 0 && length <= MAX_CREDENTIAL_ID_BYTES;
 }
 
 export interface LockPersistence {
@@ -49,7 +89,8 @@ function validateConfiguration(value: unknown): LockConfiguration {
     passphrase.iterations !== 600_000 ||
     !isWrappedKey(passphrase.wrapped) ||
     typeof recoveryCode.salt !== 'string' ||
-    !isWrappedKey(recoveryCode.wrapped)
+    !isWrappedKey(recoveryCode.wrapped) ||
+    (value.passkey !== undefined && !isValidPasskeyWrap(value.passkey))
   ) {
     throw new DOMException('Lock metadata is invalid', 'DataError');
   }

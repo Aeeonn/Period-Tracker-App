@@ -11,7 +11,7 @@ class FakeDocument extends EventTarget {
   }
 }
 
-function setupHarness() {
+function setupHarness(timeoutMs: number | (() => number) = 60_000) {
   const document = new FakeDocument();
   const locks: LockReason[] = [];
   let monotonic = 0;
@@ -26,7 +26,7 @@ function setupHarness() {
   } as LockService;
   const stop = attachAutoLock(service, {
     document,
-    timeoutMs: 60_000,
+    timeoutMs,
     monotonicNow: () => monotonic,
     wallNow: () => wall,
     setTimer(callback, delay) {
@@ -65,6 +65,38 @@ function setupHarness() {
 }
 
 describe('auto-lock visibility lifecycle', () => {
+  it('reads a live timeout setting each time the app is hidden', () => {
+    let setting = 300_000;
+    const harness = setupHarness(() => setting);
+    harness.document.setVisibility('hidden');
+    expect(harness.scheduledDelay).toBe(300_000);
+    harness.setNow(1_000);
+    harness.document.setVisibility('visible');
+
+    setting = 0;
+    harness.document.setVisibility('hidden');
+    expect(harness.locks).toEqual(['cold_start', 'timeout']);
+    harness.document.setVisibility('visible');
+
+    setting = 900_000;
+    harness.setNow(2_000);
+    harness.document.setVisibility('hidden');
+    expect(harness.scheduledDelay).toBe(900_000);
+    harness.stop();
+  });
+
+  it('falls back to 60 seconds when the live timeout is invalid or throws', () => {
+    const invalid = setupHarness(() => -1);
+    invalid.document.setVisibility('hidden');
+    expect(invalid.scheduledDelay).toBe(60_000);
+    invalid.stop();
+    const throwing = setupHarness(() => {
+      throw new Error('synthetic');
+    });
+    throwing.document.setVisibility('hidden');
+    expect(throwing.scheduledDelay).toBe(60_000);
+    throwing.stop();
+  });
   it('locks synchronously on cold start and leaves a shorter hidden interval unlocked', () => {
     const harness = setupHarness();
     expect(harness.locks).toEqual(['cold_start']);

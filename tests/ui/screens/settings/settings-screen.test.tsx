@@ -6,7 +6,15 @@ import type { DeviceId } from '../../../../src/contracts/brand.ts';
 import type { Tracker } from '../../../../src/contracts/enums.ts';
 import { createSettingsRepo } from '../../../../src/data/repos/index.ts';
 import { RepositoriesContext, type Repositories } from '../../../../src/ui/layout/repositories.tsx';
-import { SettingsScreen } from '../../../../src/ui/screens/settings/main/settings-screen.tsx';
+import {
+  LockControlsContext,
+  type LockControls,
+} from '../../../../src/ui/layout/lock-controls.tsx';
+import { createMemoryService } from '../../../lock/fixtures.ts';
+import {
+  DEFAULT_SETTINGS_PROFILE,
+  SettingsScreen,
+} from '../../../../src/ui/screens/settings/main/settings-screen.tsx';
 import { MemoryRecordStore } from '../../../data/repos/memory-record-store.ts';
 
 const DEVICE_ID = 'synthetic-settings-screen-device' as DeviceId;
@@ -36,7 +44,11 @@ async function mount(
   pinnedTrackers: readonly Tracker[],
   onPinnedTrackersChange = vi.fn(),
   onThemeChange = vi.fn(),
-): Promise<{ root: HTMLElement; onPinnedTrackersChange: typeof onPinnedTrackersChange; onThemeChange: typeof onThemeChange }> {
+): Promise<{
+  root: HTMLElement;
+  onPinnedTrackersChange: typeof onPinnedTrackersChange;
+  onThemeChange: typeof onThemeChange;
+}> {
   const root = document.createElement('div');
   document.body.append(root);
   roots.push(root);
@@ -85,6 +97,50 @@ afterEach(() => {
 });
 
 describe('Settings screen accessible behavior', () => {
+  it('applies a saved lock timeout to the running auto-lock and shows Face ID only with lock controls', async () => {
+    const { repositories, settingsRepo } = createRepositories();
+    const withoutControls = await mount(repositories, ['flow']);
+    expect(withoutControls.root.textContent).not.toContain('Face ID unlock');
+
+    const onLockTimeoutChange = vi.fn();
+    const controls: LockControls = {
+      service: createMemoryService(),
+      passkeys: {
+        isAvailable: async () => false,
+        enroll: async () => ({ ok: false, error: 'unsupported' }),
+        evaluate: async () => ({ ok: false, error: 'unsupported' }),
+        forget: async () => undefined,
+      },
+      onLockTimeoutChange,
+    };
+    const root = document.createElement('div');
+    document.body.append(root);
+    roots.push(root);
+    await act(async () => {
+      render(
+        <LockControlsContext.Provider value={controls}>
+          <RepositoriesContext.Provider value={repositories}>
+            <SettingsScreen
+              pinnedTrackers={['flow']}
+              onPinnedTrackersChange={vi.fn()}
+              onThemeChange={vi.fn()}
+            />
+          </RepositoriesContext.Provider>
+        </LockControlsContext.Provider>,
+        root,
+      );
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+    expect(root.textContent).toContain('Face ID unlock');
+    const timeout = root.querySelector<HTMLSelectElement>('#settings-lock-timeout');
+    if (!timeout) throw new Error('Lock timeout selector is missing.');
+    expect(DEFAULT_SETTINGS_PROFILE.lockTimeoutSec).toBe(60);
+    await choose(timeout, '0');
+    await expect(settingsRepo.getProfile()).resolves.toMatchObject({ lockTimeoutSec: 0 });
+    expect(onLockTimeoutChange).toHaveBeenCalledWith(0);
+  });
   it('persists display preferences, announces saves, and delegates pinned tracker ordering', async () => {
     const { repositories, settingsRepo } = createRepositories();
     const { root, onPinnedTrackersChange, onThemeChange } = await mount(

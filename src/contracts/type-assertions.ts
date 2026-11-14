@@ -37,9 +37,13 @@ import type { MULTI_VALUE_TRACKERS, RecordType, SUPPRESSION_CHANCE_CATEGORY } fr
 import type {
   ChangePassphraseResult,
   ConfirmSetupResult,
+  DisablePasskeyResult,
+  EnablePasskeyResult,
   LockReason,
   LockSetupResult,
   LockSetupState,
+  PasskeyEnrollment,
+  PasskeyInfo,
   RecoveryConfirmation,
   RecoveryConfirmPositions,
   StoreKeysResult,
@@ -54,7 +58,7 @@ import type {
   StoredRecordRow,
   Unsubscribe,
 } from './store.ts';
-import type { Bytes } from './brand.ts';
+import type { Base64Url, Bytes } from './brand.ts';
 
 export type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -239,6 +243,9 @@ export type LockServiceMembersExact = Expect<
     | 'onLock'
     | 'changePassphrase'
     | 'storeKeys'
+    | 'passkeyInfo'
+    | 'enablePasskey'
+    | 'disablePasskey'
   >
 >;
 
@@ -257,7 +264,33 @@ export type LockServiceSignatures = Expect<
       onLock: [[(reason: LockReason) => void], Unsubscribe];
       changePassphrase: [[UnlockSecret, string], Promise<ChangePassphraseResult>];
       storeKeys: [[], StoreKeysResult];
+      passkeyInfo: [[], Promise<PasskeyInfo | undefined>];
+      enablePasskey: [[UnlockSecret, PasskeyEnrollment], Promise<EnablePasskeyResult>];
+      disablePasskey: [[], Promise<DisablePasskeyResult>];
     }
+  >
+>;
+
+/** Passkey parameters and results keep their exact shapes (SR-03). */
+export type PasskeyShapes = Expect<
+  Equal<
+    [PasskeyInfo, PasskeyEnrollment, EnablePasskeyResult, DisablePasskeyResult],
+    [
+      { readonly credentialId: Base64Url; readonly prfSalt: Base64Url },
+      {
+        readonly credentialId: Base64Url;
+        readonly prfSalt: Base64Url;
+        readonly prfOutput: Bytes;
+      },
+      (
+        | { readonly ok: true }
+        | {
+            readonly ok: false;
+            readonly error: 'locked' | 'wrong_secret' | 'invalid_enrollment';
+          }
+      ),
+      { readonly ok: true } | { readonly ok: false; readonly error: 'locked' },
+    ]
   >
 >;
 

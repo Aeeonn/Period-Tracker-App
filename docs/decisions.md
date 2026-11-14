@@ -30,6 +30,12 @@ This file lists the project owner's standing decisions in plain language. It rep
 - **W-11 local crisis support** (2026-11-13): Canada is the target region. Use Canada-specific 9-8-8 (call/text) and 9-1-1 resources; independent medical-content review is required before merge.
 - **Admin help:** an optional administrative-help idea is exploratory only. It grants no hidden decryption, private-log access, forced edits or consent bypass.
 
+## Lock and unlock (2026-11-14)
+
+- **Face ID early:** build `p2-passkey-unlock` now, ahead of the P1 gate, to cut passphrase typing ([ADR-0016](adr/0016-passkey-face-id-unlock.md)). The owner chose Face ID rather than a lock-free preview build.
+- **Domain:** Face ID may be offered before the final domain is fixed. It must be set up again on each preview alias and on the final domain.
+- **Lock after:** the saved "Lock after inactivity" choice is honoured (it was ignored before). New profiles default to 1 minute, as the threat model specifies.
+
 ## Prediction engine rulings (2026-10-30)
 
 - **Pregnancy/postpartum pause:** pausing predictions during pregnancy or postpartum is wanted eventually but is **deferred**.

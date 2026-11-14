@@ -13,6 +13,8 @@ import {
   type WeightUnit,
 } from '../../../../contracts/enums.ts';
 import { useRepositories } from '../../../layout/repositories.tsx';
+import { useLockControls } from '../../../layout/lock-controls.tsx';
+import { FaceIdSettingsCard } from '../../lock/passkey/index.ts';
 import { Button, Card } from '../../../components/base';
 import { TRACKER_LABELS } from '../../log/types.ts';
 import {
@@ -31,7 +33,7 @@ export const DEFAULT_SETTINGS_PROFILE: Profile = {
   units: { temp: 'celsius', weight: 'kg' },
   weekStart: 1,
   theme: 'system',
-  lockTimeoutSec: 300,
+  lockTimeoutSec: 60,
   quickHideEnabled: false,
 };
 
@@ -74,6 +76,7 @@ export function SettingsScreen({
   onThemeChange,
 }: SettingsScreenProps) {
   const { settingsRepo } = useRepositories();
+  const lockControls = useLockControls();
   const [profile, setProfile] = useState<Profile>(DEFAULT_SETTINGS_PROFILE);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -113,6 +116,9 @@ export function SettingsScreen({
     try {
       await settingsRepo.putProfile(next);
       if (patch.theme !== undefined) onThemeChange(patch.theme);
+      if (patch.lockTimeoutSec !== undefined) {
+        lockControls?.onLockTimeoutChange(patch.lockTimeoutSec);
+      }
       setSaveMessage('Settings saved on this device.');
     } catch {
       setProfile(previous);
@@ -291,7 +297,15 @@ export function SettingsScreen({
               </option>
             ))}
           </select>
+          <p class="settings-screen__help">
+            Flo locks when it has been in the background or off screen for this long. It always
+            locks when it is fully closed.
+          </p>
         </Card>
+
+        {lockControls ? (
+          <FaceIdSettingsCard service={lockControls.service} passkeys={lockControls.passkeys} />
+        ) : null}
 
         <Card class="settings-card" heading="Your trackers">
           <p class="settings-screen__help">

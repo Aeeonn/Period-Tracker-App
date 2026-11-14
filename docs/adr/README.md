@@ -19,3 +19,4 @@ ADRs 0001–0009 are **Proposed**, recorded during Stage C planning on 2026-10-0
 | [0013](0013-pooled-backtest-gating.md)                         | Pooled synthetic backtest gating                                             | Accepted (2026-10-30)                   |
 | [0014](0014-intimacy-track.md)                                 | Intimacy-track sequencing                                                    | Proposed (2026-10-30)                   |
 | [0015](0015-normal-agentic-development.md)                     | Normal agentic development (retires the Firstmate workflow)                  | Accepted (2026-11-04)                   |
+| [0016](0016-passkey-face-id-unlock.md)                         | Optional Face ID unlock with a passkey PRF wrap; honour the lock-after setting | Accepted (2026-11-14)                   |

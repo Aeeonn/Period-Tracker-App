@@ -14,6 +14,7 @@ _Last updated: 2026-11-14._ Update this file whenever work merges or plans chang
   - the visual refresh and daily-use polish;
   - the service-worker navigation fix (`3c96d61`).
 - **Development convenience:** `npm run dev` now runs an unlocked development mode with a separate synthetic-only database (`8f383cb`). See the [README](../README.md).
+- **Face ID unlock (`p2-passkey-unlock`, built early at the owner's request, 2026-11-14):** optional passkey-PRF unlock from Settings, and the Lock-after setting is now honoured (default 1 minute) ([ADR-0016](adr/0016-passkey-face-id-unlock.md)). Automated proof uses a synthetic WebAuthn stub; real-iPhone enrolment, unlock, cancel fallback and offline unlock are still to be checked by the owner.
 
 ## Next up: finish P1
 
@@ -75,7 +76,7 @@ Items are listed in dependency order. Specs are in [task-briefs.md](plan/task-br
 7. `p2-transport` (after sync-core and relay): the relay client and manual `.flosync` file exchange.
 8. `p2-pairing` (after share-keys and relay): in-person pairing with two-way QR codes, a safety code and a fallback code.
 9. `p2-share-controls`, `p2-partner-view`, `p2-couple-space`, `p2-backup` and `p2-unpair-delete` (after pairing, transport and projection).
-10. Independent of the chain: `p2-quick-hide` and `p2-passkey-unlock` (optional Face ID; depends on feasibility).
+10. Independent of the chain: `p2-quick-hide`. (`p2-passkey-unlock` was built early; see Current state.)
 11. P2 finish: `p2-preview-relay-deploy`, `p2-integration`, `p2-demo-deploy`, the phase check and the owner gate.
 
 After P2 comes **P2.5**: original intimacy prompts and sexual-wellness lessons, with an independent medical-content review. P3–P7 follow [roadmap.md](plan/roadmap.md); write their detailed tasks when each phase starts.

@@ -82,6 +82,12 @@
   gap: 0.85rem;
 }
 
+.lock-screen__face-id {
+  display: grid;
+  gap: 0.5rem;
+  margin-block-end: 1rem;
+}
+
 .lock-screen__form > label,
 .lock-screen__character > span {
   color: var(--color-text);

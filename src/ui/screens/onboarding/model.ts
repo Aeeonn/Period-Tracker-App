@@ -81,7 +81,7 @@ export function profileFromOnboarding(answers: OnboardingAnswers): Profile {
     units: { temp: 'celsius', weight: 'kg' },
     weekStart: 1,
     theme: 'system',
-    lockTimeoutSec: 300,
+    lockTimeoutSec: 60,
     quickHideEnabled: false,
   };
 }

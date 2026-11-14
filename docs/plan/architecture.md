@@ -88,7 +88,7 @@ All interfaces live in `src/contracts/` (task `p0-contracts`). They are versione
 | `lib/localdate` | A0 date arithmetic | `LocalDate`, `epochDay`, `addDays`, `diffDays`, `todayLocal()` | — |
 | `crypto` | Primitives, key hierarchy, envelopes | `CryptoApi`: `deriveKek`, `wrapKey`, `unwrapKey`, `seal`, `open`, `sign`, `verify`, `ecdhWrap`, `ecdhUnwrap` | localdate |
 | `data` | Encrypted IndexedDB store, migrations, repositories | `RecordStore`: `get/put/delete/list(type)`, `transaction`; `Migrations`; `LogRepo`, `SettingsRepo` | crypto, contracts |
-| `lock` | Passphrase setup, unlock, auto-lock, passkey PRF, quick-hide | `LockService`: `setup`, `confirmSetup`, `cancelSetup`, `setupState`, `unlock`, `lock`, `isUnlocked`, `onLock`, `changePassphrase`, `storeKeys` ([ADR-0010](../adr/0010-lock-service-key-lifecycle.md)) | crypto, data |
+| `lock` | Passphrase setup, unlock, auto-lock, passkey PRF, quick-hide | `LockService`: `setup`, `confirmSetup`, `cancelSetup`, `setupState`, `unlock`, `lock`, `isUnlocked`, `onLock`, `changePassphrase`, `storeKeys`, `passkeyInfo`, `enablePasskey`, `disablePasskey` ([ADR-0010](../adr/0010-lock-service-key-lifecycle.md), [ADR-0016](../adr/0016-passkey-face-id-unlock.md)) | crypto, data |
 | `engine` | A0–A18 (pure) | `runEngine(input, params)` | localdate only |
 | `share` | Categories, projections, epochs, key wrapping for the partner | `ShareService`: `enable`, `pause`, `resume`, `revoke`, `preview`, `buildProjection` | crypto, data, engine output types |
 | `pairing` | QR exchange, safety code, device registration, unpair | `PairingService` | crypto, share, sync |

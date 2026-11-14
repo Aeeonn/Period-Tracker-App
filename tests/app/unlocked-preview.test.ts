@@ -87,6 +87,15 @@ function fakeService(state: SharedServiceState): LockService {
     storeKeys() {
       return { ok: false, error: 'locked' };
     },
+    async passkeyInfo() {
+      return undefined;
+    },
+    async enablePasskey() {
+      return { ok: false, error: 'locked' };
+    },
+    async disablePasskey() {
+      return { ok: false, error: 'locked' };
+    },
   };
 }
 

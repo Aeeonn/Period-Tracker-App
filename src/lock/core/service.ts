@@ -4,6 +4,7 @@ import type {
   LockService,
   LockReason,
   ConfirmSetupResult,
+  PasskeyEnrollment,
   RecoveryConfirmPositions,
   RecoveryConfirmation,
   UnlockSecret,
@@ -31,6 +32,7 @@ import {
 } from '../../crypto/keyring/lmk.ts';
 import {
   IndexedDbLockPersistence,
+  isValidPasskeyCredentialLength,
   type LockConfiguration,
   type LockPersistence,
 } from './persistence.ts';
@@ -198,8 +200,21 @@ function sourceForSecret(
       wrapped: configuration.recoveryCode.wrapped,
     };
   }
+  if (secret.kind === 'passkey_prf' && configuration.passkey) {
+    return {
+      source: {
+        kind: 'passkey_prf',
+        prfOutput: secret.prfOutput,
+        salt: decodeBase64Url(configuration.passkey.salt),
+      },
+      wrapped: configuration.passkey.wrapped,
+    };
+  }
   return undefined;
 }
+
+type CommitOutcome = 'committed' | 'locked' | 'missing';
+type AuthorizationOutcome = 'ok' | 'locked' | 'wrong_secret';
 
 export function createLockService(options: LockServiceOptions = {}): LockService {
   const persistence = options.persistence ?? new IndexedDbLockPersistence(options.databaseName);
@@ -273,6 +288,84 @@ export function createLockService(options: LockServiceOptions = {}): LockService
     setup.recoveryCode = null;
     setup.configuration = null;
     if (pending === setup) pending = null;
+  };
+
+  let configurationWrites: Promise<void> = Promise.resolve();
+  /** Runs read-modify-commit cycles one at a time so concurrent changes never drop each other's wrap. */
+  const commitUpdate = (
+    controller: AbortController,
+    isCurrentSession: () => boolean,
+    update: (latest: LockConfiguration) => LockConfiguration,
+  ): Promise<CommitOutcome> => {
+    const run = configurationWrites.then(async (): Promise<CommitOutcome> => {
+      if (!isCurrentSession() || controller.signal.aborted) return 'locked';
+      const latest = configuration;
+      if (!latest) return 'missing';
+      const updated = update(latest);
+      let committed = false;
+      try {
+        await persistence.commit(updated, controller.signal, () => {
+          committed = true;
+          configuration = updated;
+          configurationLoaded = true;
+        });
+      } catch (error) {
+        if (committed) return 'committed';
+        if (!isCurrentSession()) return 'locked';
+        throw error;
+      }
+      return committed ? 'committed' : 'locked';
+    });
+    configurationWrites = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  };
+
+  /** Checks that `authorization` unwraps this device's stored wrap to the session's LMK. */
+  const authorize = async (
+    current: UnlockSession,
+    authorization: UnlockSecret,
+    isCurrentSession: () => boolean,
+  ): Promise<AuthorizationOutcome> => {
+    const stored = await loadConfiguration();
+    if (!isCurrentSession()) return 'locked';
+    if (!stored) return 'wrong_secret';
+    let source: ReturnType<typeof sourceForSecret>;
+    try {
+      source = sourceForSecret(stored, authorization);
+    } catch {
+      return 'wrong_secret';
+    }
+    if (!source) return 'wrong_secret';
+    let authorizationLmk: Bytes;
+    try {
+      const kek = await crypto.deriveKek(source.source);
+      if (!isCurrentSession()) return 'locked';
+      const unwrapped = await unwrapLocalMasterKey(source.wrapped, kek);
+      if (!unwrapped.ok) return 'wrong_secret';
+      authorizationLmk = unwrapped.value;
+    } catch {
+      return isCurrentSession() ? 'wrong_secret' : 'locked';
+    }
+    try {
+      if (!isCurrentSession()) return 'locked';
+      return equalBytes(current.lmkBytes, authorizationLmk) ? 'ok' : 'wrong_secret';
+    } finally {
+      authorizationLmk.fill(0);
+    }
+  };
+
+  const beginSessionChange = (current: UnlockSession) => {
+    const operationGeneration = generation;
+    const controller = new AbortController();
+    activeChanges.add(controller);
+    return {
+      controller,
+      isCurrentSession: () => session === current && generation === operationGeneration,
+      end: () => activeChanges.delete(controller),
+    };
   };
 
   const service: LockService = {
@@ -503,38 +596,10 @@ export function createLockService(options: LockServiceOptions = {}): LockService
       if (!isPassphraseLengthAllowed(canonicalNewPassphrase)) {
         throw new RangeError('Use at least 10 characters after trimming');
       }
-      const operationGeneration = generation;
-      const isCurrentSession = () => session === current && generation === operationGeneration;
-      const controller = new AbortController();
-      activeChanges.add(controller);
-      let authorizationLmk: Bytes | null = null;
-      let committed = false;
+      const change = beginSessionChange(current);
       try {
-        const stored = await loadConfiguration();
-        if (!isCurrentSession()) return { ok: false, error: 'locked' };
-        if (!stored) return { ok: false, error: 'wrong_secret' };
-        let source: ReturnType<typeof sourceForSecret>;
-        try {
-          source = sourceForSecret(stored, authorization);
-        } catch {
-          return { ok: false, error: 'wrong_secret' };
-        }
-        if (!source) return { ok: false, error: 'wrong_secret' };
-        try {
-          const kek = await crypto.deriveKek(source.source);
-          if (!isCurrentSession()) return { ok: false, error: 'locked' };
-          const unwrapped = await unwrapLocalMasterKey(source.wrapped, kek);
-          if (!unwrapped.ok) return { ok: false, error: 'wrong_secret' };
-          authorizationLmk = unwrapped.value;
-        } catch {
-          return isCurrentSession()
-            ? { ok: false, error: 'wrong_secret' }
-            : { ok: false, error: 'locked' };
-        }
-        if (!isCurrentSession()) return { ok: false, error: 'locked' };
-        if (!equalBytes(current.lmkBytes, authorizationLmk)) {
-          return { ok: false, error: 'wrong_secret' };
-        }
+        const authorized = await authorize(current, authorization, change.isCurrentSession);
+        if (authorized !== 'ok') return { ok: false, error: authorized };
 
         const salt = randomBytes(PBKDF2_SALT_BYTES);
         const newKek = await crypto.deriveKek({
@@ -542,36 +607,113 @@ export function createLockService(options: LockServiceOptions = {}): LockService
           passphrase: canonicalNewPassphrase,
           params: { iterations: PBKDF2_ITERATIONS, salt },
         });
-        if (!isCurrentSession()) return { ok: false, error: 'locked' };
+        if (!change.isCurrentSession()) return { ok: false, error: 'locked' };
         const wrapped = await wrapLocalMasterKey(current.lmkBytes, newKek);
-        if (!isCurrentSession()) return { ok: false, error: 'locked' };
-        const updated: LockConfiguration = {
-          ...stored,
-          passphrase: {
-            salt: encodeBase64Url(salt),
-            iterations: PBKDF2_ITERATIONS,
-            wrapped,
-          },
-        };
-        await persistence.commit(updated, controller.signal, () => {
-          committed = true;
-          configuration = updated;
-          configurationLoaded = true;
-        });
-        return committed ? { ok: true } : { ok: false, error: 'locked' };
+        if (!change.isCurrentSession()) return { ok: false, error: 'locked' };
+        const outcome = await commitUpdate(
+          change.controller,
+          change.isCurrentSession,
+          (latest) => ({
+            ...latest,
+            passphrase: {
+              salt: encodeBase64Url(salt),
+              iterations: PBKDF2_ITERATIONS,
+              wrapped,
+            },
+          }),
+        );
+        if (outcome === 'committed') return { ok: true };
+        return { ok: false, error: outcome === 'missing' ? 'wrong_secret' : 'locked' };
       } catch (error) {
-        if (committed) return { ok: true };
-        if (!isCurrentSession()) return { ok: false, error: 'locked' };
+        if (!change.isCurrentSession()) return { ok: false, error: 'locked' };
         throw error;
       } finally {
-        authorizationLmk?.fill(0);
-        activeChanges.delete(controller);
+        change.end();
       }
     },
 
     storeKeys() {
       if (!session) return { ok: false, error: 'locked' };
       return { ok: true, keys: makeKeyHandle(session) };
+    },
+
+    async passkeyInfo() {
+      const passkey = (await loadConfiguration())?.passkey;
+      return passkey ? { credentialId: passkey.credentialId, prfSalt: passkey.prfSalt } : undefined;
+    },
+
+    async enablePasskey(authorization: UnlockSecret, enrollment: PasskeyEnrollment) {
+      const current = session;
+      if (!current) return { ok: false, error: 'locked' };
+      let credentialId: Bytes;
+      let prfSalt: Bytes;
+      try {
+        credentialId = decodeBase64Url(enrollment.credentialId);
+        prfSalt = decodeBase64Url(enrollment.prfSalt);
+      } catch {
+        return { ok: false, error: 'invalid_enrollment' };
+      }
+      if (
+        !isValidPasskeyCredentialLength(credentialId.length) ||
+        prfSalt.length !== 32 ||
+        !(enrollment.prfOutput instanceof Uint8Array) ||
+        enrollment.prfOutput.length !== 32
+      ) {
+        return { ok: false, error: 'invalid_enrollment' };
+      }
+      const passkeyFields = {
+        credentialId: encodeBase64Url(credentialId),
+        prfSalt: encodeBase64Url(prfSalt),
+      };
+      const change = beginSessionChange(current);
+      try {
+        const authorized = await authorize(current, authorization, change.isCurrentSession);
+        if (authorized !== 'ok') return { ok: false, error: authorized };
+
+        const salt = randomBytes(HKDF_SALT_BYTES);
+        const kek = await crypto.deriveKek({
+          kind: 'passkey_prf',
+          prfOutput: enrollment.prfOutput,
+          salt,
+        });
+        if (!change.isCurrentSession()) return { ok: false, error: 'locked' };
+        const wrapped = await wrapLocalMasterKey(current.lmkBytes, kek);
+        if (!change.isCurrentSession()) return { ok: false, error: 'locked' };
+        const outcome = await commitUpdate(
+          change.controller,
+          change.isCurrentSession,
+          (latest) => ({
+            ...latest,
+            passkey: { ...passkeyFields, salt: encodeBase64Url(salt), wrapped },
+          }),
+        );
+        if (outcome === 'committed') return { ok: true };
+        return { ok: false, error: outcome === 'missing' ? 'wrong_secret' : 'locked' };
+      } catch (error) {
+        if (!change.isCurrentSession()) return { ok: false, error: 'locked' };
+        throw error;
+      } finally {
+        change.end();
+      }
+    },
+
+    async disablePasskey() {
+      const current = session;
+      if (!current) return { ok: false, error: 'locked' };
+      const change = beginSessionChange(current);
+      try {
+        const outcome = await commitUpdate(change.controller, change.isCurrentSession, (latest) => {
+          const { passkey, ...withoutPasskey } = latest;
+          void passkey;
+          return withoutPasskey;
+        });
+        return outcome === 'locked' ? { ok: false, error: 'locked' } : { ok: true };
+      } catch (error) {
+        if (!change.isCurrentSession()) return { ok: false, error: 'locked' };
+        throw error;
+      } finally {
+        change.end();
+      }
     },
   };
 

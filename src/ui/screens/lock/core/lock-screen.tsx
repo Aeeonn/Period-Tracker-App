@@ -3,11 +3,13 @@ import type { ComponentChildren, TargetedEvent } from 'preact';
 import type {
   LockService,
   LockSetupState,
+  PasskeyInfo,
   RecoveryConfirmPositions,
   UnlockSecret,
 } from '../../../../contracts/lock.ts';
 import { Button, Card, Sheet } from '../../../components/base';
 import { isPassphraseLengthAllowed } from '../../../../lock/core/service.ts';
+import type { PasskeyAuthenticator } from '../../../../lock/passkey/index.ts';
 
 type ScreenMode = 'loading' | 'setup' | 'confirm' | 'resume-setup' | 'locked' | 'unlocked';
 type SecretKind = 'passphrase' | 'recovery_code';
@@ -16,6 +18,8 @@ export interface LockScreenProps {
   readonly service: LockService;
   readonly autoLockTimeoutMs?: number;
   readonly onUnlocked?: () => void;
+  /** Offers "Unlock with Face ID" when a passkey wrap is stored and the device supports it. */
+  readonly passkeys?: PasskeyAuthenticator;
 }
 
 function timeoutDescription(timeoutMs: number): string {
@@ -77,7 +81,12 @@ function screenForState(state: LockSetupState): ScreenMode {
   return state === 'configured' ? 'locked' : 'setup';
 }
 
-export function LockScreen({ autoLockTimeoutMs = 60_000, onUnlocked, service }: LockScreenProps) {
+export function LockScreen({
+  autoLockTimeoutMs = 60_000,
+  onUnlocked,
+  passkeys,
+  service,
+}: LockScreenProps) {
   const timeoutCopy = timeoutDescription(autoLockTimeoutMs);
   const [mode, setMode] = useState<ScreenMode>('loading');
   const [setupState, setSetupState] = useState<LockSetupState>('not_configured');
@@ -95,6 +104,7 @@ export function LockScreen({ autoLockTimeoutMs = 60_000, onUnlocked, service }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [faceId, setFaceId] = useState<PasskeyInfo | undefined>(undefined);
   const recoveryAuthorization = useRef<string | null>(null);
   const unlockSecretRef = useRef<HTMLInputElement>(null);
   const viewGeneration = useRef(0);
@@ -136,6 +146,72 @@ export function LockScreen({ autoLockTimeoutMs = 60_000, onUnlocked, service }: 
   useEffect(() => {
     if (mode === 'locked' && error && !busy) unlockSecretRef.current?.focus();
   }, [mode, error, busy]);
+
+  useEffect(() => {
+    if (mode !== 'locked' || !passkeys) {
+      setFaceId(undefined);
+      return;
+    }
+    let current = true;
+    void Promise.all([service.passkeyInfo(), passkeys.isAvailable()])
+      .then(([info, available]) => {
+        if (current) setFaceId(available ? info : undefined);
+      })
+      .catch(() => {
+        if (current) setFaceId(undefined);
+      });
+    return () => {
+      current = false;
+    };
+  }, [mode, passkeys, service]);
+
+  const unlockWithFaceId = async () => {
+    if (!passkeys || !faceId || busy) return;
+    const currentView = viewGeneration.current;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      // Safari only allows the Face ID prompt directly from the tap, so start it first.
+      const evaluated = await passkeys.evaluate(faceId);
+      if (currentView !== viewGeneration.current) {
+        if (evaluated.ok) evaluated.value.fill(0);
+        return;
+      }
+      if (!evaluated.ok) {
+        setError(
+          evaluated.error === 'cancelled'
+            ? 'Face ID was cancelled. You can unlock with your passphrase.'
+            : 'Face ID did not work this time. Unlock with your passphrase.',
+        );
+        return;
+      }
+      const prfOutput = evaluated.value;
+      let result: Awaited<ReturnType<LockService['unlock']>>;
+      try {
+        result = await service.unlock({ kind: 'passkey_prf', prfOutput });
+      } finally {
+        prfOutput.fill(0);
+      }
+      if (currentView !== viewGeneration.current) return;
+      if (!result.ok) {
+        setError('Face ID did not unlock this device. Unlock with your passphrase.');
+        return;
+      }
+      recoveryAuthorization.current = null;
+      setUnlockSecret('');
+      setSetupState('configured');
+      setMode('unlocked');
+      setNotice('Unlocked');
+      onUnlocked?.();
+    } catch {
+      if (currentView === viewGeneration.current) {
+        setError('Face ID did not work this time. Unlock with your passphrase.');
+      }
+    } finally {
+      if (currentView === viewGeneration.current) setBusy(false);
+    }
+  };
 
   const closeChangeFlow = (open: boolean) => {
     setChangeOpen(open);
@@ -476,6 +552,14 @@ export function LockScreen({ autoLockTimeoutMs = 60_000, onUnlocked, service }: 
 
         {mode === 'locked' ? (
           <Card class="lock-screen__card" heading="Unlock this device">
+            {faceId ? (
+              <div class="lock-screen__face-id">
+                <Button disabled={busy} onClick={() => void unlockWithFaceId()} type="button">
+                  Unlock with Face ID
+                </Button>
+                <p class="lock-screen__intro">Or use your passphrase or recovery code below.</p>
+              </div>
+            ) : null}
             <form class="lock-screen__form" onSubmit={unlock}>
               <label for="lock-unlock-method">Unlock method</label>
               <select

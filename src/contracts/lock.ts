@@ -4,7 +4,7 @@
  * exposed by this contract. Callers receive only the LMK-protected purpose
  * keys the record store needs (ADR-0004), and only while unlocked.
  */
-import type { Bytes } from './brand.ts';
+import type { Base64Url, Bytes } from './brand.ts';
 import type { RecordKeyProvider, Unsubscribe } from './store.ts';
 
 /** Secret used to unlock. A PIN is not offered (AP-07). */
@@ -92,6 +92,31 @@ export type StoreKeysResult =
   | { readonly ok: true; readonly keys: UnlockedStoreKeys }
   | { readonly ok: false; readonly error: 'locked' };
 
+/**
+ * Non-secret passkey parameters this device needs before a Face ID unlock:
+ * which credential to ask for and the PRF input to evaluate (SR-03).
+ */
+export interface PasskeyInfo {
+  /** WebAuthn credential `rawId`. */
+  readonly credentialId: Base64Url;
+  /** 32-byte WebAuthn PRF input (`eval.first`). */
+  readonly prfSalt: Base64Url;
+}
+
+/** A freshly created passkey and its 32-byte PRF output for `prfSalt`. */
+export interface PasskeyEnrollment extends PasskeyInfo {
+  readonly prfOutput: Bytes;
+}
+
+/** Result of `enablePasskey`; nothing changes unless `ok` is `true`. */
+export type EnablePasskeyResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly error: 'locked' | 'wrong_secret' | 'invalid_enrollment' };
+
+/** Result of `disablePasskey`; nothing changes unless `ok` is `true`. */
+export type DisablePasskeyResult =
+  { readonly ok: true } | { readonly ok: false; readonly error: 'locked' };
+
 export interface LockService {
   /**
    * Setup phase 1: creates the LMK and the recovery code in memory only. The
@@ -150,4 +175,25 @@ export interface LockService {
    * LMK itself is never returned.
    */
   storeKeys(): StoreKeysResult;
+  /**
+   * The stored passkey parameters, or `undefined` when no passkey unlock is
+   * configured. Readable while locked; neither value is secret.
+   */
+  passkeyInfo(): Promise<PasskeyInfo | undefined>;
+  /**
+   * Requires an unlocked session and re-authentication exactly as
+   * `changePassphrase` does. Wraps the in-memory LMK under a KEK derived with
+   * HKDF from `enrollment.prfOutput` and a new salt, then atomically adds or
+   * replaces only the passkey wrap. The LMK, the other wraps and every record
+   * stay unchanged. The caller keeps ownership of `enrollment.prfOutput`.
+   */
+  enablePasskey(
+    authorization: UnlockSecret,
+    enrollment: PasskeyEnrollment,
+  ): Promise<EnablePasskeyResult>;
+  /**
+   * Requires an unlocked session. Atomically removes only the passkey wrap;
+   * the passphrase and recovery-code wraps stay unchanged.
+   */
+  disablePasskey(): Promise<DisablePasskeyResult>;
 }
