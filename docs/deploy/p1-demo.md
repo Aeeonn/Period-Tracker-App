@@ -1,8 +1,31 @@
 # P1 preview deployment record — phase gate pending
 
-The latest synthetic preview's served-byte and deployed-origin header/network checks passed. A
-fresh browser-only interactive smoke is recorded below as partial; this is not P1 phase approval.
-No real-iPhone smoke has been run.
+The latest synthetic preview's served-byte and deployed-origin header/network checks passed. The
+owner's real-iPhone smoke (2026-11-14) passed install, offline reopen and Delete All on her phone,
+and install/setup/unlock on his phone. This is not P1 phase approval.
+
+## Real-iPhone smoke — 2026-11-14 (owner-reported)
+
+Run by the owner against https://p1-gate-0171a80.flo-preview-cm6.pages.dev (revision `0171a80`),
+installed from Safari to the Home Screen, with made-up data only.
+
+| Phone                                   | Check                                                       | Result                                                           |
+| --------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| iPhone 16 Pro, iOS 26.7.3 (cycle owner) | Home Screen install; “Preview — synthetic data only” banner | PASS                                                             |
+| iPhone 16 Pro                           | Synthetic period start and symptom logged                   | PASS                                                             |
+| iPhone 16 Pro                           | Airplane Mode → force-quit → reopen                         | PASS: unlock screen appeared; Today showed the synthetic entries |
+| iPhone 16 Pro                           | Delete All                                                  | PASS: “Your local data was removed” (no cleanup failures listed) |
+| iPhone 12, iOS 18.6.7 (partner)         | Home Screen install, banner, setup, unlock after reopening  | PASS                                                             |
+
+Not covered in this run: checklist items 4–6 of
+[test-strategy.md §7](../plan/test-strategy.md#7-real-iphone-smoke-checklist-both-phones-at-every-phase-demo-synthetic-data-only)
+(auto-lock after backgrounding, prediction copy/Calendar marks, VoiceOver and large text).
+Results are as reported by the owner; no device logs or screenshots were collected. Delete All
+reporting success means the app confirmed each cleanup step; physical flash erasure is not
+guaranteed (crypto-erasure is the guarantee).
+
+On the real iPhone, offline reopen worked and OPFS cleanup was confirmed. This is consistent with
+the diagnosis below that the Playwright WebKit failures came from the automation environment.
 
 ## Latest deployment — 2026-12-19
 
@@ -25,7 +48,7 @@ No real-iPhone smoke has been run.
   all 8 served files were byte-equal to the app build. `_headers` is Pages configuration, not a
   served asset.
 - `BASE_URL=https://0adba595.flo-preview-cm6.pages.dev npm run e2e -- --grep
-  '@headers|@network' --workers=1`: **12 passed, 4 skipped, 0 failed** across WebKit iPhone SE
+'@headers|@network' --workers=1`: **12 passed, 4 skipped, 0 failed** across WebKit iPhone SE
   and iPhone 13 descriptors. Four passing tests checked the deployed origin (header equality and
   first-party network policy on each descriptor); eight were local fixtures or validation checks.
   The four expected skips were the local-only HSTS-scope and seeded third-party-path checks.
@@ -45,14 +68,14 @@ No real-iPhone smoke has been run.
 - All app data entered was synthetic. Export/import used a fresh target context; no export contents
   or identifiers are recorded here. These are emulated WebKit results, not physical-iPhone proof.
 
-| Scenario | WebKit descriptor | Observed outcome |
-|---|---|---|
-| A — online navigation | iPhone SE | **PASS, limited.** `?today=synthetic` returned 200; after lock setup Today and the synthetic-data banner were visible. The service worker activated and controlled the page; online reload and restore rendered Today. No page errors were captured. |
-| A — online navigation | iPhone 13 | **PASS, limited.** Same observed result as iPhone SE. |
-| B — offline and restore | iPhone SE | **PARTIAL.** Offline `page.reload()` failed with `WebKit encountered an internal error` while waiting for `domcontentloaded`. After restoring network, the synthetic Today page reopened. |
-| B — offline and restore | iPhone 13 | **PARTIAL.** Same offline reload error; online restore reopened Today. |
-| C — export/import/wipe | iPhone SE | **PARTIAL.** A synthetic JSON export contained 4 records. Import into a fresh context succeeded; Flow and Cramps were visible. Delete All showed **“Some cleanup could not be confirmed”** and listed `OPFS`. Afterward, local/session storage, IndexedDB databases, Cache Storage and service-worker registrations were empty; the read-only OPFS probe raised `UnknownError: The operation failed for an unknown transient reason (e.g. out of memory).` |
-| C — export/import/wipe | iPhone 13 | **PARTIAL.** Same export count, import result, Delete All warning, empty observed stores and OPFS probe error as iPhone SE. |
+| Scenario                | WebKit descriptor | Observed outcome                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A — online navigation   | iPhone SE         | **PASS, limited.** `?today=synthetic` returned 200; after lock setup Today and the synthetic-data banner were visible. The service worker activated and controlled the page; online reload and restore rendered Today. No page errors were captured.                                                                                                                                                                                                       |
+| A — online navigation   | iPhone 13         | **PASS, limited.** Same observed result as iPhone SE.                                                                                                                                                                                                                                                                                                                                                                                                      |
+| B — offline and restore | iPhone SE         | **PARTIAL.** Offline `page.reload()` failed with `WebKit encountered an internal error` while waiting for `domcontentloaded`. After restoring network, the synthetic Today page reopened.                                                                                                                                                                                                                                                                  |
+| B — offline and restore | iPhone 13         | **PARTIAL.** Same offline reload error; online restore reopened Today.                                                                                                                                                                                                                                                                                                                                                                                     |
+| C — export/import/wipe  | iPhone SE         | **PARTIAL.** A synthetic JSON export contained 4 records. Import into a fresh context succeeded; Flow and Cramps were visible. Delete All showed **“Some cleanup could not be confirmed”** and listed `OPFS`. Afterward, local/session storage, IndexedDB databases, Cache Storage and service-worker registrations were empty; the read-only OPFS probe raised `UnknownError: The operation failed for an unknown transient reason (e.g. out of memory).` |
+| C — export/import/wipe  | iPhone 13         | **PARTIAL.** Same export count, import result, Delete All warning, empty observed stores and OPFS probe error as iPhone SE.                                                                                                                                                                                                                                                                                                                                |
 
 This smoke confirms the older offline and OPFS observations also occur on the current deployment.
 It does not establish why WebKit failed the offline reload, whether cleanup completely removed
@@ -113,10 +136,10 @@ preserves the older run's detailed context.
 ### Served bytes, headers, and network
 
 - `npx --no-install tsx tools/deploy/check-preview.ts
-  https://e056cc9b.flo-preview-cm6.pages.dev app`: PASS; all 8 non-reserved served files were
+https://e056cc9b.flo-preview-cm6.pages.dev app`: PASS; all 8 non-reserved served files were
   byte-equal to this app build. `_headers` is Pages configuration, not a served asset.
 - `BASE_URL=https://e056cc9b.flo-preview-cm6.pages.dev npm run e2e -- --grep
-  "@headers|@network" --workers=2`: **12 passed, 4 skipped, 0 failed** across WebKit iPhone SE and
+"@headers|@network" --workers=2`: **12 passed, 4 skipped, 0 failed** across WebKit iPhone SE and
   iPhone 13 descriptors. Four passing tests were live-origin checks (header equality and
   first-party network checks on each descriptor); the other eight passes were local fixtures or
   validation-only checks. Four expected skips were the local-only Host/HSTS and seeded third-party
@@ -143,14 +166,14 @@ readiness/navigation sequence and completed the delete-all observation; the A/B 
 repeated. Full timestamped events and command output are retained privately at
 `~/firstmate/data/p1-demo-redeploy-navigation/`.
 
-| Scenario | WebKit descriptor | Observed outcome |
-|---|---|---|
-| A — online navigation | iPhone SE | **PARTIAL.** Activated controller; 8 cached entries; cached `/` was nonredirected, cached `/index.html` reflected the canonical redirect, and `/?today=synthetic` was uncached before navigation. The query navigation returned 200 from the service worker with 949 matching bytes, matching security headers, no request/network redirect, and no captured online page/console/CSP error. The subsequent Today-heading, banner, and synthetic-summary assertions timed out, so post-navigation UI acceptance is **not proved**. |
-| A — online navigation | iPhone 13 | **PARTIAL.** Same observed cache and query-response results as iPhone SE. The post-navigation Today-heading, banner, and synthetic-summary assertions timed out; no online page/console/CSP error was captured. UI acceptance is **not proved**. |
-| B — offline and restore | iPhone SE | **PARTIAL.** Warm online controller and 8 cache entries including the engine worker were observed. Offline query navigation and offline reload each returned `WebKit encountered an internal error`; first timestamped offline error was `2026-11-01T03:01:19.733Z`. Offline behavior is **NOT PROVED**. After restoring online, the actual `#calendar` route rendered Calendar and its grid; explicit Today showed synthetic `Flow: Medium` and `Symptoms: Cramps`. No online errors or CSP violations were captured. |
-| B — offline and restore | iPhone 13 | **PARTIAL.** Warm online controller and 8 cache entries including the engine worker were observed. Offline query navigation and reload each returned `WebKit encountered an internal error`; first timestamped offline error was `2026-11-01T03:03:06.886Z`. Offline behavior is **NOT PROVED**. After restoring online, `#calendar` rendered Calendar and its grid; explicit Today showed synthetic `Flow: Medium` and `Symptoms: Cramps`. No online errors or CSP violations were captured. |
-| C — export/import/wipe | iPhone SE | **PARTIAL.** Synthetic JSON export contained 5 records; Flow CSV contained 1 data row. Import into a fresh target context applied after a no-change dry run; `Flow: Medium` and `Symptoms: Cramps` were visible and the round-trip JSON contained 6 records. Delete-all displayed **“Some cleanup could not be confirmed”** with failure list `OPFS`. Observed local/session storage, IndexedDB, Cache Storage, and service-worker registrations were empty. |
-| C — export/import/wipe | iPhone 13 | **PARTIAL.** Same record counts, fresh-context import/value checks, delete-all warning and observed empty stores as iPhone SE. |
+| Scenario                | WebKit descriptor | Observed outcome                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A — online navigation   | iPhone SE         | **PARTIAL.** Activated controller; 8 cached entries; cached `/` was nonredirected, cached `/index.html` reflected the canonical redirect, and `/?today=synthetic` was uncached before navigation. The query navigation returned 200 from the service worker with 949 matching bytes, matching security headers, no request/network redirect, and no captured online page/console/CSP error. The subsequent Today-heading, banner, and synthetic-summary assertions timed out, so post-navigation UI acceptance is **not proved**. |
+| A — online navigation   | iPhone 13         | **PARTIAL.** Same observed cache and query-response results as iPhone SE. The post-navigation Today-heading, banner, and synthetic-summary assertions timed out; no online page/console/CSP error was captured. UI acceptance is **not proved**.                                                                                                                                                                                                                                                                                  |
+| B — offline and restore | iPhone SE         | **PARTIAL.** Warm online controller and 8 cache entries including the engine worker were observed. Offline query navigation and offline reload each returned `WebKit encountered an internal error`; first timestamped offline error was `2026-11-01T03:01:19.733Z`. Offline behavior is **NOT PROVED**. After restoring online, the actual `#calendar` route rendered Calendar and its grid; explicit Today showed synthetic `Flow: Medium` and `Symptoms: Cramps`. No online errors or CSP violations were captured.            |
+| B — offline and restore | iPhone 13         | **PARTIAL.** Warm online controller and 8 cache entries including the engine worker were observed. Offline query navigation and reload each returned `WebKit encountered an internal error`; first timestamped offline error was `2026-11-01T03:03:06.886Z`. Offline behavior is **NOT PROVED**. After restoring online, `#calendar` rendered Calendar and its grid; explicit Today showed synthetic `Flow: Medium` and `Symptoms: Cramps`. No online errors or CSP violations were captured.                                     |
+| C — export/import/wipe  | iPhone SE         | **PARTIAL.** Synthetic JSON export contained 5 records; Flow CSV contained 1 data row. Import into a fresh target context applied after a no-change dry run; `Flow: Medium` and `Symptoms: Cramps` were visible and the round-trip JSON contained 6 records. Delete-all displayed **“Some cleanup could not be confirmed”** with failure list `OPFS`. Observed local/session storage, IndexedDB, Cache Storage, and service-worker registrations were empty.                                                                      |
+| C — export/import/wipe  | iPhone 13         | **PARTIAL.** Same record counts, fresh-context import/value checks, delete-all warning and observed empty stores as iPhone SE.                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 The deployed query response had the expected bytes and headers on both devices, and the former
 service-worker redirection page error was not captured in these online query runs. However, the

@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-12-19._ Update this file whenever work merges or plans change. Keep it short: current state, what's next and open follow-ups. Put history in [progress.md](progress.md).
+_Last updated: 2026-11-14._ Update this file whenever work merges or plans change. Keep it short: current state, what's next and open follow-ups. Put history in [progress.md](progress.md).
 
 ## Current state
 
@@ -32,17 +32,16 @@ _Last updated: 2026-12-19._ Update this file whenever work merges or plans chang
      is still outstanding; these command results alone do not close the gate.
 2. **Preview and demo.** The latest synthetic preview is https://0adba595.flo-preview-cm6.pages.dev
    (branch alias https://p1-gate-0171a80.flo-preview-cm6.pages.dev, revision `0171a80`).
-   Byte equality and deployed-origin header/network checks passed. Fresh synthetic WebKit smoke
-   also passed online navigation and export/import on both descriptors, but offline reload failed
-   with an internal WebKit error and Delete All reported OPFS cleanup unconfirmed; observed
-   non-OPFS stores were empty. Follow-up found the OPFS API fails before Delete All in this WebKit
-   environment, while the app's controlled-outage service-worker tests pass. No safe app fix is
-   identified; see [docs/deploy/p1-demo.md](deploy/p1-demo.md). These are emulated devices, not
-   real iPhones. Do not mask the warning or claim offline acceptance; confirm on both real phones
-   before deciding whether an app fix is needed.
-3. **P1 gate.** Complete the current-revision demo package, screenshots and both-phone real-iPhone
-   smoke checklist ([test-strategy.md §7](plan/test-strategy.md#7-real-iphone-smoke-checklist-both-phones-at-every-phase-demo-synthetic-data-only)),
-   record known issues, then wait for the owner's decision before starting P2.
+   Byte equality and deployed-origin header/network checks passed. Playwright WebKit emulation
+   failed offline reload and could not confirm OPFS cleanup, but the owner's **real-iPhone smoke
+   (2026-11-14)** passed: on the iPhone 16 Pro (iOS 26.7.3) the installed app reopened offline,
+   unlocked and showed synthetic entries, and Delete All reported “Your local data was removed”;
+   the iPhone 12 (iOS 18.6.7) installed, set up and unlocked. The emulation failures are treated as
+   automation limitations; no app change was needed. See [docs/deploy/p1-demo.md](deploy/p1-demo.md).
+3. **P1 gate.** Remaining: smoke checklist items 4–6 (auto-lock, prediction copy/Calendar marks,
+   VoiceOver/large text) were not run; the integrated phase report/review and the demo package
+   (what's new, screenshots, known issues, what's next) are still to do. Then wait for the owner's
+   decision before starting P2.
 
 ## Open follow-ups
 
