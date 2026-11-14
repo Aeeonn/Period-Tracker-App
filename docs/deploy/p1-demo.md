@@ -56,8 +56,29 @@ No real-iPhone smoke has been run.
 
 This smoke confirms the older offline and OPFS observations also occur on the current deployment.
 It does not establish why WebKit failed the offline reload, whether cleanup completely removed
-OPFS data, or physical flash erasure. The owner must decide whether to investigate/fix these before
-the gate or retain them as unresolved P1 limitations. Both physical-phone smoke checks remain open.
+OPFS data, or physical flash erasure. No app defect or safe code fix is established by this
+emulation. Both physical-phone smoke checks are needed to determine whether an app fix is warranted.
+
+## Follow-up diagnosis — 2026-12-19
+
+- `npm run e2e -- --grep '@sw' --workers=1`: **10 passed** across both WebKit descriptors.
+  The local controlled-outage tests served the cached root and query shell from the service worker
+  with HTTP 200, preserved shell headers, and no page errors. These tests exercise the app against
+  a local server; they are not a live-preview airplane-mode test.
+- `npx vitest run tests/data/wipe/browser-wipe.test.ts tests/data/wipe/wipe.test.ts`: **12 passed**.
+- Before running Delete All in a fresh context on the live preview, a read-only probe found the
+  service worker activated/controlling, the `flo-static-*` cache present, and both `/` and
+  `/index.html` in that cache. The same pre-wipe probe of
+  `navigator.storage.getDirectory()` already raised
+  `UnknownError: The operation failed for an unknown transient reason (e.g. out of memory).`
+  Therefore this automation environment cannot enumerate OPFS even before the wipe starts; changing
+  the UI to report success would be unsafe.
+- With Playwright WebKit `context.setOffline(true)`, both same-page reload and fresh-page navigation
+  failed with `WebKit encountered an internal error` despite the active worker and cached shell.
+  Playwright returned no document response to inspect. The controlled-outage tests pass, so the
+  live emulation error is not evidence that the worker's offline fallback is broken.
+- No application code was changed: current evidence points to WebKit automation limitations, not
+  an identified app defect. Real-device checks are required before attributing either result to Flo.
 
 ## Previous deployment (34b38d5) — interactive smoke partial
 

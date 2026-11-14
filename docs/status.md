@@ -35,9 +35,11 @@ _Last updated: 2026-12-19._ Update this file whenever work merges or plans chang
    Byte equality and deployed-origin header/network checks passed. Fresh synthetic WebKit smoke
    also passed online navigation and export/import on both descriptors, but offline reload failed
    with an internal WebKit error and Delete All reported OPFS cleanup unconfirmed; observed
-   non-OPFS stores were empty. See [docs/deploy/p1-demo.md](deploy/p1-demo.md). These are emulated
-   devices, not real iPhones. Ask the owner whether to investigate/fix the findings or carry them
-   as unresolved P1 limitations; neither is accepted or fixed yet.
+   non-OPFS stores were empty. Follow-up found the OPFS API fails before Delete All in this WebKit
+   environment, while the app's controlled-outage service-worker tests pass. No safe app fix is
+   identified; see [docs/deploy/p1-demo.md](deploy/p1-demo.md). These are emulated devices, not
+   real iPhones. Do not mask the warning or claim offline acceptance; confirm on both real phones
+   before deciding whether an app fix is needed.
 3. **P1 gate.** Complete the current-revision demo package, screenshots and both-phone real-iPhone
    smoke checklist ([test-strategy.md §7](plan/test-strategy.md#7-real-iphone-smoke-checklist-both-phones-at-every-phase-demo-synthetic-data-only)),
    record known issues, then wait for the owner's decision before starting P2.
