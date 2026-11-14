@@ -1,6 +1,6 @@
 # Project status
 
-_Last updated: 2026-11-13._ Update this file whenever work merges or plans change. Keep it short: current state, what's next and open follow-ups. Put history in [progress.md](progress.md).
+_Last updated: 2026-12-19._ Update this file whenever work merges or plans change. Keep it short: current state, what's next and open follow-ups. Put history in [progress.md](progress.md).
 
 ## Current state
 
@@ -17,12 +17,29 @@ _Last updated: 2026-11-13._ Update this file whenever work merges or plans chang
 
 ## Next up: finish P1
 
-1. **Preview demo record.** The latest synthetic preview is https://app.flo-preview-cm6.pages.dev (immutable deploy `https://e056cc9b.flo-preview-cm6.pages.dev`, built from `34b38d5`). [docs/deploy/p1-demo.md](deploy/p1-demo.md) records it honestly as **partial**:
-   - On real WebKit, delete-all can fail OPFS `getDirectory` with `UnknownError`, and the app correctly shows an “could not confirm” warning.
-   - Offline reload acceptance is still unverified.
-   Decide whether these limits need a fix or can be documented as known issues for the gate.
-2. **P1 phase check.** On the integrated `main`, run `npm run build`, `npm run check`, `npm run e2e`, `npm run test:tz`, coverage, `npm run backtest` and `npm run bench`. Then run one independent review of the P1 package against the [roadmap P1 exit criteria](plan/roadmap.md#p1--core-tracking-her). Item spec: `### p1-phase-verify` in [task-briefs.md](plan/task-briefs.md).
-3. **P1 gate.** Prepare a short demo package: what's new, the preview URL, known issues and what's next. Include a brief real-iPhone smoke check. The owner then decides whether to continue to P2.
+1. **P1 phase verification.** Automated checks completed on integrated `main` at `0171a809`:
+   - `npm run build && npm run check`: PASS; 58 test files / 434 tests.
+   - `npx playwright test tests/e2e/today.spec.ts tests/e2e/settings.spec.ts --workers=1`: 38
+     passed. Full `npm run e2e -- --workers=1`: 214 passed. The default 8-worker run had 5
+     iPhone 13 timeouts; serial execution passed.
+   - `npm run test:tz`: PASS in all 5 configured zones (58 files / 434 tests per zone).
+   - `npx vitest run --coverage`: 81.43% overall line coverage; engine 97.75%, crypto 95.82%,
+     data 95.14%, backup 95.10%. `share`, `sync` and `pairing` have no files yet.
+   - `npm run backtest`: PASS; frozen synthetic stable, drift and outlier targets met.
+     `npm run bench`: PASS; 730-record load averaged about 132 ms, p95 about 167 ms (1.5 s
+     target).
+   - The integrated P1 phase report/review against all [roadmap exit criteria](plan/roadmap.md#p1--core-tracking-her)
+     is still outstanding; these command results alone do not close the gate.
+2. **Preview and demo.** The latest synthetic preview is https://0adba595.flo-preview-cm6.pages.dev
+   (branch alias https://p1-gate-0171a80.flo-preview-cm6.pages.dev, revision `0171a80`).
+   Byte equality and deployed-origin header/network checks passed; see
+   [docs/deploy/p1-demo.md](deploy/p1-demo.md). No fresh interactive or real-iPhone smoke has run
+   against this revision. The older interactive record remains partial: offline behavior was
+   unproved and delete-all displayed an OPFS cleanup warning. Ask the owner whether to investigate
+   and fix these before the gate or present them as known P1 limitations; do not claim them passed.
+3. **P1 gate.** Complete the current-revision demo package, screenshots and both-phone real-iPhone
+   smoke checklist ([test-strategy.md §7](plan/test-strategy.md#7-real-iphone-smoke-checklist-both-phones-at-every-phase-demo-synthetic-data-only)),
+   record known issues, then wait for the owner's decision before starting P2.
 
 ## Open follow-ups
 

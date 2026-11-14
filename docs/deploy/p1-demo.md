@@ -1,10 +1,49 @@
-# P1 preview redeployment record — partial, acceptance incomplete
+# P1 preview deployment record — phase gate pending
 
-This is the fresh synthetic preview of the already reviewed navigation fix. Deployment and
-byte/header checks passed; the live interactive evidence below is partial and is not a P1 phase
-approval.
+The latest synthetic preview's served-byte and deployed-origin header/network checks passed. This
+is not P1 phase approval. The interactive smoke evidence retained below is from an older revision;
+the latest deployment has not had a fresh interactive or real-iPhone smoke.
 
-## Deployment identity
+## Latest deployment — 2026-12-19
+
+- Immutable preview URL: https://0adba595.flo-preview-cm6.pages.dev
+- Pages project / branch: `flo-preview` / `p1-gate-0171a80`; branch alias:
+  https://p1-gate-0171a80.flo-preview-cm6.pages.dev. Production branch `main` was not deployed.
+- Deployed source revision: `0171a809b0ed4d4bac6c8bbb2a607c72b15c2fc9`
+  (`feat(today): show sourced guidance and education cards`).
+- Build listing SHA-256:
+  `f4f05fffd10038e40e747476e107b839d66c07b068d307c59af1daaed0a2ee0d`.
+- Built app shell: 949 bytes, SHA-256
+  `0cec8e0cc550d4a803bfe7353741ca8d035fef15305c68545e86bdb587201781`.
+- Built service worker: `sw.js`, SHA-256
+  `fe2b2e62cb2e1f344ebd575f536d0835509067b0a53dd875f014e4cbafe237cc`.
+- Engine worker: `assets/engine.worker-9hiALv3-.js`, SHA-256
+  `13cee88e3237a90fd890d675befb514d9cc134851bd849dbb422bd83ec51a3c4`.
+- `bash tools/deploy/pages-preview.sh app --branch p1-gate-0171a80`: PASS; deployed the synthetic
+  app preview at the immutable URL and branch alias above.
+- `npx tsx tools/deploy/check-preview.ts https://0adba595.flo-preview-cm6.pages.dev app`: PASS;
+  all 8 served files were byte-equal to the app build. `_headers` is Pages configuration, not a
+  served asset.
+- `BASE_URL=https://0adba595.flo-preview-cm6.pages.dev npm run e2e -- --grep
+  '@headers|@network' --workers=1`: **12 passed, 4 skipped, 0 failed** across WebKit iPhone SE
+  and iPhone 13 descriptors. Four passing tests checked the deployed origin (header equality and
+  first-party network policy on each descriptor); eight were local fixtures or validation checks.
+  The four expected skips were the local-only HSTS-scope and seeded third-party-path checks.
+- Each deployed-origin network recorder observed 5 requests, 0 failed requests, 0 CSP violations,
+  0 browser errors, and an activated/controlling service worker; requests stayed on the deployed
+  first-party origin. Exact approved security headers were verified on `/` and `/sw.js`.
+  Application HSTS was omitted on the Pages host; platform HSTS was not simulated.
+- These checks cover deployed bytes, headers and network policy only. The latest revision has not
+  had a fresh interactive A/B/C smoke or real-iPhone smoke; offline loading, export/import and
+  delete-all behavior on this exact revision remain unverified.
+
+## Previous deployment (34b38d5) — interactive smoke partial
+
+This historical record is for an older deployment and is not validation of the latest revision.
+Its partial offline and delete-all observations remain unresolved; they have not been retested on
+the latest deployment.
+
+### Deployment identity
 
 - Immutable preview URL: https://e056cc9b.flo-preview-cm6.pages.dev
 - Pages project / branch: `flo-preview` / `app`; stable alias:
@@ -28,7 +67,7 @@ approval.
   `24fc170f2f5aaa02ee023eb4bc85eae17ad4cb73cdfe52ff051dc91c3e6f5b9e`. That older deployment
   predates the reviewed navigation fix; this redeployment does not rewrite its immutable URL.
 
-## Served bytes, headers, and network
+### Served bytes, headers, and network
 
 - `npx --no-install tsx tools/deploy/check-preview.ts
   https://e056cc9b.flo-preview-cm6.pages.dev app`: PASS; all 8 non-reserved served files were
@@ -53,7 +92,7 @@ approval.
 - The live app-shell response was **949 bytes**, SHA-256
   `099c35bafc338ff9009d7c147d1acae0c90884f0d18497037b450ddc988633bc`.
 
-## Fresh live synthetic smoke — partial
+### Fresh live synthetic smoke — partial
 
 One six-outcome A/B/C matrix was run across both descriptors. The C outcome used a separate fresh
 target context for import. A single focused C-only continuation corrected the probe's import
@@ -81,7 +120,7 @@ diagnostic recorded an OPFS `UnknownError`; the current visible failure remains 
 incomplete-cleanup warning, not proof of a runtime defect or successful OPFS cleanup. Physical
 flash erasure is not established.
 
-## Limits and evidence
+### Limits and evidence
 
 - Synthetic data only; no real health data, credentials, or export contents are recorded here.
 - This is not a physical-iPhone Safari/Home Screen test and does not prove offline document loading,
