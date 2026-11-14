@@ -14,7 +14,7 @@ _Last updated: 2026-11-14._ Update this file whenever work merges or plans chang
   - the visual refresh and daily-use polish;
   - the service-worker navigation fix (`3c96d61`).
 - **Development convenience:** `npm run dev` now runs an unlocked development mode with a separate synthetic-only database (`8f383cb`). See the [README](../README.md).
-- **Face ID unlock (`p2-passkey-unlock`, built early at the owner's request, 2026-11-14):** optional passkey-PRF unlock from Settings, and the Lock-after setting is now honoured (default 1 minute) ([ADR-0016](adr/0016-passkey-face-id-unlock.md)). Automated proof uses a synthetic WebAuthn stub; real-iPhone enrolment, unlock, cancel fallback and offline unlock are still to be checked by the owner.
+- **Face ID unlock (`p2-passkey-unlock`, built early at the owner's request, 2026-11-14):** optional passkey-PRF unlock from Settings, and the Lock-after setting is now honoured (default 1 minute) ([ADR-0016](adr/0016-passkey-face-id-unlock.md)). Automated proof uses a synthetic WebAuthn stub; real-iPhone enrolment, unlock, cancel fallback and offline unlock are still to be checked by the owner on the synthetic preview https://face-id.flo-preview-cm6.pages.dev ([record](deploy/face-id-preview.md)).
 
 ## Next up: finish P1
 
