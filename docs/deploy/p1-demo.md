@@ -17,15 +17,57 @@ installed from Safari to the Home Screen, with made-up data only.
 | iPhone 16 Pro                           | Delete All                                                  | PASS: “Your local data was removed” (no cleanup failures listed) |
 | iPhone 12, iOS 18.6.7 (partner)         | Home Screen install, banner, setup, unlock after reopening  | PASS                                                             |
 
-Not covered in this run: checklist items 4–6 of
+Not covered in that run: checklist items 4–6 of
 [test-strategy.md §7](../plan/test-strategy.md#7-real-iphone-smoke-checklist-both-phones-at-every-phase-demo-synthetic-data-only)
 (auto-lock after backgrounding, prediction copy/Calendar marks, VoiceOver and large text).
 Results are as reported by the owner; no device logs or screenshots were collected. Delete All
 reporting success means the app confirmed each cleanup step; physical flash erasure is not
 guaranteed (crypto-erasure is the guarantee).
 
+## Additional owner-reported checks — 2026-11-14
+
+After being asked to test the main address with synthetic data, the owner reported that all
+requested checks passed on both the iPhone 16 Pro and iPhone 12: immediate auto-lock after
+switching apps; prediction wording and Calendar marks; VoiceOver and large text; Face ID setup
+and unlock; passphrase fallback after cancelling; and offline Face ID unlock. See the
+[Face ID deployment record](face-id-preview.md). No device logs or screenshots were collected.
+The confirmation did not separately describe every detailed assertion in the full smoke checklist,
+and does not constitute P1 approval.
+
 On the real iPhone, offline reopen worked and OPFS cleanup was confirmed. This is consistent with
 the diagnosis below that the Playwright WebKit failures came from the automation environment.
+
+## P1 demo package — draft, 2026-11-14
+
+- **Try it:** https://flo-preview-cm6.pages.dev. This is the owner-approved production address,
+  but it is still a synthetic-only preview, not approval to use real health data. The deployed
+  app is from `c9ced53`; deployment and served-byte checks are in the
+  [Face ID deployment record](face-id-preview.md).
+- **What's new:** account-free onboarding and a local encrypted lock; period, symptom and other
+  logging; Today and Calendar with prediction windows, cited warnings and educational cards;
+  JSON/CSV export, import and Delete All. Optional Face ID and the Lock-after setting were added
+  early. Face ID must be set up separately on each hostname.
+- **Demo:** with made-up data, set up the app, log a period and symptom, inspect Today and Calendar,
+  try export/import and Delete All, and try Face ID and the lock timeout. The
+  [roadmap](../plan/roadmap.md#p1--core-tracking-her) lists the full P1 demo.
+- **Evidence:** the earlier integrated P1 checks and real-iPhone results are recorded in
+  [status.md](../status.md#next-up-finish-p1) and above. For the later Face ID change,
+  `npm run build && npm run check` passed with 462 unit tests, `npm run test:crypto` passed, and
+  the affected browser specs passed serially. The default parallel full E2E run had seven
+  iPhone 13 timeouts; the affected specs subsequently passed serially. The later owner-reported
+  phone checks are above. These results cover different revisions and are not a completed
+  final-revision phase verification.
+- **Known issues and limits:** final-revision phase verification and screenshots remain to be
+  completed. The owner confirmed the requested phone checks generally, not each detailed assertion
+  in the full smoke checklist. Further Face ID and accessibility follow-ups are listed in
+  [status.md](../status.md#open-follow-ups). Neither automated testing nor the reported phone checks
+  establish clinical accuracy or guarantee physical storage erasure.
+- **Decisions:** the owner approved early Face ID and a production-address deployment of the
+  synthetic-only build; the P1 phase gate remains open. See
+  [decisions.md](../decisions.md#lock-and-unlock-2026-11-14) and
+  [ADR-0016](../adr/0016-passkey-face-id-unlock.md).
+- **What's next:** complete the phase evidence and demo package, then present the P1 gate for the
+  owner's decision. P2 couple features remain gated.
 
 ## Latest deployment — 2026-12-19
 

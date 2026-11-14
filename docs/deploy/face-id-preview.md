@@ -26,9 +26,20 @@ The owner explicitly approved putting the current app on the production address
 
 Passkeys are tied to the hostname, so Face ID set up on another preview link does not carry over.
 
-## Owner checks on a real iPhone (pending)
+## Owner-reported real-iPhone checks — 2026-11-14
 
-1. Open the alias from Safari, add it to the Home Screen, and set up the lock with made-up data.
+The owner reported that all requested checks passed on both the iPhone 16 Pro and iPhone 12:
+immediate auto-lock after switching apps; Today prediction wording and Calendar marks; VoiceOver
+and large text; Face ID setup and unlock; passphrase fallback after cancelling Face ID; and offline
+Face ID unlock. The owner was asked to use the main address above and synthetic data. Results are
+owner-reported; no device logs or screenshots were collected. This is not P1 or P2 gate approval.
+
+The specific check of setting up Face ID while Lock after is already set to "Immediately" was not
+included in that confirmation and remains a follow-up.
+
+### Requested Face ID procedure
+
+1. Open the main address from Safari, add it to the Home Screen, and set up the lock with made-up data.
 2. Settings → Face ID → turn it on with the passphrase.
 3. Force-quit, reopen, and tap "Unlock with Face ID".
 4. Cancel the Face ID prompt and check the passphrase still unlocks.

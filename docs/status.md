@@ -14,7 +14,7 @@ _Last updated: 2026-11-14._ Update this file whenever work merges or plans chang
   - the visual refresh and daily-use polish;
   - the service-worker navigation fix (`3c96d61`).
 - **Development convenience:** `npm run dev` now runs an unlocked development mode with a separate synthetic-only database (`8f383cb`). See the [README](../README.md).
-- **Face ID unlock (`p2-passkey-unlock`, built early at the owner's request, 2026-11-14):** optional passkey-PRF unlock from Settings, and the Lock-after setting is now honoured (default 1 minute) ([ADR-0016](adr/0016-passkey-face-id-unlock.md)). Automated proof uses a synthetic WebAuthn stub; real-iPhone enrolment, unlock, cancel fallback and offline unlock are still to be checked by the owner on the synthetic preview https://face-id.flo-preview-cm6.pages.dev or the production address https://flo-preview-cm6.pages.dev (owner-approved, same synthetic-only build; [record](deploy/face-id-preview.md)).
+- **Face ID unlock (`p2-passkey-unlock`, built early at the owner's request, 2026-11-14):** optional passkey-PRF unlock from Settings, and the Lock-after setting is now honoured (default 1 minute) ([ADR-0016](adr/0016-passkey-face-id-unlock.md)). The owner reports Face ID setup, unlock, passphrase fallback and offline unlock passed on both phones after being asked to use https://flo-preview-cm6.pages.dev with synthetic data ([record](deploy/face-id-preview.md)); automated tests use a synthetic WebAuthn stub.
 
 ## Next up: finish P1
 
@@ -39,10 +39,13 @@ _Last updated: 2026-11-14._ Update this file whenever work merges or plans chang
    unlocked and showed synthetic entries, and Delete All reported “Your local data was removed”;
    the iPhone 12 (iOS 18.6.7) installed, set up and unlocked. The emulation failures are treated as
    automation limitations; no app change was needed. See [docs/deploy/p1-demo.md](deploy/p1-demo.md).
-3. **P1 gate.** Remaining: smoke checklist items 4–6 (auto-lock, prediction copy/Calendar marks,
-   VoiceOver/large text) were not run; the integrated phase report/review and the demo package
-   (what's new, screenshots, known issues, what's next) are still to do. Then wait for the owner's
-   decision before starting P2.
+3. **P1 gate.** The owner subsequently reported that the requested auto-lock, prediction/Calendar,
+   VoiceOver/large-text and Face ID checks passed on both phones
+   ([record](deploy/p1-demo.md#additional-owner-reported-checks--2026-11-14)). The integrated
+   phase report/review and [draft demo package](deploy/p1-demo.md#p1-demo-package--draft-2026-11-14)
+   (including screenshots) remain incomplete; the report must distinguish the owner's general
+   confirmation from the detailed smoke-checklist assertions.
+   Then wait for the owner's decision before starting P2.
 
 ## Open follow-ups
 
