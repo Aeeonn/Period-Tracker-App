@@ -143,7 +143,7 @@ describe('Lock screen Face ID unlock', () => {
     await click(button(root, 'Unlock with Face ID'));
     await waitFor(root, () => root.querySelector('[role="alert"]') !== null);
     expect(root.querySelector('[role="alert"]')?.textContent).toBe(
-      'Face ID was cancelled. You can unlock with your passphrase.',
+      'Face ID was cancelled or timed out. You can unlock with your passphrase.',
     );
     expect(service.isUnlocked()).toBe(false);
     expect(onUnlocked).not.toHaveBeenCalled();
@@ -228,8 +228,22 @@ describe('Settings Face ID card', () => {
     await submitPassphrase(root, SYNTHETIC_PASSPHRASE);
     await waitFor(root, () => root.querySelector('[role="alert"]') !== null);
     expect(root.querySelector('[role="alert"]')?.textContent).toBe(
-      'Face ID was cancelled. Nothing changed.',
+      'Face ID was cancelled or timed out. Nothing changed.',
     );
     expect(await service.passkeyInfo()).toBeUndefined();
+  });
+
+  it('forgets the new passkey when saving the Face ID wrap throws', async () => {
+    const service = await unlockedService(false);
+    vi.spyOn(service, 'enablePasskey').mockRejectedValue(new Error('synthetic storage failure'));
+    const { authenticator } = fakeAuthenticator();
+    const root = await mount(<FaceIdSettingsCard service={service} passkeys={authenticator} />);
+    await waitFor(root, () => button(root, 'Turn on Face ID') !== undefined);
+    await submitPassphrase(root, SYNTHETIC_PASSPHRASE);
+    await waitFor(root, () => root.querySelector('[role="alert"]') !== null);
+    expect(root.querySelector('[role="alert"]')?.textContent).toBe(
+      'Face ID could not be turned on. Nothing changed.',
+    );
+    expect(authenticator.forget).toHaveBeenCalledWith(CREDENTIAL_ID);
   });
 });

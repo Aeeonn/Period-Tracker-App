@@ -57,7 +57,7 @@ export function FaceIdSettingsCard({ service, passkeys }: FaceIdSettingsCardProp
         if (!mounted.current) return;
         setError(
           enrolled.error === 'cancelled'
-            ? 'Face ID was cancelled. Nothing changed.'
+            ? 'Face ID was cancelled or timed out. Nothing changed.'
             : enrolled.error === 'unsupported'
               ? 'This device could not create a Face ID key that Flo can use. Nothing changed.'
               : 'Face ID could not be set up. Nothing changed.',
@@ -68,6 +68,9 @@ export function FaceIdSettingsCard({ service, passkeys }: FaceIdSettingsCardProp
       let result: Awaited<ReturnType<LockService['enablePasskey']>>;
       try {
         result = await service.enablePasskey(authorization, enrollment);
+      } catch (error) {
+        void passkeys.forget(enrollment.credentialId);
+        throw error;
       } finally {
         enrollment.prfOutput.fill(0);
       }

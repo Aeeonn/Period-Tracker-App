@@ -46,6 +46,14 @@ _Last updated: 2026-11-14._ Update this file whenever work merges or plans chang
 
 ## Open follow-ups
 
+- **Face ID review follow-ups (ADR-0016):**
+  - real iPhone: check Face ID setup still works with Lock after set to "Immediately" (the passkey sheet may count as hidden), and check the create-then-get PRF fallback;
+  - move focus to the passphrase field or new button when the Face ID card changes state;
+  - neutral passkey name in the Passwords app (`Flo unlock`), for discretion;
+  - Settings "unavailable" copy over-states the Home Screen requirement; record iCloud Keychain sync of the passkey in the T3 notes;
+  - a malformed passkey field should not block passphrase unlock; restored `lockTimeoutSec` values outside 0/60/300/900 should snap to an offered choice.
+- **E2E under parallel load:** the full `npm run e2e` run had 7 iPhone 13 click timeouts (PBKDF2 under parallel workers); all passed with `--workers=1`. Watch for flakiness.
+
 - **`p1-export-import-followups`** (`src/backup/portable/**`):
   - handle older schema versions before the first schema bump;
   - check that the record id matches its contents on import;

@@ -181,7 +181,7 @@ export function LockScreen({
       if (!evaluated.ok) {
         setError(
           evaluated.error === 'cancelled'
-            ? 'Face ID was cancelled. You can unlock with your passphrase.'
+            ? 'Face ID was cancelled or timed out. You can unlock with your passphrase.'
             : 'Face ID did not work this time. Unlock with your passphrase.',
         );
         return;

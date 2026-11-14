@@ -201,7 +201,7 @@ test('Face ID @passkey enrols, unlocks, falls back to the passphrase, and turns 
   await setStubMode(page, 'cancel');
   await faceIdButton.click();
   await expect(page.getByRole('alert')).toHaveText(
-    'Face ID was cancelled. You can unlock with your passphrase.',
+    'Face ID was cancelled or timed out. You can unlock with your passphrase.',
   );
   await expect(page.locator('#lock-unlock-secret')).toBeVisible();
   await expect(page.locator('.shell-root')).toHaveCount(0);
