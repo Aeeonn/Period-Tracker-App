@@ -3,6 +3,16 @@
 Synthetic-data-only preview of optional Face ID unlock and the honoured Lock after setting
 ([ADR-0016](../adr/0016-passkey-face-id-unlock.md)). This is not P1 or P2 phase approval.
 
+## Production branch deployment — 2026-11-14
+
+The owner explicitly approved putting the current app on the production address
+("put everything that's working in the main app", then chose "production").
+
+- Revision: `c9ced53` (merged `main`). Command: `tools/deploy/pages-preview.sh app` (no `--branch`, so the Pages production branch `main`).
+- Address: https://flo-preview-cm6.pages.dev (deployment https://3388e641.flo-preview-cm6.pages.dev). This replaces the feasibility probe that was served there.
+- `npx --no-install tsx tools/deploy/check-preview.ts https://flo-preview-cm6.pages.dev app`: PASS (8 served files byte-equal). The response has the strict first-party CSP, and the bundle contains the Face ID copy.
+- This is the same build as the previews: it still shows "Preview — synthetic data only". It is not the P6 launch and not approval for real health data. P1 gate is still pending.
+
 ## Deployment — 2026-11-14
 
 - Revision: `4f74962` (merged `main`).
