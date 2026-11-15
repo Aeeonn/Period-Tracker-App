@@ -16,6 +16,23 @@ This file lists the project owner's standing decisions in plain language. It rep
 - The owner prefers to keep moving rather than wait on reports. Don't stop for confirmation on routine, in-scope work; ask only for the items listed in [AGENTS.md](../AGENTS.md#ask-the-owner-first).
 - Local development defaults to the unlocked development mode (`npm run dev`) because the passphrase and recovery-code screens slowed testing. The lock feature stays in the product (`npm run dev:secured`, production builds).
 
+## Scope (2026-11-15)
+
+The owner narrowed the plan to what the two of them need ([ADR-0017](adr/0017-narrowed-scope.md)). The current roadmap is at the top of [roadmap.md](plan/roadmap.md#current-roadmap-narrowed-2026-11-15). Nothing already built is removed.
+
+- **Goals, in order:** cycle tracking and logging; tracking and helping their sex life (her own desire, comfort and satisfaction patterns, intimacy content); a partner view on his phone.
+- **Real use starts after P1**, not after a later hardening phase. Production use with real data still needs the owner's explicit go-ahead.
+- **Partner view is wanted on his own phone.** It shows what she logged and when her period is expected. The owner says they are open about this and it is not private from him. She still gets an on/off switch per category, a one-tap pause and "see what he sees"; sharing starts off.
+  - Agent's reading, not yet confirmed by the owner: free-text notes stay private unless she chooses to share them.
+- **Lean sharing** replaces the P2 design: one pairing code, one couple key, latest snapshot wins, relay only. No safety-code pairing, key rotation, conflict copies, file exchange, consent history, start date, per-entry opt-in or quick-hide. The relay still stores only ciphertext.
+- **Contraception:** she has an IUD; copper or hormonal is **not yet confirmed**. It changes what the app shows (a hormonal IUD hides the fertility estimate; a copper IUD does not), so she should choose the right one in the app. Pill and medication reminders are dropped.
+- **Ovulation markers:** she does not use ovulation test strips. Temperature, test-strip and mucus tracking are dropped.
+- **Dropped for now** ("we don't need all that fancy stuff quite yet"): pregnancy, postpartum, perimenopause and trying-to-conceive modes; symptom checker; local assistant; content library; doctor report; Apple Health and other imports. Quizzes, date ideas and check-ins are an unplanned wish list. Any of these can come back if the owner asks.
+- **Pattern summaries** are simple per-phase summaries of her own logs with day counts and a "not enough yet" state, and they include satisfaction. The formal statistical calibration study is not required.
+- **Process:** no phase reports, demo packages or formal gates. The owner decides when to launch and when each step starts.
+
+Where this section conflicts with older entries below (for example the P6 production timing, backup scope or the deferred pregnancy features), this section wins.
+
 ## Product direction
 
 - **Priority:** a working app comes before maximal hardening (2026-10-28). The owner said the app does not need to be “super security-first”, but this is a priority signal, not permission to drop approved encryption, consent rules or reviews. Propose any concrete simplification to the owner first.

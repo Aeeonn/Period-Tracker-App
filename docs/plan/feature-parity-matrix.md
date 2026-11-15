@@ -1,5 +1,7 @@
 # Feature inventory and parity matrix (Step 2)
 
+> **Scope narrowed 2026-11-15 ([ADR-0017](../adr/0017-narrowed-scope.md)).** The Decision, MoSCoW and Phase columns below show the original plan. Many P3–P7 features are now dropped, and the P2 sharing features are simplified; see the [current roadmap](roadmap.md#current-roadmap-narrowed-2026-11-15) for what is kept.
+
 **Status:** Stage E revision, 2026-10-02, with the proposed intimacy-track phase overlay in [ADR-0014](../adr/0014-intimacy-track.md) (2026-10-30). Critiqued in Stage D and corrected in Stage E ([stage-e-resolution.md](stage-e-resolution.md)); not yet approved (Stage F).
 **Inputs:** [R1](research/R1-flo-feature-inventory.md), [R2](research/R2-flo-methods.md), [R6](research/R6-beyond-flo.md), corrected by the [Stage B cross-check](research/crosscheck-stage-b.md). All sources accessed 2026-10-02.
 

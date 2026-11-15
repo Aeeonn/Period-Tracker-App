@@ -18,11 +18,13 @@ A private, local-first cycle-tracking PWA for one couple: the cycle owner and he
 | Prediction engine, dates, warnings                  | [docs/plan/algorithms-spec.md](docs/plan/algorithms-spec.md) and the `cycle-math` skill                  |
 | Privacy, consent, crypto, network                   | [docs/plan/security-privacy.md](docs/plan/security-privacy.md)                                           |
 | Screens and copy                                    | [docs/plan/ux-spec.md](docs/plan/ux-spec.md)                                                             |
-| Phases and exit criteria                            | [docs/plan/roadmap.md](docs/plan/roadmap.md)                                                             |
+| Current scope, steps and what was dropped           | [docs/plan/roadmap.md](docs/plan/roadmap.md) (top section) and [ADR-0017](docs/adr/0017-narrowed-scope.md) |
 | Acceptance criteria for a planned item              | [docs/plan/task-briefs.md](docs/plan/task-briefs.md) — search for `### <item-id>`, e.g. `### p2-pairing` |
 | Test catalogue, phase gates, iPhone smoke checklist | [docs/plan/test-strategy.md](docs/plan/test-strategy.md)                                                 |
 | Architecture decisions                              | [docs/adr/](docs/adr/README.md)                                                                          |
 | Deploy records                                      | [docs/deploy/](docs/deploy/)                                                                             |
+
+The scope was narrowed on 2026-11-15 ([ADR-0017](docs/adr/0017-narrowed-scope.md)). `plan.md`, the feature matrix and the P2/P2.5 briefs describe the original, larger plan; where they conflict with the current roadmap or `docs/decisions.md`, the current roadmap and decisions win. Do not build dropped features without asking the owner.
 
 In `task-briefs.md` and `backlog.md`, use the goals, owned areas, interfaces and acceptance criteria. Ignore their process fields (route, model, effort, brief/record paths, slots, “first mate”, “captain hold”).
 
@@ -79,9 +81,9 @@ Fix correctness, security, data-loss and spec defects before merging. Put nits i
 
 - Installing, adding or upgrading any dependency or tool.
 - Accounts, credentials, tokens, billing, DNS or Cloudflare settings.
-- Production deployment, real health data, or anything in the P6 launch.
+- Production deployment, real health data, or anything in the launch for real use.
 - Destructive or irreversible actions, such as deleting unmerged work, resetting or cleaning worktrees, rewriting pushed history, or wiping stores.
-- Product decisions not covered by the spec or `docs/decisions.md`, and starting a new phase (the owner reviews a demo first).
+- Product decisions not covered by the spec or `docs/decisions.md`, and starting a new roadmap step.
 
 You may run **synthetic-only preview deployments** from merged `main` without asking. Use `tools/deploy/pages-preview.sh app --branch <alias>`, always with an explicit non-`main` alias, because `main` is the production branch of the Pages project. Record each deployment in `docs/deploy/`.
 

@@ -1,5 +1,7 @@
 # Plan — private cycle tracker for two (Flo-equivalent, iPhone web app)
 
+> **Scope narrowed 2026-11-15 ([ADR-0017](../adr/0017-narrowed-scope.md)).** This document describes the original, full plan. The current scope and order of work are in [roadmap.md](roadmap.md#current-roadmap-narrowed-2026-11-15) and [decisions.md](../decisions.md#scope-2026-11-15). Where they conflict with this document (phases P2–P7, the feature counts, real use starting only in P6), they win. The constitution rules, the glossary and the P0/P1 design still apply.
+
 **Status:** Stage E revision, 2026-10-02. Ready for the Stage F presentation; **not approved**.
 
 - Stage C: drafted by the plan-synthesis worker (`github-copilot/claude-opus-5.5`, high thinking), from the preserved planning prompt (`~/firstmate/data/flo-planning/planning-prompt.md`, which supersedes the older committed `PLANNING_PROMPT.md`), the Stage C note, the six research reports and the cross-check.

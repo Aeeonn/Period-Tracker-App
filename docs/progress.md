@@ -4,6 +4,8 @@ This log records approved choices separately from completed evidence and pending
 
 ## Approved choices
 
+- **2026-11-15 — Narrowed scope:** the owner cut the plan to what a two-person private app needs ([ADR-0017](adr/0017-narrowed-scope.md)). Real use starts after P1; lean partner sharing and then patterns and intimacy replace P2–P7; pregnancy, perimenopause, symptom-checker, assistant, marker and import features are dropped. Documentation only; no code changed.
+
 - **2026-11-04 — Normal agentic development:** the Firstmate-style workflow is retired ([ADR-0015](adr/0015-normal-agentic-development.md)). The workflow now uses a feature branch, a fast-forward to `main` and an automatic push of `main`, with an independent review for sensitive changes. Owner decisions were migrated to [decisions.md](decisions.md).
 
 - **2026-10-02 — Plan approval:** retain encrypted backup/restore, joint hosting custody, and Canadian guidance. The approval of plan defaults alone did not authorize infrastructure or operational actions; the separately approved pinned local dependency set is recorded below.

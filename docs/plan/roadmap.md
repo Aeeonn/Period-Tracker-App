@@ -1,5 +1,69 @@
 # Roadmap, phases and gates (Step 10)
 
+> **Narrowed 2026-11-15 ([ADR-0017](../adr/0017-narrowed-scope.md)).** The owner cut the plan down to what a two-person private app needs. The **current roadmap** is the next section. Everything under [Original roadmap](#original-roadmap-history) is history: P0 and P1 happened as written there, and P2–P7 are replaced.
+
+## Current roadmap (narrowed 2026-11-15)
+
+Goals, in order: cycle tracking and logging; tracking and helping the couple's sex life; a partner view on his phone. Nothing already built is removed. There are no phase reports, demo packages or formal gates; the owner decides when to launch and when each step starts.
+
+### Step 1 — Close P1 and launch for real use
+
+- **Why first.** Her tracker is feature-complete and passed the owner's checks on both phones. The pattern summaries in step 3 need at least three logged cycles, so real logging should start now.
+- **Work:**
+  - Close P1 on the owner's phone checks of 2026-11-14 ([record](../deploy/p1-demo.md)); no integrated phase report.
+  - Fix what could lose data or lock her out once real data exists: handle older schema versions on import before the first schema bump; check that a record id matches its contents on import; a malformed passkey field must not block passphrase unlock; out-of-range `lockTimeoutSec` values snap to an offered choice.
+  - Align the W-01 and W-11 emergency wording with Canadian 9-1-1 guidance (medical content; reviewed).
+  - Backup: a passphrase-protected export file and a monthly "back up now" nudge, reusing the existing export/import. A backup file that leaves the phone must be encrypted. No relay-stored backup, no restore dry-run.
+  - One stable address for real use. The app is already served at https://flo-preview-cm6.pages.dev (owner-approved, 2026-11-14, synthetic data so far). Face ID and local data are tied to the address, so choose it once.
+  - She sets her contraception method (copper or hormonal IUD) in the app.
+- **Done when:** the owner gives the explicit go-ahead for real data; she installs from the chosen address; one real export-then-import round trip works on her phone (never in the repository).
+
+### Step 2 — Lean partner sharing
+
+- **Goal.** He sees, on his own phone, what she logged in the categories she switched on and when her period is expected. Both can add to a shared log and leave notes. She gets one daily reminder while the app is closed.
+- **Work** (the detailed design gets its own ADR before coding; it replaces ADR-0004 and ADR-0005):
+  - Relay Worker and D1 that store ciphertext only, built up from `relay-spike/`.
+  - Pairing with one in-person QR code or typed code carrying the shared secret.
+  - One couple key. Her phone publishes a snapshot per switched-on category; the latest snapshot wins. Switching a category off stops publishing and deletes its relay copy.
+  - Sharing controls: per-category on/off (all off at first), one-tap pause, "see what he sees".
+  - Partner view: Today and Calendar from the shared snapshots, with the permanent "no day is safe" line on anything about fertility.
+  - Couple space: one shared sex log, love notes, and support cards. Each entry is edited only by its author.
+  - One generic daily Web Push to her phone, with fixed text and no health detail ([ADR-0008](../adr/0008-generic-notifications-under-lock.md)).
+  - Unpair: delete the relay data and forget the key on both phones.
+- **Not built:** three-code pairing with a safety code, pairing-file and sync-file fallbacks, per-category key epochs and rotation, identity certificates, hybrid logical clocks, tombstones, conflict copies, consent history, sharing-start date, per-entry opt-in, life-stage suppression, partner or event push, quick-hide, a separate preview relay environment.
+- **Done when:** both real phones pair; a category she turns on appears on his phone and disappears from the relay when she turns it off; pause works; a canary scan shows no plaintext in the relay database; the daily push arrives or in-app-only reminders are accepted.
+
+### Step 3 — Patterns and intimacy
+
+- **Goal.** Show her own patterns from her own logs, and add original intimacy content.
+- **Work:**
+  - Per-phase summaries of desire, comfort, satisfaction, mood and energy, with day counts and a "not enough yet" state (A12 minimum-evidence thresholds; no chance-check calibration study). This covers F-105, F-106, F-118 and F-032 in simplified form. They never feed or use fertility output and never imply consent.
+  - Cycle history: lengths, variation and a simple graph (F-031).
+  - Prediction track record, for example "6 of your last 8 periods started inside the range" (A18, on-device part).
+  - Original intimacy conversation prompts and sexual-wellness lessons (F-104, F-053) with one independent content review. This item does not depend on step 2 and can start at any time.
+  - More "did you know" cards as wanted, each cited and reviewed.
+- **Done when:** the summaries show the "not enough yet", "no clear pattern" and pattern states on synthetic data; the intimacy content has passed its review.
+
+### Dropped, and an unplanned wish list
+
+These are not planned. Any of them can return by owner decision.
+
+| Area | Dropped |
+| --- | --- |
+| Life stages | Pregnancy, postpartum, perimenopause and trying-to-conceive modes; IVF dating; pregnancy-loss flow; partner pregnancy progress (F-036, F-038–F-047, F-064, F-074); pausing predictions during pregnancy or postpartum |
+| Contraception extras | Pill and medication tracking and reminders; late-period check-in flow; emergency-contraception, test and STI organizer (F-016, F-048, F-109–F-111). The contraception setting, late-period state and the related core cards already exist and stay |
+| Fertility markers | Temperature, ovulation-test and mucus tracking, marker fusion, test tutorials (F-027–F-030, F-073; A6–A9) |
+| Analytics and reports | Doctor report, heavy-bleeding chart, warning rules W-08–W-10, irregular-cycle refinements unless the track record shows a need (F-034, F-112, full F-033, F-003 refinements) |
+| Premium-style extras | Symptom checker, local assistant, content library and courses, lifestyle correlations, log Q&A (F-047, F-049–F-052, F-054, F-107, F-116) |
+| Hardening and launch | Separate end-to-end security audit, formal performance and accessibility passes, user guide, quick-hide, relay-stored backup (parts of P6, F-113, F-119) |
+| Integrations | Shortcuts, calendar export, Apple Health and other-app imports, on-device model (F-108, F-120, F-067, P7) |
+
+**Wish list (unplanned):** couple quizzes, date ideas, relationship check-in (F-062, F-063, F-103).
+
+## Original roadmap (history)
+
+Kept for reference. P0 and P1 were built as described here. P2–P7, the phase gates and the phase gate procedure below are replaced by the current roadmap above.
+
 **Status:** Stage E baseline, with the proposed intimacy-track sequencing in [ADR-0014](../adr/0014-intimacy-track.md) (2026-10-30); Stage C was corrected after the Stage D critique (see [stage-e-resolution.md](stage-e-resolution.md)).
 
 - Detailed tasks exist for **P0–P2** plus the P2.5 intimacy-content wave: see [task-briefs.md](task-briefs.md) and [backlog-import.md](backlog-import.md).

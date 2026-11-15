@@ -984,6 +984,8 @@
 
 ## P2
 
+> **Replaced 2026-11-15 ([ADR-0017](../adr/0017-narrowed-scope.md)).** The P2 and P2.5 briefs below describe the original, heavier sharing design. Lean sharing in the [current roadmap](roadmap.md#step-2--lean-partner-sharing) replaces them. Use these briefs only as reference for consent wording and relay behaviour; do not build to their acceptance criteria. `p2-passkey-unlock` is already built.
+
 ### p2-identity
 
 **Device and owner/partner identity keys and certificates** · ship / feature · phase P2 · wave P2-W1 · risk **high** · features F-025
