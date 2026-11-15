@@ -112,15 +112,28 @@ describe('Log screen accessible persistence behavior', () => {
     expect(root.querySelectorAll('.log-screen__form-card .log-editor')).toHaveLength(23);
     expect(root.textContent).toContain('A logged experience is never a signal of consent');
 
+    // Only the selected tracker's editor is shown.
+    const visibleCards = [...root.querySelectorAll<HTMLElement>('.log-screen__form-card')].filter(
+      (candidate) => !candidate.hidden,
+    );
+    expect(visibleCards).toHaveLength(1);
+
+    // Chip-only trackers save on tap: there is no Save button to press.
     const flow = card(root, 'Flow');
+    expect(flow.textContent).not.toContain('Save Flow');
     await chooseWithin(flow, 'Heavy');
-    await chooseWithin(flow, 'Clots over 2.5 cm');
-    await clickButton(flow, 'Save Flow');
     await waitFor(root, () => root.querySelector('[role="status"]')?.textContent === 'Saved privately.');
+    await expect(logRepo.getDay(DATE)).resolves.toMatchObject({ flow: 'heavy' });
+    await chooseWithin(flow, 'Clots over 2.5 cm');
+    await waitFor(
+      root,
+      () => root.querySelector('.log-screen__summary-list')?.textContent?.includes('Clots') === true,
+    );
     await expect(logRepo.getDay(DATE)).resolves.toMatchObject({
       flow: 'heavy',
       heavy_detail: ['clots_over_2_5cm'],
     });
+    expect(root.querySelector('.log-screen__day-actions')).toBeNull();
     expect(root.querySelector('.log-screen__summary-list')?.textContent).toContain('Heavy');
 
     const sex = card(root, 'Sex and intimacy');
@@ -231,11 +244,32 @@ describe('Log screen accessible persistence behavior', () => {
     await act(async () => flowTab.click());
     const flow = card(root, 'Flow');
     await chooseWithin(flow, 'Medium');
-    await clickButton(flow, 'Save Flow');
     await waitFor(root, () => root.querySelector('[role="alert"]') !== null);
     expect(root.querySelector('[role="alert"]')?.textContent).toContain(
       'That log could not be saved. It remains private',
     );
     await expect(logRepo.getDay(nextDate as LocalDate)).resolves.toBeUndefined();
+  });
+
+  it('saves a tapped choice at once and removes it when tapped again', async () => {
+    const { logRepo } = createLogRepository();
+    const clearTracker = vi.spyOn(logRepo, 'clearTracker');
+    const root = await mount(logRepo);
+    const flow = card(root, 'Flow');
+
+    await chooseWithin(flow, 'Medium');
+    await chooseWithin(flow, 'Light');
+    await waitFor(
+      root,
+      () => root.querySelector('.log-screen__summary-list')?.textContent?.includes('Light') === true,
+    );
+    await expect(logRepo.getDay(DATE)).resolves.toMatchObject({ flow: 'light' });
+    expect(clearTracker).not.toHaveBeenCalled();
+
+    await chooseWithin(flow, 'Light');
+    await waitFor(root, () => root.querySelector('[role="status"]')?.textContent === 'Log cleared.');
+    expect((await logRepo.getDay(DATE))?.flow).toBeUndefined();
+    expect(clearTracker).toHaveBeenCalledTimes(1);
+    expect(root.textContent).toContain('Nothing logged yet');
   });
 });

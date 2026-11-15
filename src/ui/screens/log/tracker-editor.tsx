@@ -76,7 +76,30 @@ interface TrackerEditorProps {
   readonly onSave: (entries: readonly LogEntry[]) => void;
   readonly onClear: () => void;
   readonly onDraftChange: (tracker: Tracker, entries: readonly LogEntry[], dirty: boolean) => void;
+  /**
+   * When provided, tap-only trackers save each choice as soon as it is tapped
+   * and report cleared trackers, instead of waiting for a Save button.
+   */
+  readonly onAutoSave?:
+    | ((entries: readonly LogEntry[], cleared: readonly Tracker[]) => void)
+    | undefined;
 }
+
+/** Trackers whose editor is only chips: one tap is a complete entry. */
+export const TAP_TO_SAVE_TRACKERS: ReadonlySet<Tracker> = new Set<Tracker>([
+  'flow',
+  'heavy_detail',
+  'period_pain',
+  'discharge',
+  'symptoms_body',
+  'mood',
+  'energy',
+  'stress',
+  'desire',
+  'ovulation_manual',
+  'pill_intake',
+  'lochia',
+]);
 
 interface ChoiceGroupProps<T extends string> {
   readonly legend: string;
@@ -226,6 +249,7 @@ function SaveBar({
   disabled,
   canSave,
   canClear,
+  tapToSave,
   onSave,
   onClear,
 }: {
@@ -233,14 +257,18 @@ function SaveBar({
   readonly disabled: boolean;
   readonly canSave: boolean;
   readonly canClear: boolean;
+  readonly tapToSave: boolean;
   readonly onSave: () => void;
   readonly onClear: () => void;
 }) {
+  if (tapToSave && !canClear) return null;
   return (
     <div class="log-editor__actions">
-      <Button disabled={disabled || !canSave} onClick={onSave}>
-        Save {label}
-      </Button>
+      {tapToSave ? null : (
+        <Button disabled={disabled || !canSave} onClick={onSave}>
+          Save {label}
+        </Button>
+      )}
       {canClear ? (
         <Button variant="quiet" disabled={disabled} onClick={onClear}>
           Clear {label.toLowerCase()} log
@@ -281,7 +309,12 @@ export function TrackerEditor({
   onSave,
   onClear,
   onDraftChange,
+  onAutoSave,
 }: TrackerEditorProps) {
+  const tapToSave = onAutoSave !== undefined && TAP_TO_SAVE_TRACKERS.has(tracker);
+  const commit = (entries: readonly LogEntry[], cleared: readonly Tracker[] = []) => {
+    if (tapToSave) onAutoSave?.(entries, cleared);
+  };
   const [flow, setFlow] = useState<Flow | undefined>(day?.flow);
   const [heavyDetails, setHeavyDetails] = useState<readonly HeavyDetail[]>(day?.heavy_detail ?? []);
   const [periodPain, setPeriodPain] = useState<PeriodPain | undefined>(day?.period_pain);
@@ -337,6 +370,7 @@ export function TrackerEditor({
         disabled={disabled}
         canSave={canSave}
         canClear={canClear}
+        tapToSave={tapToSave}
         onSave={() => onSave(entries)}
         onClear={onClear}
       />
@@ -356,7 +390,18 @@ export function TrackerEditor({
             legend="Flow level"
             values={FLOW}
             value={flow}
-            onChange={setFlow}
+            onChange={(value) => {
+              setFlow(value);
+              if (value === undefined) {
+                commit([], ['flow']);
+                return;
+              }
+              const next: LogEntry[] = [{ tracker: 'flow', value }];
+              if ((value === 'heavy' || value === 'very_heavy') && heavyDetails.length > 0) {
+                next.push({ tracker: 'heavy_detail', value: heavyDetails });
+              }
+              commit(next);
+            }}
             disabled={disabled}
           />
           {flow === 'heavy' || flow === 'very_heavy' ? (
@@ -364,7 +409,11 @@ export function TrackerEditor({
               legend="Heavy-flow details"
               values={HEAVY_DETAIL}
               value={heavyDetails}
-              onChange={setHeavyDetails}
+              onChange={(value) => {
+                setHeavyDetails(value);
+                if (value.length > 0) commit([{ tracker: 'heavy_detail', value }]);
+                else commit([], ['heavy_detail']);
+              }}
               disabled={disabled}
             />
           ) : null}
@@ -383,7 +432,11 @@ export function TrackerEditor({
             legend="Heavy-flow details"
             values={HEAVY_DETAIL}
             value={heavyDetails}
-            onChange={setHeavyDetails}
+            onChange={(value) => {
+              setHeavyDetails(value);
+              if (value.length > 0) commit([{ tracker: 'heavy_detail', value }]);
+              else commit([], ['heavy_detail']);
+            }}
             disabled={disabled}
           />
           {saveBar(heavyDetails.length > 0, [{ tracker: 'heavy_detail', value: heavyDetails }])}
@@ -397,7 +450,11 @@ export function TrackerEditor({
             legend="Period pain"
             values={PERIOD_PAIN}
             value={periodPain}
-            onChange={setPeriodPain}
+            onChange={(value) => {
+              setPeriodPain(value);
+              if (value === undefined) commit([], ['period_pain']);
+              else commit([{ tracker: 'period_pain', value }]);
+            }}
             disabled={disabled}
           />
           {saveBar(
@@ -414,7 +471,11 @@ export function TrackerEditor({
             legend="Discharge"
             values={DISCHARGE}
             value={discharge}
-            onChange={setDischarge}
+            onChange={(value) => {
+              setDischarge(value);
+              if (value === undefined) commit([], ['discharge']);
+              else commit([{ tracker: 'discharge', value }]);
+            }}
             disabled={disabled}
           />
           {saveBar(
@@ -431,7 +492,11 @@ export function TrackerEditor({
             legend="Symptoms"
             values={SYMPTOMS_BODY}
             value={symptoms}
-            onChange={setSymptoms}
+            onChange={(value) => {
+              setSymptoms(value);
+              if (value.length > 0) commit([{ tracker: 'symptoms_body', value }]);
+              else commit([], ['symptoms_body']);
+            }}
             disabled={disabled}
             exclusive={'no_symptoms' as SymptomBody}
           />
@@ -446,7 +511,11 @@ export function TrackerEditor({
             legend="Mood"
             values={MOOD}
             value={mood}
-            onChange={setMood}
+            onChange={(value) => {
+              setMood(value);
+              if (value.length > 0) commit([{ tracker: 'mood', value }]);
+              else commit([], ['mood']);
+            }}
             disabled={disabled}
             exclusive={'no_particular_mood' as Mood}
           />
@@ -461,9 +530,12 @@ export function TrackerEditor({
             legend="Energy"
             values={ENERGY.map(String)}
             value={energy === undefined ? undefined : String(energy)}
-            onChange={(value) =>
-              setEnergy(value === undefined ? undefined : (Number(value) as Energy))
-            }
+            onChange={(value) => {
+              const next = value === undefined ? undefined : (Number(value) as Energy);
+              setEnergy(next);
+              if (next === undefined) commit([], ['energy']);
+              else commit([{ tracker: 'energy', value: next }]);
+            }}
             labelFor={(value) => ENERGY_LABELS[Number(value) as Energy] ?? 'Energy'}
             disabled={disabled}
           />
@@ -481,9 +553,12 @@ export function TrackerEditor({
             legend="Stress"
             values={STRESS.map(String)}
             value={stress === undefined ? undefined : String(stress)}
-            onChange={(value) =>
-              setStress(value === undefined ? undefined : (Number(value) as Stress))
-            }
+            onChange={(value) => {
+              const next = value === undefined ? undefined : (Number(value) as Stress);
+              setStress(next);
+              if (next === undefined) commit([], ['stress']);
+              else commit([{ tracker: 'stress', value: next }]);
+            }}
             disabled={disabled}
           />
           {saveBar(
@@ -501,7 +576,11 @@ export function TrackerEditor({
             legend="Desire level"
             values={DESIRE}
             value={desire}
-            onChange={setDesire}
+            onChange={(value) => {
+              setDesire(value);
+              if (value === undefined) commit([], ['desire']);
+              else commit([{ tracker: 'desire', value }]);
+            }}
             disabled={disabled}
           />
           {saveBar(
@@ -700,7 +779,11 @@ export function TrackerEditor({
             legend="Ovulation observation"
             values={OVULATION_MANUAL}
             value={ovulation}
-            onChange={setOvulation}
+            onChange={(value) => {
+              setOvulation(value);
+              if (value === undefined) commit([], ['ovulation_manual']);
+              else commit([{ tracker: 'ovulation_manual', value }]);
+            }}
             disabled={disabled}
           />
           {saveBar(
@@ -717,7 +800,11 @@ export function TrackerEditor({
             legend="Pill intake"
             values={PILL_INTAKE}
             value={pillIntake}
-            onChange={setPillIntake}
+            onChange={(value) => {
+              setPillIntake(value);
+              if (value === undefined) commit([], ['pill_intake']);
+              else commit([{ tracker: 'pill_intake', value }]);
+            }}
             disabled={disabled}
           />
           {saveBar(
@@ -966,7 +1053,11 @@ export function TrackerEditor({
             legend="Postpartum bleeding"
             values={LOCHIA}
             value={lochia}
-            onChange={setLochia}
+            onChange={(value) => {
+              setLochia(value);
+              if (value === undefined) commit([], ['lochia']);
+              else commit([{ tracker: 'lochia', value }]);
+            }}
             disabled={disabled}
           />
           {saveBar(
@@ -994,8 +1085,18 @@ export function TrackerEditor({
   const baselineSignature = JSON.stringify(draftScope.map((draftTracker) => day?.[draftTracker]));
 
   useEffect(() => {
-    onDraftChange(tracker, changedEntries, draftIsDirty);
-  }, [baselineSignature, changedEntries, draftIsDirty, draftSignature, onDraftChange, tracker]);
+    // Tap-to-save trackers never hold unsaved edits: each tap is already queued.
+    if (tapToSave) onDraftChange(tracker, [], false);
+    else onDraftChange(tracker, changedEntries, draftIsDirty);
+  }, [
+    baselineSignature,
+    changedEntries,
+    draftIsDirty,
+    draftSignature,
+    onDraftChange,
+    tapToSave,
+    tracker,
+  ]);
 
   return (
     <section class="log-editor" aria-labelledby={`log-editor-title-${tracker}`}>

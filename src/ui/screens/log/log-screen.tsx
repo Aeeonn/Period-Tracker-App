@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import type { DayBundle } from '../../../contracts/entities.ts';
 import { TRACKERS, type TemperatureUnit, type Tracker } from '../../../contracts/enums.ts';
 import type { LocalDate } from '../../../contracts/localdate.ts';
-import { format, parse, todayLocal } from '../../../lib/localdate/index.ts';
+import {
+  addDays,
+  diffDays,
+  epochDay,
+  format,
+  parse,
+  todayLocal,
+} from '../../../lib/localdate/index.ts';
 import { Button, Card, Chip } from '../../components/base';
 import { TrackerEditor } from './tracker-editor.tsx';
 import { formatDaySummary } from './day-summary.ts';
@@ -106,6 +113,27 @@ export async function persistLogEntries(
   }
 }
 
+const WEEKDAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
+
+/** A friendly name for the open day: Today, Yesterday, Tomorrow or the weekday. */
+export function dayName(date: LocalDate, today: LocalDate): string {
+  const offset = diffDays(today, date);
+  if (offset === 0) return 'Today';
+  if (offset === -1) return 'Yesterday';
+  if (offset === 1) return 'Tomorrow';
+  // Epoch day 0 (1970-01-01) was a Thursday; this stays in calendar-day arithmetic.
+  const weekday = (((Number(epochDay(date)) + 4) % 7) + 7) % 7;
+  return WEEKDAY_NAMES[weekday] ?? '';
+}
+
 export function LogScreen({
   logRepo,
   localDate: initialDate,
@@ -138,6 +166,12 @@ export function LogScreen({
   const [customizing, setCustomizing] = useState(false);
   const pending = getPendingEdits(pendingDrafts);
   const summary = formatDaySummary(day);
+  // Tap-to-save writes run one after another, without disabling the editor
+  // between taps. `openDateRef` stops a late write from repainting another day.
+  const autoSaveQueue = useRef<Promise<void>>(Promise.resolve());
+  const openDateRef = useRef(selectedDate);
+  openDateRef.current = selectedDate;
+  const storedTrackers = useRef<Set<Tracker>>(new Set());
 
   const reportDraft = useCallback(
     (tracker: Tracker, entries: readonly LogEntry[], dirty: boolean) => {
@@ -161,7 +195,11 @@ export function LogScreen({
     void logRepo
       .getDay(selectedDate)
       .then((record) => {
-        if (current) setDay(record);
+        if (!current) return;
+        storedTrackers.current = new Set(
+          TRACKERS.filter((tracker) => record?.[tracker] !== undefined),
+        );
+        setDay(record);
       })
       .catch(() => {
         if (current) setErrorMessage('Your log could not be opened. Please try again.');
@@ -226,6 +264,32 @@ export function LogScreen({
 
   const saveDay = () => void saveEntries(getPendingEdits(pendingDrafts).entries);
 
+  const autoSave = (entries: readonly LogEntry[], cleared: readonly Tracker[]) => {
+    if (!logRepo || dateError) return;
+    const date = selectedDate;
+    // Only clear what is (or is about to be) stored, so deselecting an unsaved
+    // choice does not create an empty day record.
+    const toClear = cleared.filter((tracker) => storedTrackers.current.has(tracker));
+    for (const tracker of toClear) storedTrackers.current.delete(tracker);
+    for (const entry of entries) storedTrackers.current.add(entry.tracker);
+    if (entries.length === 0 && toClear.length === 0) return;
+    setErrorMessage('');
+    autoSaveQueue.current = autoSaveQueue.current.then(async () => {
+      try {
+        for (const tracker of toClear) await logRepo.clearTracker(date, tracker);
+        await persistLogEntries(logRepo, date, entries);
+        const record = await logRepo.getDay(date);
+        if (openDateRef.current !== date) return;
+        setDay(record);
+        setSavedMessage(entries.length > 0 ? 'Saved privately.' : 'Log cleared.');
+      } catch {
+        if (openDateRef.current === date) {
+          setErrorMessage('That log could not be saved. It remains private; please try again.');
+        }
+      }
+    });
+  };
+
   const clearTracker = async (tracker: Tracker) => {
     if (!logRepo || dateError || saving) return;
     setSaving(true);
@@ -273,20 +337,26 @@ export function LogScreen({
   const canSaveDay =
     Boolean(logRepo) && !loading && !saving && dateError === null && pending.entries.length > 0;
 
+  const today = todayLocal();
+
   return (
     <section class="log-screen" aria-labelledby="log-screen-title">
       <header class="log-screen__header">
-        <p class="log-screen__eyebrow">A private space for your notes</p>
         <h1 id="log-screen-title">Log</h1>
-        <p class="log-screen__privacy">
-          Your logs stay private. A logged experience is never a signal of consent, never turns on
-          sharing, and does not change fertility estimates.
-        </p>
+        <p class="log-screen__day-name">{dayName(selectedDate, today)}</p>
       </header>
 
-      <Card class="log-screen__date-card" heading="Choose a day">
-        <label class="log-input">
-          <span>Log date</span>
+      <div class="log-screen__date-bar">
+        <Button
+          class="log-screen__date-step"
+          variant="quiet"
+          aria-label="Previous day"
+          onClick={() => changeDate(format(addDays(selectedDate, -1)))}
+        >
+          <span aria-hidden="true">‹</span>
+        </Button>
+        <label class="log-input log-screen__date-field">
+          <span class="log-screen__sr-only">Log date</span>
           <input
             aria-describedby={dateError ? 'log-date-error' : undefined}
             type="date"
@@ -294,12 +364,20 @@ export function LogScreen({
             onInput={(event) => changeDate(event.currentTarget.value)}
           />
         </label>
-        {dateError ? (
-          <p id="log-date-error" class="log-screen__error" role="alert">
-            {dateError}
-          </p>
-        ) : null}
-      </Card>
+        <Button
+          class="log-screen__date-step"
+          variant="quiet"
+          aria-label="Next day"
+          onClick={() => changeDate(format(addDays(selectedDate, 1)))}
+        >
+          <span aria-hidden="true">›</span>
+        </Button>
+      </div>
+      {dateError ? (
+        <p id="log-date-error" class="log-screen__error" role="alert">
+          {dateError}
+        </p>
+      ) : null}
 
       {dateChangePending ? (
         <div class="log-screen__date-confirmation" role="alert">
@@ -348,12 +426,6 @@ export function LogScreen({
           <p class="log-screen__hint">Nothing logged yet</p>
         )}
       </Card>
-
-      <div class="log-screen__day-actions">
-        <Button disabled={!canSaveDay} onClick={saveDay}>
-          Save day
-        </Button>
-      </div>
 
       <section class="log-tracker-list" aria-labelledby="log-tracker-list-title">
         <div class="log-tracker-list__heading">
@@ -454,11 +526,6 @@ export function LogScreen({
           {errorMessage}
         </p>
       ) : null}
-      {savedMessage ? (
-        <p class="log-screen__saved" role="status">
-          {savedMessage}
-        </p>
-      ) : null}
       {!loading
         ? TRACKERS.map((tracker) => {
             const inactive = selectedTracker !== tracker;
@@ -477,11 +544,30 @@ export function LogScreen({
                   onSave={(entries) => void saveEntries(entries)}
                   onClear={() => void clearTracker(tracker)}
                   onDraftChange={reportDraft}
+                  onAutoSave={autoSave}
                 />
               </Card>
             );
           })
         : null}
+
+      <p class="log-screen__saved" role="status">
+        {savedMessage}
+      </p>
+
+      {pending.entries.length > 0 ? (
+        <div class="log-screen__day-actions">
+          <p>Unsaved changes</p>
+          <Button disabled={!canSaveDay} onClick={saveDay}>
+            Save changes
+          </Button>
+        </div>
+      ) : null}
+
+      <p class="log-screen__privacy">
+        Your logs stay private. A logged experience is never a signal of consent, never turns on
+        sharing, and does not change fertility estimates.
+      </p>
     </section>
   );
 }

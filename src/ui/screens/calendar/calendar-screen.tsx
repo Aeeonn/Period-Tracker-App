@@ -124,9 +124,7 @@ export function CalendarScreen({
   return (
     <section class="calendar-screen" aria-labelledby="calendar-title">
       <header class="calendar-screen__header">
-        <p class="calendar-screen__eyebrow">A gentle view of your cycle</p>
         <h1 id="calendar-title">Calendar</h1>
-        <p>Explore cycle days and the notes you have logged.</p>
       </header>
 
       <section class="calendar-card" aria-label="Cycle calendar">

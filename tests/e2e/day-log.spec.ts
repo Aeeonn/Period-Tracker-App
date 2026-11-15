@@ -53,61 +53,58 @@ test.afterAll(async () => {
   vite = undefined;
 });
 
-test('@day-log saves a whole day and shows the saved entries in Calendar', async ({ page }) => {
+test('@day-log saves each tap at once and shows the saved entries in Calendar', async ({ page }) => {
   await page.goto(`${origin}/tests/e2e/log-fixtures/?fixture=day-log`);
   await expect(page.getByRole('heading', { name: 'Log', exact: true })).toBeVisible();
   const dateInput = page.getByLabel('Log date');
   const savedDate = await dateInput.inputValue();
+  const pinned = page.getByRole('group', { name: 'Pinned trackers' });
 
-  await page.getByRole('button', { name: 'Flow', exact: true }).click();
+  // Chip-only trackers save on tap: no Save button and no unsaved marker.
+  await pinned.getByRole('button', { name: 'Flow', exact: true }).click();
   await page
     .getByRole('group', { name: 'Flow level' })
     .getByRole('button', { name: 'Medium', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Mood', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Saved privately.');
+  await expect(page.getByText('Flow: Medium', { exact: true })).toBeVisible();
+  await pinned.getByRole('button', { name: 'Mood', exact: true }).click();
   await page
     .getByRole('group', { name: 'Mood' })
     .getByRole('button', { name: 'Calm', exact: true })
     .click();
-  await expect(
-    page
-      .getByRole('group', { name: 'Pinned trackers' })
-      .getByRole('button', { name: 'Flow', exact: true })
-      .locator('.log-tracker-list__unsaved-dot'),
-  ).toBeVisible();
-
-  await page.getByRole('button', { name: 'Save day', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Saved privately.');
-  await expect(page.getByRole('button', { name: 'Save day', exact: true })).toBeDisabled();
-  await expect(page.getByText('Flow: Medium', { exact: true })).toBeVisible();
   await expect(page.getByText('Mood: Calm', { exact: true })).toBeVisible();
+  await expect(page.locator('.log-tracker-list__unsaved-dot')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toHaveCount(0);
 
   const otherDate = savedDate === '2032-04-04' ? '2032-04-05' : '2032-04-04';
-  await page.getByRole('button', { name: 'Flow', exact: true }).click();
-  await page
-    .getByRole('group', { name: 'Flow level' })
-    .getByRole('button', { name: 'Light', exact: true })
-    .click();
+
+  // Typed trackers keep an explicit save, and guard unsaved text on a date change.
+  await pinned.getByRole('button', { name: 'Notes', exact: true }).click();
+  await page.getByLabel('Note', { exact: true }).fill('synthetic draft note');
   await expect(
-    page
-      .getByRole('group', { name: 'Pinned trackers' })
-      .getByRole('button', { name: 'Flow', exact: true })
+    pinned
+      .getByRole('button', { name: 'Notes', exact: true })
       .locator('.log-tracker-list__unsaved-dot'),
   ).toBeVisible();
   await dateInput.fill(otherDate);
   await expect(page.locator('.log-screen__date-confirmation')).toContainText('unsaved edits');
   await page.getByRole('button', { name: 'Stay on this day', exact: true }).click();
-  await page
-    .getByRole('group', { name: 'Flow level' })
-    .getByRole('button', { name: 'Medium', exact: true })
-    .click();
-  await expect(page.getByRole('button', { name: 'Save day', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page.getByText('Notes: synthetic draft note', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save changes', exact: true })).toHaveCount(0);
+
+  // The day stepper moves one calendar day at a time.
   await dateInput.fill(otherDate);
   await expect(dateInput).toHaveValue(otherDate);
   await expect(page.getByText('Nothing logged yet', { exact: true })).toBeVisible();
   await dateInput.fill(savedDate);
   await expect(page.getByText('Flow: Medium', { exact: true })).toBeVisible();
   await expect(page.getByText('Mood: Calm', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Next day', exact: true }).click();
+  await expect(dateInput).not.toHaveValue(savedDate);
+  await page.getByRole('button', { name: 'Previous day', exact: true }).click();
+  await expect(dateInput).toHaveValue(savedDate);
 
   await page.getByRole('link', { name: 'Calendar', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Calendar', exact: true })).toBeVisible();

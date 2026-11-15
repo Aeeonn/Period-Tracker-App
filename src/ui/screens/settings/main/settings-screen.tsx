@@ -148,13 +148,9 @@ export function SettingsScreen({
 
   return (
     <section class="settings-screen shell-screen" aria-labelledby="settings-title">
-      <p class="shell-eyebrow">A few choices, just for you</p>
       <h1 class="shell-screen__title" id="settings-title">
         Settings
       </h1>
-      <p class="settings-screen__intro">
-        Make this space feel comfortable. Your profile choices are saved on this device.
-      </p>
 
       {loading ? <p role="status">Loading your settings...</p> : null}
       {loadError ? (

@@ -19,7 +19,7 @@
   display: grid;
   gap: var(--space-3);
   padding: clamp(var(--space-4), 5vw, var(--space-6));
-  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+  border-color: var(--color-card-border);
   background:
     radial-gradient(ellipse at 100% 0, var(--color-accent-subtle), transparent 55%),
     var(--color-surface);

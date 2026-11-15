@@ -1,7 +1,11 @@
 .reminder-banner {
   display: grid;
   gap: var(--space-2);
-  border-inline-start: 0.35rem solid var(--color-accent);
+  padding: var(--space-3) var(--space-4);
+  border-color: transparent;
+  background: var(--tint-peach);
+  box-shadow: none;
+  font-weight: 600;
 }
 
 .reminder-banner__message {

@@ -183,7 +183,12 @@ test('@log without a repository shows the gentle disabled save state', async ({ 
   await openFixture(page, '?fixture=locked');
   await expect(page.locator('.log-screen__locked')).toContainText('Unlock to save');
   await selectTracker(page, 'Desire');
-  await expect(page.getByRole('button', { name: 'Save Desire' })).toBeDisabled();
+  await expect(
+    page
+      .getByRole('group', { name: 'Desire level' })
+      .getByRole('button', { name: 'Medium', exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Save Desire' })).toHaveCount(0);
 });
 test('@log the AppShell Log tab opens the injected screen and retains tracker choices across tabs', async ({
   page,
@@ -195,8 +200,9 @@ test('@log the AppShell Log tab opens the injected screen and retains tracker ch
     .getByRole('group', { name: 'Desire level' })
     .getByRole('button', { name: 'Medium', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Save Desire', exact: true }).click();
+  // Chip-only trackers save on tap; there is no Save button.
   await expect(page.getByText('Saved privately.')).toBeVisible();
+  await expect(page.getByText('Desire: Medium', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Customize trackers' }).click();
   await page.getByRole('button', { name: 'Hide Flow', exact: true }).click();
   await page.getByRole('button', { name: 'Done', exact: true }).click();

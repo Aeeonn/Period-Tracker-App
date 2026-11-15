@@ -50,12 +50,12 @@ export interface AppShellProps {
   readonly unlockedPreview?: boolean;
 }
 
+// Insights and Us return to the owner tab bar when those screens exist
+// (roadmap steps 2 and 3); an empty "coming soon" tab is a dead end.
 const OWNER_TABS: readonly Tab[] = [
   { id: 'today', label: 'Today', icon: 'today' },
-  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
   { id: 'log', label: 'Log', icon: 'log' },
-  { id: 'insights', label: 'Insights', icon: 'insights' },
-  { id: 'us', label: 'Us', icon: 'us' },
+  { id: 'calendar', label: 'Calendar', icon: 'calendar' },
 ];
 
 const PARTNER_TABS: readonly Tab[] = [
@@ -140,8 +140,7 @@ function TabIcon({ name }: { name: IconName }) {
           fill="none"
           focusable="false"
         >
-          <circle cx="12" cy="12" r="8.25" />
-          <path d="M12 7.5v9M7.5 12h9" />
+          <path d="M12 5.5v13M5.5 12h13" />
         </svg>
       );
     case 'insights':
@@ -462,22 +461,14 @@ export function AppShell({
   return (
     <div class="shell-root" data-role={role}>
       <header class="shell-header shell-container">
-        <div class="shell-brand">
-          <svg
-            class="shell-brand__mark"
-            aria-hidden="true"
-            viewBox="0 0 40 40"
-            fill="none"
-            focusable="false"
-          >
-            <circle cx="20" cy="20" r="12.5" />
-            <circle cx="29.2" cy="9.8" r="2.4" class="shell-brand__dot" />
-          </svg>
-          <div>
-            <p class="shell-brand__name">Cycle companion</p>
-          </div>
+        <div class="shell-preview-banner" role="note">
+          <span class="shell-preview-banner__dot" aria-hidden="true" />
+          <span>
+            {unlockedPreview
+              ? 'Unlocked development preview: no passphrase protection. Use synthetic data only; do not enter real information.'
+              : 'Preview — synthetic data only'}
+          </span>
         </div>
-        <span class="shell-role">{roleLabel}</span>
         <a
           class="ui-button ui-button--quiet shell-settings-link"
           href="#settings"
@@ -510,12 +501,6 @@ export function AppShell({
 
       <RepositoriesContext.Provider value={repositories}>
         <main class="shell-main shell-container" tabIndex={0}>
-          <div class="shell-preview-banner" role="note">
-            <span class="shell-preview-banner__dot" aria-hidden="true" />
-            {unlockedPreview
-              ? 'Unlocked development preview: no passphrase protection. Use synthetic data only; do not enter real information.'
-              : 'Preview — synthetic data only'}
-          </div>
           {updateNotice ? (
             <div role="status" aria-live="polite">
               <Card class="shell-update" heading="Update ready">
@@ -576,12 +561,14 @@ export function AppShell({
           {tabs.map((tab) => (
             <a
               key={tab.id}
-              class="shell-tab"
+              class={tab.id === 'log' ? 'shell-tab shell-tab--primary' : 'shell-tab'}
               href={`#${tab.id}`}
               aria-current={activeTab === tab.id ? 'page' : undefined}
               onClick={() => setActiveTab(tab.id)}
             >
-              <TabIcon name={tab.icon} />
+              <span class="shell-tab__icon-wrap">
+                <TabIcon name={tab.icon} />
+              </span>
               <span class="shell-tab__label">{tab.label}</span>
             </a>
           ))}

@@ -315,7 +315,7 @@ function CycleRing({
         ? 'This is a possible fertile window. Ovulation can happen outside these dates.'
         : selectedSegment === 'today'
           ? `The marker shows today, ${formatLocalDate(today)}.`
-          : 'Focus or choose a ring segment to learn what it means.';
+          : '';
 
   const dateLabels = weekDates(today, weekStart);
 
@@ -323,7 +323,7 @@ function CycleRing({
     <div class="today-cycle-overview">
       <Card class="today-ring-card">
         <figure class="today-ring">
-          <figcaption class="today-ring__caption">
+          <figcaption class="visually-hidden">
             <h2>Cycle at a glance</h2>
             <p>Estimated timing, shown as a planning guide.</p>
           </figcaption>
@@ -762,6 +762,12 @@ export function TodayScreen({
     void saveFlow(flowForBleedingAnswer(answer), `Bleeding: ${answer}`);
   };
 
+  // The bleeding prompt below already asks this, so the banner does not repeat it.
+  const bleedingPromptVisible = showStillBleeding || currentFlow !== undefined;
+  const bannerReminders = bleedingPromptVisible
+    ? reminders.filter((reminder) => reminder.kind !== 'still_bleeding')
+    : reminders;
+
   const whyText =
     whyTopic === 'prediction'
       ? (predictionExplanation ??
@@ -771,8 +777,12 @@ export function TodayScreen({
   return (
     <section class="today-screen" aria-labelledby="today-screen-title">
       <header class="today-screen__header">
-        <p class="today-screen__eyebrow">Cycle overview</p>
-        <h1 id="today-screen-title">Today</h1>
+        <div class="today-screen__heading">
+          <h1 id="today-screen-title">Today</h1>
+          <p class="today-screen__date">
+            {WEEKDAY_NAMES[weekdayIndex(today)]}, {formatLocalDate(today)}
+          </p>
+        </div>
         <p class="today-screen__cycle-day">
           {currentCycleDay === null ? 'Cycle day unavailable' : `Cycle day ${currentCycleDay}`}
         </p>
@@ -790,7 +800,7 @@ export function TodayScreen({
         </section>
       ) : null}
 
-      <ReminderBanner reminders={reminders} />
+      <ReminderBanner reminders={bannerReminders} />
 
       <CycleRing
         actions={
@@ -833,6 +843,44 @@ export function TodayScreen({
               <p class="today-flow-error" role="alert">
                 {flowErrorMessage}
               </p>
+            ) : null}
+            {showStillBleeding || currentFlow !== undefined ? (
+              <Card class="today-bleeding-prompt" heading="Still bleeding today?">
+                <div class="today-bleeding-prompt__choices">
+                  {STILL_BLEEDING_ANSWERS.map((answer) => {
+                    const selected = currentFlow === flowForBleedingAnswer(answer);
+                    return (
+                      <div class="today-bleeding-prompt__choice" key={answer}>
+                        <Button
+                          class={
+                            selected
+                              ? 'today-flow-choice today-flow-choice--selected'
+                              : 'today-flow-choice'
+                          }
+                          aria-pressed={selected}
+                          disabled={flowSaving}
+                          onClick={() => answerStillBleeding(answer)}
+                          variant="secondary"
+                        >
+                          {answer}
+                          {selected ? ' ✓' : ''}
+                        </Button>
+                        {selected ? (
+                          <Button
+                            class="today-flow-remove"
+                            aria-label="Remove today's flow entry"
+                            disabled={flowSaving}
+                            onClick={() => void clearTodayFlow()}
+                            variant="quiet"
+                          >
+                            ✕
+                          </Button>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
             ) : null}
           </div>
         }
@@ -895,45 +943,6 @@ export function TodayScreen({
           </p>
         </Card>
       </div>
-
-      {showStillBleeding || currentFlow !== undefined ? (
-        <Card class="today-bleeding-prompt" heading="Still bleeding today?">
-          <div class="today-bleeding-prompt__choices">
-            {STILL_BLEEDING_ANSWERS.map((answer) => {
-              const selected = currentFlow === flowForBleedingAnswer(answer);
-              return (
-                <div class="today-bleeding-prompt__choice" key={answer}>
-                  <Button
-                    class={
-                      selected
-                        ? 'today-flow-choice today-flow-choice--selected'
-                        : 'today-flow-choice'
-                    }
-                    aria-pressed={selected}
-                    disabled={flowSaving}
-                    onClick={() => answerStillBleeding(answer)}
-                    variant="secondary"
-                  >
-                    {answer}
-                    {selected ? ' ✓' : ''}
-                  </Button>
-                  {selected ? (
-                    <Button
-                      class="today-flow-remove"
-                      aria-label="Remove today's flow entry"
-                      disabled={flowSaving}
-                      onClick={() => void clearTodayFlow()}
-                      variant="quiet"
-                    >
-                      ✕
-                    </Button>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      ) : null}
 
       {contentSlot.paragraphs.length > 0 ? (
         <Card

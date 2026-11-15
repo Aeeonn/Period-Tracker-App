@@ -1,46 +1,74 @@
 .log-screen {
   display: grid;
   width: min(100%, 46rem);
-  gap: var(--space-4);
+  gap: var(--space-3);
   margin-inline: auto;
-  padding-block: var(--space-6);
+  padding-block: var(--space-2) var(--space-6);
 }
 
 .log-screen__header {
-  padding: clamp(var(--space-4), 5vw, var(--space-8));
-  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(ellipse at 92% 8%, var(--color-accent-subtle), transparent 58%),
-    var(--color-surface);
-  box-shadow: var(--shadow-card);
-}
-
-.log-screen__eyebrow {
-  margin: 0 0 var(--space-2);
-  color: var(--color-accent);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .log-screen__header h1 {
-  margin: 0 0 var(--space-3);
-  font-size: clamp(2rem, 8vw, 2.75rem);
-  letter-spacing: -0.045em;
+  margin: 0;
+  font-size: clamp(1.75rem, 7vw, 2.25rem);
+  letter-spacing: -0.04em;
   line-height: var(--line-height-tight);
 }
 
-.log-screen__privacy {
-  max-width: 39rem;
+.log-screen__day-name {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--color-accent);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
 }
 
-.log-screen__date-card,
+.log-screen__date-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+.log-screen__date-step {
+  padding: 0;
+  border-radius: 50%;
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+}
+
+.log-input.log-screen__date-field input {
+  border-color: transparent;
+  background: transparent;
+  font-weight: 600;
+  text-align: center;
+}
+
+.log-screen__privacy {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
 .log-screen__form-card,
 .log-tracker-customizer {
   display: grid;
   gap: var(--space-4);
+}
+
+/* The grid display above would otherwise override the hidden attribute. */
+.log-screen__form-card[hidden] {
+  display: none;
 }
 
 .log-screen__locked,
@@ -64,8 +92,15 @@
 }
 
 .log-screen__saved {
+  min-block-size: 1.25rem;
   color: var(--color-accent);
+  font-size: var(--font-size-sm);
   font-weight: 600;
+  text-align: center;
+}
+
+.log-screen__saved:empty {
+  display: none;
 }
 
 .log-tracker-list {
@@ -82,7 +117,9 @@
 
 .log-tracker-list__heading h2 {
   margin: 0;
-  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
 }
 
 .log-tracker-list__choices,
@@ -90,6 +127,32 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* Trackers scroll sideways in one row so the editor stays near the top. */
+.log-tracker-list__choices {
+  flex-wrap: nowrap;
+  margin-inline: calc(-1 * var(--space-4));
+  padding: var(--space-1) var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.log-tracker-list__choices::-webkit-scrollbar {
+  display: none;
+}
+
+.log-tracker-list__choice .ui-chip {
+  white-space: nowrap;
+}
+
+.log-tracker-list__heading .ui-button {
+  min-block-size: 44px;
+  padding-inline: var(--space-3);
+  border-color: transparent;
+  background: transparent;
+  font-size: var(--font-size-sm);
 }
 
 .log-tracker-customizer__list {
@@ -118,9 +181,16 @@
   gap: var(--space-4);
 }
 
+/* The selected tracker pill and each group's legend already name the editor. */
 .log-editor h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   margin: 0;
-  font-size: var(--font-size-xl);
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
 .log-editor h3 {
@@ -136,14 +206,15 @@
 .log-choice-group {
   min-width: 0;
   margin: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: 0;
+  border: 0;
 }
 
 .log-choice-group legend {
-  padding-inline: var(--space-2);
-  font-weight: 650;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
 }
 
 .log-choice-group__choices {
@@ -240,20 +311,23 @@
 
 .log-screen__day-summary {
   display: grid;
-  gap: var(--space-3);
-  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
-  background:
-    radial-gradient(ellipse at 100% 0, var(--color-accent-subtle), transparent 56%),
-    var(--color-surface);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-color: transparent;
+  background: var(--tint-lilac);
+  box-shadow: none;
 }
 
 .log-screen__day-summary > .ui-card__heading {
   margin: 0;
-  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
 }
 
 .log-screen__summary-list {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -261,10 +335,13 @@
 }
 
 .log-screen__summary-entry {
-  width: 100%;
   min-height: 44px;
   justify-content: flex-start;
-  padding-inline: var(--space-2);
+  padding-inline: var(--space-3);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
   text-align: left;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -275,13 +352,29 @@
 }
 
 .log-screen__day-actions {
+  position: sticky;
+  z-index: 1;
+  inset-block-end: var(--space-2);
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-toast);
+}
+
+.log-screen__day-actions p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
 }
 
 .log-screen__day-actions .ui-button {
   min-height: 44px;
-  min-width: min(100%, 12rem);
 }
 
 .log-screen__date-confirmation {
