@@ -4,7 +4,6 @@ import type { LocalDate, LocalTime } from '../../src/contracts/localdate.ts';
 import { parse } from '../../src/lib/localdate/index.ts';
 import {
   isStandaloneDisplayMode,
-  OPERATOR_DISCLOSURE_TEXT,
   parseLocalDateInput,
   parseOptionalInteger,
   parseReminderTime,
@@ -70,12 +69,6 @@ describe('onboarding model', () => {
     expect(isStandaloneDisplayMode(false, false)).toBe(false);
     expect(isStandaloneDisplayMode(true, false)).toBe(true);
     expect(isStandaloneDisplayMode(false, true)).toBe(true);
-  });
-
-  it('uses the same fixed operator disclosure for both roles', () => {
-    expect(OPERATOR_DISCLOSURE_TEXT).toBe(
-      "This app's website and its encrypted mailbox run on a free Cloudflare account held by the person who set up this private app. They can't read your encrypted data. They can see when your phone connects and roughly where from, and they could change the app's code. The mailbox is set up to keep no logs, but its owner could turn logging back on. If you'd rather hold the account yourself, that can be arranged.",
-    );
   });
 
   it('persists the selected method and reminder choices before the Profile completion marker', async () => {

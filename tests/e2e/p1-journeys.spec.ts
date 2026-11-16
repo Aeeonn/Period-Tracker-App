@@ -169,9 +169,7 @@ async function finishOwnerOnboarding(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Gentle reminders' })).toBeVisible();
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await expect(page.getByRole('heading', { name: /Who runs the app/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  await page.getByRole('button', { name: 'Continue to Today', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible({
     timeout: 15_000,
   });

@@ -3,7 +3,6 @@ import AxeBuilder from '@axe-core/playwright';
 import { createServer, type ViteDevServer } from 'vite';
 import { resolve } from 'node:path';
 import { fillConfirmation, configureThroughUi, setupOrUnlockApp } from './helpers/lock.ts';
-import { OPERATOR_DISCLOSURE_TEXT } from '../../src/ui/screens/onboarding/model.ts';
 
 let vite: ViteDevServer | undefined;
 let origin = '';
@@ -53,11 +52,6 @@ async function configureLock(page: Page): Promise<void> {
   await fillConfirmation(page, code, positions);
 }
 
-async function assertOperatorText(page: Page): Promise<void> {
-  await expect(page.getByTestId('operator-disclosure')).toHaveText(OPERATOR_DISCLOSURE_TEXT);
-  await checkA11yInBothThemes(page);
-}
-
 test.beforeEach(({ page }) => {
   const errors: string[] = [];
   pageErrors.set(page, errors);
@@ -105,11 +99,10 @@ test('T-A11Y-01 @onboarding fresh owner setup stores basics and returning owner 
   await checkA11yInBothThemes(page);
   await expect(page.getByLabel('Remind me to log my period while I’m on it')).toBeChecked();
   await expect(page.getByLabel('Daily check-in')).not.toBeChecked();
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
-
-  await expect(page.getByRole('heading', { name: 'Who runs the app’s servers?' })).toBeVisible();
-  await assertOperatorText(page);
-  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  // Reminders is the last step: the owner removed the server-disclosure step (2026-11-16).
+  await expect(page.getByLabel('Step 2 of 2')).toBeVisible();
+  await page.getByRole('button', { name: 'Continue to Today', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Who runs the app/ })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible({
     timeout: 15_000,
   });
@@ -123,17 +116,18 @@ test('T-A11Y-01 @onboarding fresh owner setup stores basics and returning owner 
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
 });
 
-test('T-UX-05 @onboarding partner sees the same fixed operator disclosure', async ({ page }) => {
+test('@onboarding partner setup ends on a short ready step with sharing off', async ({ page }) => {
   await openIntro(page);
   await continueToRole(page);
   await page.getByRole('button', { name: "I'm the partner" }).click();
   await configureLock(page);
 
-  await expect(page.getByRole('heading', { name: 'Who runs the app’s servers?' })).toBeVisible({
+  await expect(page.getByRole('heading', { name: 'You’re ready' })).toBeVisible({
     timeout: 15_000,
   });
-  await assertOperatorText(page);
-  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  await expect(page.getByText('Sharing is off until she turns categories on.')).toBeVisible();
+  await checkA11yInBothThemes(page);
+  await page.getByRole('button', { name: 'Continue to Today', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Partner navigation' })).toBeVisible({
     timeout: 15_000,
   });

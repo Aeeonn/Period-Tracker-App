@@ -7,9 +7,6 @@ import { compare, parse } from '../../../lib/localdate/index.ts';
 
 export type OnboardingRole = 'owner' | 'partner';
 
-export const OPERATOR_DISCLOSURE_TEXT =
-  "This app's website and its encrypted mailbox run on a free Cloudflare account held by the person who set up this private app. They can't read your encrypted data. They can see when your phone connects and roughly where from, and they could change the app's code. The mailbox is set up to keep no logs, but its owner could turn logging back on. If you'd rather hold the account yourself, that can be arranged.";
-
 export interface OnboardingAnswers {
   readonly lastPeriodStart: LocalDate | undefined;
   readonly typicalCycleLength: number | undefined;

@@ -4,7 +4,6 @@ import type { LocalDate } from '../../../contracts/localdate.ts';
 import { todayLocal } from '../../../lib/localdate/index.ts';
 import { useRepositories } from '../../layout/repositories.tsx';
 import {
-  OPERATOR_DISCLOSURE_TEXT,
   parseLocalDateInput,
   parseOptionalInteger,
   parseReminderTime,
@@ -19,7 +18,7 @@ interface OnboardingScreenProps {
   readonly onComplete: () => void;
 }
 
-type OnboardingStep = 'basics' | 'reminders' | 'disclosure';
+type OnboardingStep = 'basics' | 'reminders' | 'ready';
 
 const CONTRACEPTION_OPTIONS: readonly {
   readonly value: ContraceptionMethod;
@@ -47,7 +46,7 @@ const GOAL_OPTIONS: readonly { readonly value: Goal; readonly label: string }[] 
 export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
   const { logRepo, settingsRepo } = useRepositories();
   const today = todayLocal();
-  const [step, setStep] = useState<OnboardingStep>(role === 'owner' ? 'basics' : 'disclosure');
+  const [step, setStep] = useState<OnboardingStep>(role === 'owner' ? 'basics' : 'ready');
   const [periodDateKnown, setPeriodDateKnown] = useState(false);
   const [periodDateText, setPeriodDateText] = useState('');
   const [cycleLengthText, setCycleLengthText] = useState('');
@@ -61,7 +60,6 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
   const [dailyCheckInTimeText, setDailyCheckInTimeText] = useState('');
   const [answers, setAnswers] = useState<OnboardingAnswers | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pairingNotice, setPairingNotice] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const submitBasics = (event: SubmitEvent) => {
@@ -92,31 +90,12 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
     }
   };
 
-  const continueReminders = (event: SubmitEvent) => {
-    event.preventDefault();
-    setError(null);
-    try {
-      const time = dailyCheckInEnabled ? parseReminderTime(dailyCheckInTimeText) : undefined;
-      if (dailyCheckInEnabled && time === undefined) {
-        throw new RangeError('Choose a time for your daily check-in, or leave it off.');
-      }
-      if (answers === null) throw new Error('Your basics are not ready yet.');
-      setAnswers({ ...answers, dailyCheckInTime: time, periodReminderEnabled });
-      setStep('disclosure');
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : 'Check your reminder choices and try again.',
-      );
-    }
-  };
-
-  const finish = async () => {
-    setError(null);
+  const finish = async (finalAnswers: OnboardingAnswers | null) => {
     setSaving(true);
     try {
       if (role === 'owner') {
-        if (answers === null) throw new Error('Your basics are not ready yet.');
-        await persistOwnerOnboarding({ logRepo, settingsRepo }, answers, today);
+        if (finalAnswers === null) throw new Error('Your basics are not ready yet.');
+        await persistOwnerOnboarding({ logRepo, settingsRepo }, finalAnswers, today);
       }
       onComplete();
     } catch {
@@ -126,23 +105,46 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
     }
   };
 
-  const ownerStepNumber = step === 'basics' ? 1 : step === 'reminders' ? 2 : 3;
-  const totalSteps = role === 'owner' ? 3 : 1;
-  const currentStep = role === 'owner' ? ownerStepNumber : 1;
+  // Reminders is the owner's last step: a valid choice saves the setup and opens Today.
+  const finishReminders = (event: SubmitEvent) => {
+    event.preventDefault();
+    setError(null);
+    let finalAnswers: OnboardingAnswers;
+    try {
+      const time = dailyCheckInEnabled ? parseReminderTime(dailyCheckInTimeText) : undefined;
+      if (dailyCheckInEnabled && time === undefined) {
+        throw new RangeError('Choose a time for your daily check-in, or leave it off.');
+      }
+      if (answers === null) throw new Error('Your basics are not ready yet.');
+      finalAnswers = { ...answers, dailyCheckInTime: time, periodReminderEnabled };
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : 'Check your reminder choices and try again.',
+      );
+      return;
+    }
+    setAnswers(finalAnswers);
+    void finish(finalAnswers);
+  };
+
+  const totalSteps = 2;
+  const currentStep = step === 'basics' ? 1 : 2;
   const currentYear = Number(today.slice(0, 4));
 
   return (
     <main class="onboarding-root" data-onboarding-step={step} data-role={role}>
       <section class="onboarding-panel" aria-labelledby="onboarding-title">
         <p class="onboarding-eyebrow">A little space for your cycle</p>
-        <div class="onboarding-progress" aria-label={`Step ${currentStep} of ${totalSteps}`}>
-          <span>
-            Step {currentStep} of {totalSteps}
-          </span>
-          <span class="onboarding-progress__track" aria-hidden="true">
-            <span style={{ width: `${(currentStep / totalSteps) * 100}%` }} />
-          </span>
-        </div>
+        {role === 'owner' ? (
+          <div class="onboarding-progress" aria-label={`Step ${currentStep} of ${totalSteps}`}>
+            <span>
+              Step {currentStep} of {totalSteps}
+            </span>
+            <span class="onboarding-progress__track" aria-hidden="true">
+              <span style={{ width: `${(currentStep / totalSteps) * 100}%` }} />
+            </span>
+          </div>
+        ) : null}
 
         {step === 'basics' && role === 'owner' ? (
           <form onSubmit={submitBasics}>
@@ -289,7 +291,7 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
         ) : null}
 
         {step === 'reminders' && role === 'owner' ? (
-          <form onSubmit={continueReminders}>
+          <form onSubmit={finishReminders}>
             <h1 class="onboarding-title" id="onboarding-title">
               Gentle reminders
             </h1>
@@ -341,67 +343,45 @@ export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {
             <div class="onboarding-actions">
               <button
                 class="onboarding-button onboarding-button--quiet"
+                disabled={saving}
                 onClick={() => setStep('basics')}
                 type="button"
               >
                 Back
               </button>
-              <button class="onboarding-button onboarding-button--primary" type="submit">
-                Continue
+              <button
+                class="onboarding-button onboarding-button--primary"
+                disabled={saving}
+                type="submit"
+              >
+                {saving ? 'Saving…' : 'Continue to Today'}
               </button>
             </div>
           </form>
         ) : null}
 
-        {step === 'disclosure' ? (
+        {step === 'ready' ? (
           <>
             <h1 class="onboarding-title" id="onboarding-title">
-              Who runs the app’s servers?
+              You’re ready
             </h1>
-            <p class="onboarding-lead">A clear look at how the service works.</p>
-            <p class="onboarding-disclosure" data-testid="operator-disclosure">
-              {OPERATOR_DISCLOSURE_TEXT}
-            </p>
+            <p class="onboarding-lead">This phone is set up as the partner view.</p>
             <p class="onboarding-sharing-note">
-              Pair now or later. Pairing is never required. Sharing is off until she turns
-              categories on.
+              Pairing isn’t set up in this version. Sharing is off until she turns categories on.
             </p>
-            {pairingNotice ? (
-              <p class="onboarding-warning" role="status">
-                Pairing isn’t set up in this version. You can continue to Today and return later.
-              </p>
-            ) : null}
             {error ? (
               <p class="onboarding-error" role="alert">
                 {error}
               </p>
             ) : null}
             <div class="onboarding-actions onboarding-actions--stacked">
-              {role === 'owner' ? (
-                <button
-                  class="onboarding-button onboarding-button--quiet"
-                  disabled={saving}
-                  onClick={() => setStep('reminders')}
-                  type="button"
-                >
-                  Back
-                </button>
-              ) : null}
-              <button
-                class="onboarding-button onboarding-button--secondary"
-                disabled={saving}
-                onClick={() => setPairingNotice(true)}
-                type="button"
-              >
-                Pair now
-              </button>
               <button
                 class="onboarding-button onboarding-button--primary"
                 disabled={saving}
-                onClick={() => void finish()}
+                onClick={() => void finish(null)}
                 type="button"
               >
-                {saving ? 'Saving…' : 'Pair later and continue to Today'}
+                Continue to Today
               </button>
             </div>
           </>

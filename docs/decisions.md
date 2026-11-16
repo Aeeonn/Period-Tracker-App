@@ -69,7 +69,7 @@ Where this section conflicts with older entries below (for example the P6 produc
 - **Cloudflare** (AP-10, 2026-10-28):
   - **Account:** one Free-plan account owned by the owner, with no payment method. The owner creates and manages the account and email; agents never create accounts or change account settings.
   - **Token:** a scoped deploy token for this account only, with Workers Scripts, D1 and Pages edit permissions and nothing else. It is stored outside the repository at `~/.config/flo-deploy/cloudflare.env` (mode 600). Never read, print or copy it; the deploy scripts load it.
-  - **Disclosure:** the in-app hosting-custody disclosure is not required.
+  - **Disclosure:** the in-app hosting-custody disclosure is not required. On 2026-11-16 the owner had the "Who runs the app's servers?" onboarding step removed. Her setup is now two steps (basics, reminders); the partner sees a short "You're ready" step. This sets aside rule PR-08 and test T-UX-05 in [security-privacy.md](plan/security-privacy.md#2-consent-and-privacy-rules-testable).
 - **Previews** (AP-18): synthetic-only preview deployments are allowed without asking each time.
   - Deploy from merged `main` using the existing scripts: Pages project `flo-preview`, with the app alias `app`.
   - Always pass an explicit non-`main` `--branch` alias; `main` is the Pages production branch.

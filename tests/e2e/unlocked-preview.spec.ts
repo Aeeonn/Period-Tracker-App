@@ -43,10 +43,8 @@ async function finishOnboarding(page: Page, role: 'owner' | 'partner'): Promise<
     await expect(page.getByText(/no passphrase protection/i)).toBeVisible();
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Gentle reminders' })).toBeVisible();
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
   }
-  await expect(page.getByRole('heading', { name: /Who runs the app/ })).toBeVisible();
-  await page.getByRole('button', { name: 'Pair later and continue to Today' }).click();
+  await page.getByRole('button', { name: 'Continue to Today', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Today', exact: true })).toBeVisible();
   await expect(page.getByText(/no passphrase protection/i)).toBeVisible();
   await expect(page.getByTestId('lock-screen')).toHaveCount(0);

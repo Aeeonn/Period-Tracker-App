@@ -58,7 +58,7 @@ Every rule from constitution §4 rule 1 is enforced by **encryption or data sepa
 | PR-05 | An automated test proves the app contacts only approved endpoints | `tools/allowed-endpoints.json` = app origin plus relay origin; Playwright records every request in scripted journeys | T-NET-01 |
 | PR-06 | No health data in logs or screenshots | Production builds strip `console`; a scrubbed logger; screenshot tests use synthetic data | Lint plus reviewer |
 | PR-07 | Relay metadata minimisation (T13) | Workers logs/observability, Logpush and tail consumers off; no IP, user-agent, geolocation or body logging; opaque slot and record ids with no per-category meaning; sequence-number cursors instead of timestamps; push schedule limited to `{IANA zone, HH:MM}` | T-RELAY-02 (committed and deployed configuration) |
-| PR-08 | Plain disclosure of who operates the hosting and relay and what that operator could see or change | Fixed text in onboarding (both roles) and Sharing help; the operator named by the AP-10 custody choice | T-UX-05 |
+| PR-08 | Plain disclosure of who operates the hosting and relay and what that operator could see or change | Fixed text in onboarding (both roles) and Sharing help; the operator named by the AP-10 custody choice | T-UX-05. **Set aside by the owner:** the disclosure is not required and the onboarding step was removed on 2026-11-16 ([decisions.md](../decisions.md#hosting-deployment-and-data)) |
 
 | ID | Security rule (constitution §4 rule 3) | Check |
 |---|---|---|
