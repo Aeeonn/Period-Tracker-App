@@ -155,27 +155,6 @@
   font-size: var(--font-size-sm);
 }
 
-.log-tracker-customizer__list {
-  display: grid;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.log-tracker-customizer__list li {
-  display: grid;
-  gap: var(--space-2);
-  padding-block: var(--space-3);
-  border-block-end: 1px solid var(--color-border);
-}
-
-.log-tracker-customizer__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
 .log-editor {
   display: grid;
   gap: var(--space-4);
@@ -300,13 +279,6 @@
 .log-screen input:disabled,
 .log-screen textarea:disabled {
   cursor: not-allowed;
-}
-
-@media (min-width: 40rem) {
-  .log-tracker-customizer__list li {
-    grid-template-columns: minmax(9rem, 1fr) auto;
-    align-items: center;
-  }
 }
 
 .log-screen__day-summary {

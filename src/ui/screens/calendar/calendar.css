@@ -308,7 +308,7 @@
   justify-items: center;
   gap: var(--space-2);
   padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-card-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   color: var(--color-text);
@@ -425,10 +425,10 @@
 .calendar-day-detail__logged {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
   border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
+  background: var(--tint-lilac);
 }
 
 .calendar-day-detail__logged h3,
@@ -437,14 +437,16 @@
 }
 
 .calendar-day-detail__logged h3 {
-  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .calendar-day-detail__logged ul {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   margin: 0;
-  padding-inline-start: var(--space-5);
+  padding: 0;
+  list-style: none;
   overflow-wrap: anywhere;
 }
 

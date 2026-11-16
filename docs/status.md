@@ -18,6 +18,7 @@ _Last updated: 2026-11-15._ Update this file whenever work merges or plans chang
   - Frame: no brand row or role pill; the preview notice and Settings share one slim row. Owner tabs are Today, a raised centre Log button and Calendar. The empty Insights and Us tabs are hidden until those screens exist (this differs from [ux-spec.md §2](plan/ux-spec.md#2-two-experiences-and-navigation), which lists five tabs).
   - Today: the cycle ring is first on screen; the "Still bleeding today?" prompt sits under the action buttons and the reminder banner no longer repeats it.
   - Log: chip-only trackers **save on tap** and clear when tapped again; typed trackers (notes, temperature, sleep, sex details and similar) keep a Save button and the unsaved-edits guard. A previous/next day stepper was added. Fixed: every tracker editor was displayed at once because a grid rule overrode `hidden`.
+  - Second pass (same day): onboarding and the lock screens use the same soft cards and pill buttons (look only; no lock behaviour changed, and the recovery-code boxes are now labelled "Position N" with the full name kept for screen readers). Settings and Log share one compact tracker list: pinned trackers first in the user's order with arrow buttons, then the rest with a Pin button. Calendar day details lost their heavy outline.
 - **Development convenience:** `npm run dev` now runs an unlocked development mode with a separate synthetic-only database (`8f383cb`). See the [README](../README.md).
 - **Face ID unlock (`p2-passkey-unlock`, built early at the owner's request, 2026-11-14):** optional passkey-PRF unlock from Settings, and the Lock-after setting is now honoured (default 1 minute) ([ADR-0016](adr/0016-passkey-face-id-unlock.md)). The owner reports Face ID setup, unlock, passphrase fallback and offline unlock passed on both phones after being asked to use https://flo-preview-cm6.pages.dev with synthetic data ([record](deploy/face-id-preview.md)); automated tests use a synthetic WebAuthn stub.
 
@@ -53,12 +54,12 @@ Details and the "done when" list are in the [roadmap](plan/roadmap.md#step-1--cl
 
 ## Open follow-ups
 
-- **UI refresh, not yet done:**
-  - onboarding and the lock screens still use the older look;
-  - Settings "Your trackers" still uses Move up / Move down / Hide buttons per tracker;
-  - Calendar day cells and the day-detail panel were not redesigned;
+- **UI refresh, still open:**
+  - real-iPhone check of the new look: safe areas around the centre Log button, the date stepper with the native date picker, the lock and recovery screens;
+  - pinned trackers are not stored: the order and the hidden trackers reset each time the app is reopened (storing them needs a profile field, so a contract change);
   - the "Preview — synthetic data only" notice is shown in every build and must change before real use (launch step);
-  - real-iPhone check of the new frame (safe areas around the centre Log button, date stepper with the native date picker).
+  - onboarding still ends with the "Who runs the app's servers?" step, although the owner decided that disclosure is not required; removing it is the owner's call;
+  - Calendar day cells were not redesigned.
 - **Face ID, real iPhone:** check that setup still works with Lock after set to "Immediately" (the passkey sheet may count as hidden).
 - **Test timeouts:** parallel full E2E runs, one time-zone matrix run and one coverage run had timeouts that passed on a serial retry. The causes are not established. Run Playwright with `--workers=1`.
 - **Today:** avoid exhausting the card rotation through repeated log saves, and guard overlapping Today refresh/history writes.

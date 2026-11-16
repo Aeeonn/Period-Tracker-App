@@ -16,7 +16,7 @@ import { useRepositories } from '../../../layout/repositories.tsx';
 import { useLockControls } from '../../../layout/lock-controls.tsx';
 import { FaceIdSettingsCard } from '../../lock/passkey/index.ts';
 import { Button, Card } from '../../../components/base';
-import { TRACKER_LABELS } from '../../log/types.ts';
+import { TrackerPinList } from '../../log/tracker-pin-list.tsx';
 import {
   formatTemperatureFromCelsius,
   movePinnedTracker,
@@ -305,59 +305,19 @@ export function SettingsScreen({
 
         <Card class="settings-card" heading="Your trackers">
           <p class="settings-screen__help">
-            Pin the things you want close by, hide the rest, or arrange your own order. This list
-            lasts for this app session.
+            Pin the things you want close by and arrange them with the arrows. This list lasts for
+            this app session.
           </p>
-          <ul class="settings-tracker-list">
-            {customizableTrackers.map((tracker) => {
-              const index = pinnedTrackers.indexOf(tracker);
-              const isPinned = index >= 0;
-              return (
-                <li class="settings-tracker-list__item" key={tracker}>
-                  <span class="settings-tracker-list__label">
-                    {TRACKER_LABELS[tracker]}
-                    {isPinned ? <span class="settings-tracker-list__status">Pinned</span> : null}
-                  </span>
-                  <div class="settings-tracker-list__actions">
-                    {isPinned ? (
-                      <>
-                        <Button
-                          variant="quiet"
-                          aria-label={`Move ${TRACKER_LABELS[tracker]} up`}
-                          disabled={index === 0}
-                          onClick={() =>
-                            onPinnedTrackersChange(movePinnedTracker(pinnedTrackers, tracker, -1))
-                          }
-                        >
-                          Move up
-                        </Button>
-                        <Button
-                          variant="quiet"
-                          aria-label={`Move ${TRACKER_LABELS[tracker]} down`}
-                          disabled={index === pinnedTrackers.length - 1}
-                          onClick={() =>
-                            onPinnedTrackersChange(movePinnedTracker(pinnedTrackers, tracker, 1))
-                          }
-                        >
-                          Move down
-                        </Button>
-                      </>
-                    ) : null}
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        onPinnedTrackersChange(togglePinnedTracker(pinnedTrackers, tracker))
-                      }
-                    >
-                      {isPinned
-                        ? `Hide ${TRACKER_LABELS[tracker]}`
-                        : `Pin ${TRACKER_LABELS[tracker]}`}
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <TrackerPinList
+            trackers={customizableTrackers}
+            pinnedTrackers={pinnedTrackers}
+            onMove={(tracker, offset) =>
+              onPinnedTrackersChange(movePinnedTracker(pinnedTrackers, tracker, offset))
+            }
+            onToggle={(tracker) =>
+              onPinnedTrackersChange(togglePinnedTracker(pinnedTrackers, tracker))
+            }
+          />
           {pinnedTrackers.length === 0 ? (
             <p class="settings-screen__hint">No trackers are pinned. Add one whenever you like.</p>
           ) : null}

@@ -393,7 +393,7 @@ export function LockScreen({
 
   const confirmationInput = (index: number, position: number) => (
     <label class="lock-screen__character" key={position}>
-      <span>Character at position {position}</span>
+      <span>Position {position}</span>
       <input
         aria-label={`Character at position ${position}`}
         autoCapitalize="characters"

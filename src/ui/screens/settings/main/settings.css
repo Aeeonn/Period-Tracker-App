@@ -125,43 +125,6 @@
   white-space: nowrap;
 }
 
-.settings-tracker-list {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.settings-tracker-list__item {
-  display: grid;
-  gap: var(--space-2);
-  padding-block: var(--space-3);
-  border-block-end: 1px solid var(--color-border);
-}
-
-.settings-tracker-list__label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-weight: 600;
-}
-
-.settings-tracker-list__status {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
-  font-size: var(--font-size-xs);
-  font-weight: 700;
-}
-
-.settings-tracker-list__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
 .settings-about-list {
   display: grid;
   gap: var(--space-2);

@@ -12,6 +12,7 @@ import {
 } from '../../../lib/localdate/index.ts';
 import { Button, Card, Chip } from '../../components/base';
 import { TrackerEditor } from './tracker-editor.tsx';
+import { TrackerPinList } from './tracker-pin-list.tsx';
 import { formatDaySummary } from './day-summary.ts';
 import {
   getPendingEdits,
@@ -479,44 +480,12 @@ export function LogScreen({
           <p class="log-screen__hint">
             Choose the trackers that feel useful to you, then arrange your pinned list.
           </p>
-          <ul class="log-tracker-customizer__list">
-            {customizableTrackers.map((tracker) => {
-              const index = pinnedTrackers.indexOf(tracker);
-              const isPinned = index >= 0;
-              return (
-                <li key={tracker}>
-                  <span>{TRACKER_LABELS[tracker]}</span>
-                  <div class="log-tracker-customizer__actions">
-                    {isPinned ? (
-                      <>
-                        <Button
-                          variant="quiet"
-                          aria-label={`Move ${TRACKER_LABELS[tracker]} up`}
-                          disabled={index === 0}
-                          onClick={() => moveTracker(tracker, -1)}
-                        >
-                          Move up
-                        </Button>
-                        <Button
-                          variant="quiet"
-                          aria-label={`Move ${TRACKER_LABELS[tracker]} down`}
-                          disabled={index === pinnedTrackers.length - 1}
-                          onClick={() => moveTracker(tracker, 1)}
-                        >
-                          Move down
-                        </Button>
-                      </>
-                    ) : null}
-                    <Button variant="secondary" onClick={() => togglePinned(tracker)}>
-                      {isPinned
-                        ? `Hide ${TRACKER_LABELS[tracker]}`
-                        : `Pin ${TRACKER_LABELS[tracker]}`}
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <TrackerPinList
+            trackers={customizableTrackers}
+            pinnedTrackers={pinnedTrackers}
+            onMove={moveTracker}
+            onToggle={togglePinned}
+          />
         </Card>
       ) : null}
 
