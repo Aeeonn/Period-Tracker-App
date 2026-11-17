@@ -30,6 +30,8 @@ Goals, in order: cycle tracking and logging; tracking and helping the couple's s
   - Couple space: one shared sex log, love notes, and support cards. Each entry is edited only by its author.
   - One generic daily Web Push to her phone, with fixed text and no health detail ([ADR-0008](../adr/0008-generic-notifications-under-lock.md)).
   - Unpair: delete the relay data and forget the key on both phones.
+  - The "Us" tab returns to the tab bar, and setup offers the partner choice again.
+  - Calendar: a marker on days with sex logged, and day cells that are easier to read.
 - **Not built:** three-code pairing with a safety code, pairing-file and sync-file fallbacks, per-category key epochs and rotation, identity certificates, hybrid logical clocks, tombstones, conflict copies, consent history, sharing-start date, per-entry opt-in, life-stage suppression, partner or event push, quick-hide, a separate preview relay environment.
 - **Done when:** both real phones pair; a category she turns on appears on his phone and disappears from the relay when she turns it off; pause works; a canary scan shows no plaintext in the relay database; the daily push arrives or in-app-only reminders are accepted.
 
@@ -42,6 +44,8 @@ Goals, in order: cycle tracking and logging; tracking and helping the couple's s
   - Prediction track record, for example "6 of your last 8 periods started inside the range" (A18, on-device part).
   - Original intimacy conversation prompts and sexual-wellness lessons (F-104, F-053) with one independent content review. This item does not depend on step 2 and can start at any time.
   - More "did you know" cards as wanted, each cited and reviewed.
+  - The "Insights" tab returns to the tab bar to hold the summaries, history and track record.
+  - Motion: a cycle ring that draws in and sheets that slide, respecting reduced-motion settings and adding no dependency ([decisions.md](../decisions.md#product-direction)).
 - **Done when:** the summaries show the "not enough yet", "no clear pattern" and pattern states on synthetic data; the intimacy content has passed its review.
 
 ### Dropped, and an unplanned wish list
