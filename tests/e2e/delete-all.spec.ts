@@ -88,7 +88,6 @@ async function installSyntheticServiceWorker(page: Page): Promise<boolean> {
 }
 
 async function completeOwnerOnboarding(page: Page, passphrase: string): Promise<void> {
-  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
   const { code, positions } = await configureThroughUi(page, passphrase);
   await fillConfirmation(page, code, positions);
   await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible({ timeout: 15_000 });
@@ -144,7 +143,6 @@ test('T-CON-20 @delete erases local stores and allows a fresh lock after typed c
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
-  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
   await completeOwnerOnboarding(page, OLD_LOCK_PASSPHRASE);
 
   await page.getByRole('link', { name: 'Settings' }).click();
@@ -231,8 +229,6 @@ test('T-CON-20 @delete erases local stores and allows a fresh lock after typed c
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
-  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
-  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
   await expect(page.getByRole('heading', { name: 'Create your lock' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Unlock this device' })).toHaveCount(0);
 

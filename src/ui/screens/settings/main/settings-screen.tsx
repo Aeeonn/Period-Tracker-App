@@ -5,7 +5,6 @@ import type { Profile } from '../../../../contracts/entities.ts';
 import {
   ISO_WEEKDAYS,
   THEMES,
-  TRACKERS,
   type IsoWeekday,
   type TemperatureUnit,
   type Theme,
@@ -17,6 +16,7 @@ import { useLockControls } from '../../../layout/lock-controls.tsx';
 import { FaceIdSettingsCard } from '../../lock/passkey/index.ts';
 import { Button, Card } from '../../../components/base';
 import { TrackerPinList } from '../../log/tracker-pin-list.tsx';
+import { OFFERED_TRACKERS } from '../../log/types.ts';
 import {
   formatTemperatureFromCelsius,
   movePinnedTracker,
@@ -132,7 +132,6 @@ export function SettingsScreen({
     return <PortableDataScreen onBack={() => setShowPortableData(false)} />;
   }
 
-  const customizableTrackers = TRACKERS.filter((tracker) => tracker !== 'heavy_detail');
   const profileControlsDisabled = loading || loadError !== null || saving;
 
   if (showDeleteScreen) {
@@ -309,7 +308,7 @@ export function SettingsScreen({
             this app session.
           </p>
           <TrackerPinList
-            trackers={customizableTrackers}
+            trackers={OFFERED_TRACKERS}
             pinnedTrackers={pinnedTrackers}
             onMove={(tracker, offset) =>
               onPinnedTrackersChange(movePinnedTracker(pinnedTrackers, tracker, offset))

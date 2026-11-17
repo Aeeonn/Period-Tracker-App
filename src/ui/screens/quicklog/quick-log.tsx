@@ -10,7 +10,6 @@ import {
   SEX_ACTIVITY,
   STI_TEST_RESULT,
   SYMPTOMS_BODY,
-  LH_TEST_RESULT,
   EMERGENCY_CONTRACEPTION,
   type Desire,
   type Discharge,
@@ -100,13 +99,6 @@ const TEST_CHOICES: readonly TestChoice[] = [
     createEntry: (day: DayBundle | undefined) => ({
       tracker: 'tests' as const,
       value: { ...(day?.tests ?? {}), pregnancy: result },
-    }),
-  })),
-  ...LH_TEST_RESULT.map((result) => ({
-    label: `LH test: ${optionLabel(result)}`,
-    createEntry: (day: DayBundle | undefined) => ({
-      tracker: 'tests' as const,
-      value: { ...(day?.tests ?? {}), lh: result },
     }),
   })),
   ...STI_TEST_RESULT.map((result) => ({

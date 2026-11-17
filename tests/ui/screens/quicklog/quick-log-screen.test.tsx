@@ -137,4 +137,27 @@ describe('Quick Log accessible behavior', () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
     expect((await logRepo.getDay(DATE).catch(() => undefined))?.desire).toBeUndefined();
   });
+
+  it('offers pregnancy, STI and emergency-contraception choices but no ovulation-strip results', async () => {
+    const root = mount();
+    await act(async () => {
+      render(
+        <QuickLogSheet
+          open
+          onOpenChange={vi.fn()}
+          localDate={DATE}
+          logRepo={null}
+          pinnedTrackers={['tests']}
+        />,
+        root,
+      );
+    });
+    const labels = [...root.querySelectorAll('.quick-log__choices button')].map(
+      (candidate) => candidate.textContent?.trim() ?? '',
+    );
+    expect(labels.some((label) => label.startsWith('Pregnancy test:'))).toBe(true);
+    expect(labels.some((label) => label.startsWith('STI test:'))).toBe(true);
+    expect(labels.some((label) => label.startsWith('Emergency contraception:'))).toBe(true);
+    expect(labels.some((label) => label.startsWith('LH test:'))).toBe(false);
+  });
 });

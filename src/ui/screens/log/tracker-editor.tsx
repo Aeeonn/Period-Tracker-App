@@ -691,13 +691,16 @@ export function TrackerEditor({
             onChange={setPregnancyTest}
             disabled={disabled}
           />
-          <ChoiceGroup
-            legend="LH test"
-            values={['negative', 'high', 'peak', 'invalid'] as const}
-            value={lhTest}
-            onChange={setLhTest}
-            disabled={disabled}
-          />
+          {/* Ovulation strips are out of scope (ADR-0017); keep an existing value editable. */}
+          {day?.tests?.lh !== undefined ? (
+            <ChoiceGroup
+              legend="LH test"
+              values={['negative', 'high', 'peak', 'invalid'] as const}
+              value={lhTest}
+              onChange={setLhTest}
+              disabled={disabled}
+            />
+          ) : null}
           <ChoiceGroup
             legend="STI test result"
             values={['positive', 'negative', 'pending'] as const}

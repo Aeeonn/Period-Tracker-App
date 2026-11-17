@@ -183,6 +183,23 @@ describe('Settings screen accessible behavior', () => {
     expect(onPinnedTrackersChange).toHaveBeenCalledWith(['mood', 'flow']);
     await act(async () => button(root, 'Hide Flow').click());
     expect(onPinnedTrackersChange).toHaveBeenLastCalledWith(['mood']);
+
+    // Trackers for dropped features (ADR-0017) are not offered for pinning.
+    const offered = [...root.querySelectorAll('.tracker-pin-list button')].map((candidate) =>
+      candidate.getAttribute('aria-label'),
+    );
+    expect(offered).toContain('Pin Weight');
+    for (const dropped of [
+      'Basal body temperature',
+      'Ovulation',
+      'Pill intake',
+      'Medication',
+      'Perimenopause impacts',
+      'Postpartum bleeding',
+      'Heavy-flow details',
+    ]) {
+      expect(offered).not.toContain(`Pin ${dropped}`);
+    }
   });
 
   it('shows a safe load error and rolls back failed setting writes without changing the saved profile', async () => {

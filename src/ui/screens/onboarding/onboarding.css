@@ -131,8 +131,7 @@
   transition: width 180ms ease;
 }
 
-.onboarding-button,
-.onboarding-choice {
+.onboarding-button {
   min-block-size: 48px;
   min-inline-size: 48px;
   font: inherit;
@@ -181,7 +180,6 @@
 }
 
 .onboarding-button:focus-visible,
-.onboarding-choice:focus-visible,
 .onboarding-input:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 3px;
@@ -234,47 +232,6 @@
 .onboarding-error {
   border: 1px solid var(--color-period);
   color: var(--color-text);
-}
-
-.onboarding-choice-list {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.onboarding-choice {
-  display: grid;
-  grid-template-columns: 2.75rem 1fr auto;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-  cursor: pointer;
-  font-weight: 700;
-  text-align: start;
-}
-
-.onboarding-choice:hover {
-  border-color: var(--color-accent);
-  background: var(--color-accent-subtle);
-}
-
-.onboarding-choice__icon {
-  display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
-  font-size: var(--font-size-xl);
-}
-
-.onboarding-choice__arrow {
-  color: var(--color-accent);
-  font-size: var(--font-size-xl);
 }
 
 .onboarding-field,

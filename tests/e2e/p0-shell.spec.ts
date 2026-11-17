@@ -9,15 +9,13 @@ const pageErrors = new WeakMap<Page, string[]>();
 
 type OnboardingRole = 'owner' | 'partner';
 
-async function continueWelcomeToLock(page: Page, role: OnboardingRole): Promise<void> {
+// Setup no longer asks for a role: it is the owner unless the URL says `?role=partner`.
+async function continueWelcomeToLock(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Welcome to your cycle companion' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
-  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
-  await page
-    .getByRole('button', { name: role === 'owner' ? "I'm tracking my cycle" : "I'm the partner" })
-    .click();
+  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toHaveCount(0);
 }
 
 async function finishOnboardingAfterLock(page: Page, role: OnboardingRole): Promise<void> {
@@ -32,8 +30,7 @@ async function finishOnboardingAfterLock(page: Page, role: OnboardingRole): Prom
 
 async function openApp(page: Page, query = ''): Promise<void> {
   await page.goto(`${origin}/${query}`);
-  const role = query.includes('role=partner') ? 'partner' : 'owner';
-  await continueWelcomeToLock(page, role);
+  await continueWelcomeToLock(page);
   await expect(page.getByTestId('lock-screen')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Create your lock' })).toBeVisible();
 }

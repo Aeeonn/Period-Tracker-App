@@ -25,16 +25,14 @@ function trackErrors(page: Page): void {
   page.on('pageerror', (error) => errors.push(`${error.name}: ${error.message}`));
 }
 
-async function chooseRole(page: Page, role: 'owner' | 'partner'): Promise<void> {
+// Setup no longer asks for a role: it is the owner unless the URL says `?role=partner`.
+async function passIntro(page: Page): Promise<void> {
   await expect(
     page.getByRole('heading', { name: 'Welcome to your cycle companion' }),
   ).toBeVisible();
   await expect(page.getByText(/no passphrase protection/i)).toBeVisible();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
-  await page
-    .getByRole('button', { name: role === 'owner' ? "I'm tracking my cycle" : "I'm the partner" })
-    .click();
 }
 
 async function finishOnboarding(page: Page, role: 'owner' | 'partner'): Promise<void> {
@@ -81,7 +79,7 @@ test('owner onboarding and synthetic changes survive a reload without a lock pro
 }) => {
   test.setTimeout(60_000);
   await page.goto(origin);
-  await chooseRole(page, 'owner');
+  await passIntro(page);
   await finishOnboarding(page, 'owner');
 
   await expect(page.getByRole('heading', { name: 'No cycle logs yet' })).toBeVisible();
@@ -97,8 +95,8 @@ test('owner onboarding and synthetic changes survive a reload without a lock pro
 
 test('partner onboarding skips the lock without changing the partner view', async ({ page }) => {
   test.setTimeout(60_000);
-  await page.goto(origin);
-  await chooseRole(page, 'partner');
+  await page.goto(`${origin}/?role=partner`);
+  await passIntro(page);
   await finishOnboarding(page, 'partner');
   await expect(page.getByRole('navigation', { name: 'Partner navigation' })).toBeVisible();
 });

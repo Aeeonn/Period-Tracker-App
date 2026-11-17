@@ -19,7 +19,13 @@ import {
   updatePendingTrackerDrafts,
   type PendingTrackerDrafts,
 } from './pending-edits.ts';
-import { DEFAULT_PINNED_TRACKERS, TRACKER_LABELS, type LogEntry, type LogRepo } from './types.ts';
+import {
+  DEFAULT_PINNED_TRACKERS,
+  OFFERED_TRACKERS,
+  TRACKER_LABELS,
+  type LogEntry,
+  type LogRepo,
+} from './types.ts';
 import './log.css';
 
 export interface LogScreenProps {
@@ -28,6 +34,8 @@ export interface LogScreenProps {
   readonly pinnedTrackers?: readonly Tracker[] | undefined;
   readonly temperatureUnit?: TemperatureUnit | undefined;
   readonly onPinnedTrackersChange?: ((trackers: readonly Tracker[]) => void) | undefined;
+  /** Trackers offered for pinning; defaults to the in-scope set. */
+  readonly offeredTrackers?: readonly Tracker[] | undefined;
 }
 
 export async function persistLogEntries(
@@ -141,11 +149,9 @@ export function LogScreen({
   pinnedTrackers: pinnedTrackersProp,
   temperatureUnit = 'celsius',
   onPinnedTrackersChange,
+  offeredTrackers = OFFERED_TRACKERS,
 }: LogScreenProps) {
   const [selectedDate, setSelectedDate] = useState<LocalDate>(() => initialDate ?? todayLocal());
-  const customizableTrackers: readonly Tracker[] = TRACKERS.filter(
-    (tracker) => tracker !== 'heavy_detail',
-  );
   const [dateText, setDateText] = useState(() => format(selectedDate));
   const [dateError, setDateError] = useState<string | null>(null);
   const [dateChangePending, setDateChangePending] = useState<LocalDate | null>(null);
@@ -481,7 +487,7 @@ export function LogScreen({
             Choose the trackers that feel useful to you, then arrange your pinned list.
           </p>
           <TrackerPinList
-            trackers={customizableTrackers}
+            trackers={offeredTrackers}
             pinnedTrackers={pinnedTrackers}
             onMove={moveTracker}
             onToggle={togglePinned}

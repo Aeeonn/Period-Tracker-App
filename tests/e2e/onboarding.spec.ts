@@ -27,14 +27,15 @@ async function checkA11yInBothThemes(page: Page): Promise<void> {
   }
 }
 
-async function openIntro(page: Page): Promise<void> {
-  await page.goto(`${origin}/`);
+async function openIntro(page: Page, query = ''): Promise<void> {
+  await page.goto(`${origin}/${query}`);
   await expect(
     page.getByRole('heading', { name: 'Welcome to your cycle companion' }),
   ).toBeVisible();
 }
 
-async function continueToRole(page: Page): Promise<void> {
+// Setup no longer asks for a role: it is the owner unless the URL says `?role=partner`.
+async function continuePastInstall(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   const installTitle = page.getByRole('heading', { name: 'Make room for the app' });
   await expect(installTitle).toBeVisible();
@@ -43,8 +44,7 @@ async function continueToRole(page: Page): Promise<void> {
   ).toBeVisible();
   await checkA11yInBothThemes(page);
   await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
-  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
-  await checkA11yInBothThemes(page);
+  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toHaveCount(0);
 }
 
 async function configureLock(page: Page): Promise<void> {
@@ -85,13 +85,14 @@ test('T-A11Y-01 @onboarding fresh owner setup stores basics and returning owner 
   test.setTimeout(90_000);
   await openIntro(page);
   await checkA11yInBothThemes(page);
-  await continueToRole(page);
-  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
+  await continuePastInstall(page);
   await configureLock(page);
 
   await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible({ timeout: 15_000 });
   await checkA11yInBothThemes(page);
   await expect(page.getByLabel('Typical cycle length (days)')).toHaveValue('');
+  await expect(page.getByLabel('Avoid pregnancy')).toBeVisible();
+  await expect(page.getByLabel('Trying to conceive')).toHaveCount(0);
   await expect(page.getByLabel('Typical period length (days)')).toHaveValue('');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 
@@ -117,9 +118,8 @@ test('T-A11Y-01 @onboarding fresh owner setup stores basics and returning owner 
 });
 
 test('@onboarding partner setup ends on a short ready step with sharing off', async ({ page }) => {
-  await openIntro(page);
-  await continueToRole(page);
-  await page.getByRole('button', { name: "I'm the partner" }).click();
+  await openIntro(page, '?role=partner');
+  await continuePastInstall(page);
   await configureLock(page);
 
   await expect(page.getByRole('heading', { name: 'You’re ready' })).toBeVisible({

@@ -28,7 +28,6 @@ async function completeFreshOwnerOnboarding(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
-  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
   const { code, positions } = await configureThroughUi(page);
   await fillConfirmation(page, code, positions);
   await expect(page.getByRole('heading', { name: 'Your basics' })).toBeVisible();

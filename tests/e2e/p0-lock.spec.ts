@@ -12,8 +12,6 @@ async function continueWelcomeToLock(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Make room for the app' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue in browser anyway' }).click();
-  await expect(page.getByRole('heading', { name: 'Which brings you here?' })).toBeVisible();
-  await page.getByRole('button', { name: "I'm tracking my cycle" }).click();
 }
 
 async function finishOwnerOnboarding(page: Page): Promise<void> {

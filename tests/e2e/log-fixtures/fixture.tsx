@@ -1,12 +1,17 @@
 import { render } from 'preact';
 import type { DeviceId } from '../../../src/contracts/brand.ts';
 import type { DayBundle } from '../../../src/contracts/entities.ts';
+import { TRACKERS } from '../../../src/contracts/enums.ts';
 import type { LocalDate } from '../../../src/contracts/localdate.ts';
 import { createLogRepo, createSettingsRepo } from '../../../src/data/repos/index.ts';
 import { parse } from '../../../src/lib/localdate/index.ts';
 import { AppShell } from '../../../src/ui/layout/app.tsx';
 import { LogScreen } from '../../../src/ui/screens/log/index.ts';
 import { MemoryRecordStore } from '../../data/repos/memory-record-store.ts';
+
+// The app offers only in-scope trackers; this fixture offers every one so each
+// editor stays covered by the accessibility audits.
+const ALL_PINNABLE_TRACKERS = TRACKERS.filter((tracker) => tracker !== 'heavy_detail');
 
 function syntheticDate(): LocalDate {
   const parsed = parse('2032-04-05');
@@ -84,7 +89,11 @@ async function mountFixture(): Promise<void> {
   }
 
   render(
-    <LogScreen logRepo={fixture === 'locked' ? undefined : repository} localDate={date} />,
+    <LogScreen
+      logRepo={fixture === 'locked' ? undefined : repository}
+      localDate={date}
+      offeredTrackers={ALL_PINNABLE_TRACKERS}
+    />,
     root,
   );
 }

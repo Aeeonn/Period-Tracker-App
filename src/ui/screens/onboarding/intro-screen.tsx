@@ -8,7 +8,7 @@ export interface OnboardingIntroProps {
   readonly unlockedPreview?: boolean;
 }
 
-type IntroStep = 'welcome' | 'install' | 'role';
+type IntroStep = 'welcome' | 'install';
 
 function standaloneMode(): boolean {
   const displayMode =
@@ -26,7 +26,15 @@ export function OnboardingIntro({
   const [step, setStep] = useState<IntroStep>('welcome');
   const standalone = standaloneMode();
 
-  const continueWelcome = () => setStep(standalone ? 'role' : 'install');
+  // Partner setup is not offered until sharing exists (ADR-0017). `?role=partner`
+  // keeps the partner shell reachable for development and tests.
+  const role: OnboardingRole =
+    new URLSearchParams(window.location.search).get('role') === 'partner' ? 'partner' : 'owner';
+
+  const continueWelcome = () => {
+    if (standalone) onRoleSelected(role);
+    else setStep('install');
+  };
 
   return (
     <main class="onboarding-root" data-onboarding-step={step}>
@@ -89,51 +97,13 @@ export function OnboardingIntro({
             </p>
             <button
               class="onboarding-button onboarding-button--primary"
-              onClick={() => setStep('role')}
+              onClick={() => onRoleSelected(role)}
             >
               Continue in browser anyway
             </button>
           </>
         ) : null}
 
-        {step === 'role' ? (
-          <>
-            <h1 class="onboarding-title" id="onboarding-title">
-              Which brings you here?
-            </h1>
-            <p class="onboarding-lead">
-              Choose the view that feels right. You can continue on your own.
-            </p>
-            <div class="onboarding-choice-list">
-              <button
-                class="onboarding-choice"
-                onClick={() => onRoleSelected('owner')}
-                type="button"
-              >
-                <span class="onboarding-choice__icon" aria-hidden="true">
-                  ✿
-                </span>
-                <span>I'm tracking my cycle</span>
-                <span class="onboarding-choice__arrow" aria-hidden="true">
-                  →
-                </span>
-              </button>
-              <button
-                class="onboarding-choice"
-                onClick={() => onRoleSelected('partner')}
-                type="button"
-              >
-                <span class="onboarding-choice__icon" aria-hidden="true">
-                  ♡
-                </span>
-                <span>I'm the partner</span>
-                <span class="onboarding-choice__arrow" aria-hidden="true">
-                  →
-                </span>
-              </button>
-            </div>
-          </>
-        ) : null}
       </section>
     </main>
   );

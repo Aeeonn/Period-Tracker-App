@@ -40,7 +40,6 @@ const CONTRACEPTION_OPTIONS: readonly {
 const GOAL_OPTIONS: readonly { readonly value: Goal; readonly label: string }[] = [
   { value: 'track', label: 'Track my cycle' },
   { value: 'avoid_pregnancy', label: 'Avoid pregnancy' },
-  { value: 'ttc', label: 'Trying to conceive' },
 ];
 
 export function OnboardingScreen({ role, onComplete }: OnboardingScreenProps) {

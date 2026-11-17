@@ -4,7 +4,7 @@ import { TRACKER_LABELS } from './types.ts';
 import './tracker-pin-list.css';
 
 export interface TrackerPinListProps {
-  /** Every tracker that can be pinned, in catalogue order. */
+  /** Trackers offered for pinning, in catalogue order. */
   readonly trackers: readonly Tracker[];
   /** Pinned trackers, in the order the user arranged them. */
   readonly pinnedTrackers: readonly Tracker[];
@@ -17,8 +17,11 @@ export interface TrackerPinListProps {
  * order, so moving one visibly moves its row; the rest follow in catalogue order.
  */
 export function TrackerPinList({ trackers, pinnedTrackers, onMove, onToggle }: TrackerPinListProps) {
-  const pinned = pinnedTrackers.filter((tracker) => trackers.includes(tracker));
-  const ordered = [...pinned, ...trackers.filter((tracker) => !pinned.includes(tracker))];
+  // A pinned tracker is always listed, even one no longer offered, so it can be hidden.
+  const ordered = [
+    ...pinnedTrackers,
+    ...trackers.filter((tracker) => !pinnedTrackers.includes(tracker)),
+  ];
 
   return (
     <ul class="tracker-pin-list">

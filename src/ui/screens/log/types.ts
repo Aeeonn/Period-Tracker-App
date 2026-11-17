@@ -1,4 +1,5 @@
 import type { createLogRepo } from '../../../data/repos/index.ts';
+import { TRACKERS } from '../../../contracts/enums.ts';
 import type { Tracker, TrackerValues } from '../../../contracts/index.ts';
 
 export type LogRepo = ReturnType<typeof createLogRepo>;
@@ -18,6 +19,25 @@ export const DEFAULT_PINNED_TRACKERS: readonly Tracker[] = [
   'notes',
   'tests',
 ];
+
+/**
+ * Trackers offered in the pin lists. The trackers left out belong to features
+ * dropped from scope (ADR-0017) or are edited inside another tracker
+ * (`heavy_detail` under Flow). They stay in the data model, and a day that
+ * already holds one still shows and edits it.
+ */
+const NOT_OFFERED: ReadonlySet<Tracker> = new Set<Tracker>([
+  'heavy_detail',
+  'bbt',
+  'ovulation_manual',
+  'pill_intake',
+  'medication',
+  'peri_impact',
+  'lochia',
+]);
+export const OFFERED_TRACKERS: readonly Tracker[] = TRACKERS.filter(
+  (tracker) => !NOT_OFFERED.has(tracker),
+);
 
 export const TRACKER_LABELS: Readonly<Record<Tracker, string>> = {
   flow: 'Flow',
