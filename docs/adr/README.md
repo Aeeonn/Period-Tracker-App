@@ -21,3 +21,4 @@ ADRs 0001–0009 are **Proposed**, recorded during Stage C planning on 2026-10-0
 | [0015](0015-normal-agentic-development.md)                     | Normal agentic development (retires the Firstmate workflow)                  | Accepted (2026-11-04)                   |
 | [0016](0016-passkey-face-id-unlock.md)                         | Optional Face ID unlock with a passkey PRF wrap; honour the lock-after setting | Accepted (2026-11-14)                   |
 | [0017](0017-narrowed-scope.md)                             | Narrowed scope for a two-person private app                                  | Accepted (2026-11-15)                   |
+| [0018](0018-pinned-trackers-in-profile.md)                 | Pinned trackers are stored in the profile                                    | Accepted (2026-11-16)                   |
