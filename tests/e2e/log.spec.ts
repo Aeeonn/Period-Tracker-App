@@ -119,9 +119,17 @@ test('T-UX-03 @log heavy and very-heavy flow reveal heavy details', async ({ pag
 
 test('T-UX-01 @log Fahrenheit BBT input saves in canonical Celsius', async ({ page }) => {
   await page.clock.install({ time: new Date('2032-04-05T12:00:00') });
-  await openFixture(page, '?fixture=day-log&unit=fahrenheit');
+  await openFixture(page, '?fixture=day-log&unit=fahrenheit&seed=bbt');
   await expect(page.getByLabel('Log date')).toHaveValue('2032-04-05');
-  await selectTracker(page, 'Basal body temperature');
+  // Temperature is no longer offered for pinning (ADR-0017), but an existing
+  // reading still opens its editor from the day summary.
+  await page.getByRole('button', { name: 'Customize trackers' }).click();
+  await expect(page.getByRole('button', { name: 'Pin Weight', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Pin Basal body temperature', exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByRole('button', { name: /^Basal body temperature:/ }).click();
 
   const bbt = page.getByRole('region', { name: 'Basal body temperature', exact: true });
   await expect(bbt).toBeVisible();

@@ -258,6 +258,11 @@ describe('portable record schema validation', () => {
         ...profile,
         body: { ...profile.body, recentContentCards: 'not-an-array' },
       } as unknown as LogicalRecord,
+      // A negative lock timeout is not a usable setting.
+      {
+        ...profile,
+        body: { ...profile.body, lockTimeoutSec: -60 },
+      } as unknown as LogicalRecord,
       // The logical id must match the record's own contents.
       { ...profile, logicalId: 'another-profile' } as LogicalRecord,
       { ...day, logicalId: '2038-02-02' } as LogicalRecord,

@@ -2,7 +2,7 @@ import { render } from 'preact';
 import type { DeviceId } from '../../../src/contracts/brand.ts';
 import type { DayBundle } from '../../../src/contracts/entities.ts';
 import { TRACKERS } from '../../../src/contracts/enums.ts';
-import type { LocalDate } from '../../../src/contracts/localdate.ts';
+import type { LocalDate, LocalTime } from '../../../src/contracts/localdate.ts';
 import { createLogRepo, createSettingsRepo } from '../../../src/data/repos/index.ts';
 import { parse } from '../../../src/lib/localdate/index.ts';
 import { AppShell } from '../../../src/ui/layout/app.tsx';
@@ -43,6 +43,15 @@ declare global {
 async function mountFixture(): Promise<void> {
   if (fixture === 'heavy') await repository.setTracker(date, 'flow', 'heavy');
   if (fixture === 'note') await repository.setTracker(date, 'notes', notePayload);
+  // An earlier temperature reading: the tracker is no longer offered for pinning,
+  // but a day that already has one must still show and edit it.
+  if (params.get('seed') === 'bbt') {
+    await repository.setTracker(date, 'bbt', {
+      valueC: 36.5,
+      measuredAt: '06:30' as LocalTime,
+      disturbances: [],
+    });
+  }
   if (params.get('unit') === 'fahrenheit' || params.get('weekstart') === 'sunday') {
     await repositories.settingsRepo.putProfile({
       goal: 'track',

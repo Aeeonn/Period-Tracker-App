@@ -368,6 +368,7 @@ function isEntityBody(entity: EntityName, value: unknown): boolean {
         isOneOf(value.weekStart, ISO_WEEKDAYS) &&
         isOneOf(value.theme, THEMES) &&
         isInteger(value.lockTimeoutSec) &&
+        value.lockTimeoutSec >= 0 &&
         isBoolean(value.quickHideEnabled) &&
         (value.recentContentCards === undefined ||
           (Array.isArray(value.recentContentCards) &&

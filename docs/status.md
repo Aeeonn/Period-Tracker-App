@@ -21,6 +21,12 @@ _Last updated: 2026-11-16._ Update this file whenever work merges or plans chang
   - Second pass (same day): onboarding and the lock screens use the same soft cards and pill buttons (look only; no lock behaviour changed, and the recovery-code boxes are now labelled "Position N" with the full name kept for screen readers). Settings and Log share one compact tracker list: pinned trackers first in the user's order with arrow buttons, then the rest with a Pin button. Calendar day details lost their heavy outline.
 - **Onboarding shortened (2026-11-16, owner decision):** the "Who runs the app's servers?" step and its "Pair now" button are gone. The owner finishes on the reminders step ("Continue to Today"); the partner gets a short "You're ready" step that says sharing is off.
 - **Latest preview (2026-11-16):** https://ui-refresh.flo-preview-cm6.pages.dev serves `3082198` with the UI refresh and the shortened onboarding, synthetic data only ([record](deploy/ui-refresh-preview.md)). The main address still serves the older `c9ced53`. No real-iPhone check of the new look yet.
+- **Before-real-use work (2026-11-16):**
+  - Dropped-scope options are no longer offered: temperature, ovulation, pill intake, medication, perimenopause and postpartum trackers in the pin lists; ovulation-strip results in quick log; "Trying to conceive" in setup. Setup no longer asks for a role (owner unless the URL says `?role=partner`).
+  - Pinned trackers are stored in the profile ([ADR-0018](adr/0018-pinned-trackers-in-profile.md)) and survive reopening the app.
+  - The sex entry is one screen and saves on tap (activity, comfort, satisfaction, protection, bleeding after); quick log links to it.
+  - Import and lock safety: a record id must match its contents; older-schema files have an upgrade path with a test that fails if a schema bump lands without its step; a damaged Face ID wrap no longer blocks the passphrase or recovery code (ADR-0016 amended); an out-of-range stored lock timeout snaps down to an offered choice; negative timeouts are rejected on import.
+  - Independent review of the lock and import changes: PASS, no blocking findings; its follow-ups are listed below.
 - **Development convenience:** `npm run dev` now runs an unlocked development mode with a separate synthetic-only database (`8f383cb`). See the [README](../README.md).
 - **Face ID unlock (`p2-passkey-unlock`, built early at the owner's request, 2026-11-14):** optional passkey-PRF unlock from Settings, and the Lock-after setting is now honoured (default 1 minute) ([ADR-0016](adr/0016-passkey-face-id-unlock.md)). The owner reports Face ID setup, unlock, passphrase fallback and offline unlock passed on both phones after being asked to use https://flo-preview-cm6.pages.dev with synthetic data ([record](deploy/face-id-preview.md)); automated tests use a synthetic WebAuthn stub.
 
@@ -28,18 +34,16 @@ _Last updated: 2026-11-16._ Update this file whenever work merges or plans chang
 
 Details and the "done when" list are in the [roadmap](plan/roadmap.md#step-1--close-p1-and-launch-for-real-use). No phase report or demo package is needed.
 
-1. **Data-loss and lockout fixes** (sensitive: import, lock; review each):
-   - handle older schema versions on import before the first schema bump (`src/backup/portable/**`);
-   - check that a record id matches its contents on import;
-   - a malformed passkey field must not block passphrase unlock;
-   - restored `lockTimeoutSec` values outside 0/60/300/900 snap to an offered choice.
+1. **Data-loss and lockout fixes:** done and reviewed on 2026-11-16 (see Current state).
 2. **Emergency wording** (medical content; review): align W-01 with Canadian 9-1-1 guidance; consider moving W-11 source links outside the assertive announcement and adding a direct 9-1-1 call action.
 3. **Backup:** a passphrase-protected export file and a monthly "back up now" nudge, reusing export/import (sensitive: crypto, backup; review).
-4. **Ask the owner:**
+4. **Real build without the preview notice:** "Preview — synthetic data only" must not show in the build she uses for real; previews keep it.
+5. **A Today state for a hormonal IUD**, if that is her method: the fertility estimate is hidden and period predictions wait for three logged bleeds, so the ring needs something useful to show.
+6. **Ask the owner:**
    - the explicit go-ahead for real data, and which address to use (the app is at https://flo-preview-cm6.pages.dev; Face ID and local data are tied to the address);
    - whether her IUD is copper or hormonal, so she picks the right method in the app;
    - whether free-text notes should stay private from the partner view (assumed yes).
-5. **Launch:** she installs from the chosen address and does one real export-then-import round trip on her phone.
+7. **Launch:** she installs from the chosen address and does one real export-then-import round trip on her phone.
 
 ## After launch
 
@@ -58,9 +62,14 @@ Details and the "done when" list are in the [roadmap](plan/roadmap.md#step-1--cl
 
 - **UI refresh, still open:**
   - real-iPhone check of the new look: safe areas around the centre Log button, the date stepper with the native date picker, the lock and recovery screens;
-  - pinned trackers are not stored: the order and the hidden trackers reset each time the app is reopened (storing them needs a profile field, so a contract change);
   - the "Preview — synthetic data only" notice is shown in every build and must change before real use (launch step);
   - Calendar day cells were not redesigned.
+- **From the 2026-11-16 lock/import review:**
+  - profile changes read and then write in two steps (Settings, pinned trackers, recently shown cards); two changes within the same few milliseconds can lose one display preference. Fix with one repository method that updates the profile inside a single transaction;
+  - nothing refreshes after an applied import: pins and the running lock timeout keep their old values until the next unlock;
+  - no test covers the snap call in the runtime itself or the per-step version check in the upgrade path (the pure functions and the final validation are covered);
+  - a damaged passkey field stays on disk until the next lock-configuration write (it is ignored on every read);
+  - id checks for sharing entities can be added when their repositories exist.
 - **Face ID, real iPhone:** check that setup still works with Lock after set to "Immediately" (the passkey sheet may count as hidden).
 - **Test timeouts:** parallel full E2E runs, one time-zone matrix run and one coverage run had timeouts that passed on a serial retry. The causes are not established. Run Playwright with `--workers=1`.
 - **Today:** avoid exhausting the card rotation through repeated log saves, and guard overlapping Today refresh/history writes.
