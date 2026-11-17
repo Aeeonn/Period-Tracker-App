@@ -96,6 +96,7 @@ export const TAP_TO_SAVE_TRACKERS: ReadonlySet<Tracker> = new Set<Tracker>([
   'energy',
   'stress',
   'desire',
+  'sex',
   'ovulation_manual',
   'pill_intake',
   'lochia',
@@ -282,12 +283,33 @@ function hasValue<T extends Tracker>(day: DayBundle | undefined, tracker: T): bo
   return day?.[tracker] !== undefined;
 }
 
-function initialSexEvents(day: DayBundle | undefined): readonly SexEvent[] {
-  return (day?.sex ?? []).map((event) => ({
+const BLANK_SEX_EVENT: SexEvent = { activity: [], protection: [] };
+
+function isFilledSexEvent(event: SexEvent): boolean {
+  return (
+    event.activity.length > 0 ||
+    event.protection.length > 0 ||
+    event.comfort !== undefined ||
+    event.satisfaction !== undefined ||
+    event.bleeding_after !== undefined
+  );
+}
+
+const SATISFACTION_LABELS: Readonly<Record<string, string>> = {
+  low: 'Not great',
+  ok: 'Okay',
+  high: 'Great',
+  skip: 'Rather not say',
+};
+
+/** With `startBlank`, an empty day opens straight onto one blank entry to fill in. */
+function initialSexEvents(day: DayBundle | undefined, startBlank: boolean): readonly SexEvent[] {
+  const events = (day?.sex ?? []).map((event) => ({
     ...event,
     activity: [...event.activity],
     protection: [...event.protection],
   }));
+  return events.length === 0 && startBlank ? [BLANK_SEX_EVENT] : events;
 }
 
 function updateEvent<T extends keyof SexEvent>(
@@ -296,9 +318,13 @@ function updateEvent<T extends keyof SexEvent>(
   key: T,
   value: SexEvent[T],
 ): readonly SexEvent[] {
-  return events.map((event, eventIndex) =>
-    eventIndex === index ? { ...event, [key]: value } : event,
-  );
+  return events.map((event, eventIndex) => {
+    if (eventIndex !== index) return event;
+    const next = { ...event, [key]: value };
+    // A deselected single choice is left out rather than stored as an empty field.
+    if (value === undefined) delete next[key];
+    return next;
+  });
 }
 
 export function TrackerEditor({
@@ -324,7 +350,9 @@ export function TrackerEditor({
   const [energy, setEnergy] = useState<Energy | undefined>(day?.energy);
   const [stress, setStress] = useState<Stress | undefined>(day?.stress);
   const [desire, setDesire] = useState<Desire | undefined>(day?.desire);
-  const [sexEvents, setSexEvents] = useState<readonly SexEvent[]>(initialSexEvents(day));
+  const [sexEvents, setSexEvents] = useState<readonly SexEvent[]>(() =>
+    initialSexEvents(day, tapToSave),
+  );
   const [pregnancyTest, setPregnancyTest] = useState<TestsLog['pregnancy']>(day?.tests?.pregnancy);
   const [lhTest, setLhTest] = useState<TestsLog['lh']>(day?.tests?.lh);
   const [stiResult, setStiResult] = useState<TestsLog['sti']>(day?.tests?.sti);
@@ -591,15 +619,17 @@ export function TrackerEditor({
       );
       break;
     case 'sex': {
-      const savedSexEvents = sexEvents.filter(
-        (event) =>
-          event.activity.length > 0 ||
-          event.protection.length > 0 ||
-          event.comfort !== undefined ||
-          event.satisfaction !== undefined ||
-          event.bleeding_after !== undefined,
-      );
+      const savedSexEvents = sexEvents.filter(isFilledSexEvent);
       const hasSexEntry = savedSexEvents.length > 0;
+      // Every tap is a complete change: the filled entries are saved at once, and
+      // removing the last one clears the tracker.
+      const changeSexEvents = (next: readonly SexEvent[]) => {
+        setSexEvents(next.length === 0 && tapToSave ? [BLANK_SEX_EVENT] : next);
+        const filled = next.filter(isFilledSexEvent);
+        if (filled.length > 0) commit([{ tracker: 'sex', value: filled }]);
+        else commit([], ['sex']);
+      };
+      const lastEvent = sexEvents.at(-1);
       editor = (
         <>
           <p class="log-editor__hint">
@@ -607,20 +637,13 @@ export function TrackerEditor({
           </p>
           {sexEvents.map((event, index) => (
             <section class="log-sex-event" key={index} aria-label={`Event ${index + 1}`}>
-              <h3>Event {index + 1}</h3>
+              {sexEvents.length > 1 ? <h3>Event {index + 1}</h3> : null}
               <MultiChoiceGroup
                 legend="Activity"
                 values={SEX_ACTIVITY}
                 value={event.activity}
-                onChange={(value) => setSexEvents(updateEvent(sexEvents, index, 'activity', value))}
-                disabled={disabled}
-              />
-              <MultiChoiceGroup
-                legend="Protection used"
-                values={SEX_PROTECTION}
-                value={event.protection}
                 onChange={(value) =>
-                  setSexEvents(updateEvent(sexEvents, index, 'protection', value))
+                  changeSexEvents(updateEvent(sexEvents, index, 'activity', value))
                 }
                 disabled={disabled}
               />
@@ -628,15 +651,27 @@ export function TrackerEditor({
                 legend="Comfort and pain"
                 values={SEX_COMFORT}
                 value={event.comfort}
-                onChange={(value) => setSexEvents(updateEvent(sexEvents, index, 'comfort', value))}
+                onChange={(value) =>
+                  changeSexEvents(updateEvent(sexEvents, index, 'comfort', value))
+                }
                 disabled={disabled}
               />
               <ChoiceGroup
                 legend="Satisfaction"
                 values={SEX_SATISFACTION}
                 value={event.satisfaction}
+                labelFor={(value) => SATISFACTION_LABELS[value] ?? optionLabel(value)}
                 onChange={(value) =>
-                  setSexEvents(updateEvent(sexEvents, index, 'satisfaction', value))
+                  changeSexEvents(updateEvent(sexEvents, index, 'satisfaction', value))
+                }
+                disabled={disabled}
+              />
+              <MultiChoiceGroup
+                legend="Protection used"
+                values={SEX_PROTECTION}
+                value={event.protection}
+                onChange={(value) =>
+                  changeSexEvents(updateEvent(sexEvents, index, 'protection', value))
                 }
                 disabled={disabled}
               />
@@ -645,28 +680,32 @@ export function TrackerEditor({
                 values={SEX_BLEEDING_AFTER}
                 value={event.bleeding_after}
                 onChange={(value) =>
-                  setSexEvents(updateEvent(sexEvents, index, 'bleeding_after', value))
+                  changeSexEvents(updateEvent(sexEvents, index, 'bleeding_after', value))
                 }
                 disabled={disabled}
               />
-              <Button
-                variant="quiet"
-                disabled={disabled || sexEvents.length < 2}
-                onClick={() =>
-                  setSexEvents(sexEvents.filter((_, eventIndex) => eventIndex !== index))
-                }
-              >
-                Remove event {index + 1}
-              </Button>
+              {sexEvents.length > 1 ? (
+                <Button
+                  variant="quiet"
+                  disabled={disabled}
+                  onClick={() =>
+                    changeSexEvents(sexEvents.filter((_, eventIndex) => eventIndex !== index))
+                  }
+                >
+                  Remove event {index + 1}
+                </Button>
+              ) : null}
             </section>
           ))}
-          <Button
-            variant="secondary"
-            disabled={disabled}
-            onClick={() => setSexEvents([...sexEvents, { activity: [], protection: [] }])}
-          >
-            Add event
-          </Button>
+          {lastEvent === undefined || isFilledSexEvent(lastEvent) ? (
+            <Button
+              variant="secondary"
+              disabled={disabled}
+              onClick={() => setSexEvents([...sexEvents, BLANK_SEX_EVENT])}
+            >
+              {sexEvents.length === 0 ? 'Add event' : 'Add another'}
+            </Button>
+          ) : null}
           {saveBar(hasSexEntry, [{ tracker: 'sex', value: savedSexEvents }])}
         </>
       );

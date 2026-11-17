@@ -54,7 +54,7 @@ export interface TodayScreenProps {
   readonly reminders?: readonly DueReminder[];
   readonly pinnedTrackers?: readonly Tracker[];
   readonly weekStart?: IsoWeekday;
-  readonly onOpenLog?: (() => void) | undefined;
+  readonly onOpenLog?: ((tracker?: Tracker) => void) | undefined;
   readonly onContentShown?: (cardId: ContentCardId, shownOn: LocalDate) => Promise<void>;
 }
 

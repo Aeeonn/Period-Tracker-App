@@ -256,11 +256,13 @@
 .log-sex-event,
 .log-medication {
   display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-raised);
+  gap: var(--space-4);
+}
+
+.log-sex-event + .log-sex-event,
+.log-medication + .log-medication {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-card-border);
 }
 
 .log-checkbox {

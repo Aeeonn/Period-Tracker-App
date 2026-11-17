@@ -3,6 +3,7 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DeviceId } from '../../../../src/contracts/brand.ts';
+import type { DayBundle } from '../../../../src/contracts/entities.ts';
 import type { LocalDate } from '../../../../src/contracts/localdate.ts';
 import { createLogRepo } from '../../../../src/data/repos/index.ts';
 import { LogScreen } from '../../../../src/ui/screens/log/log-screen.tsx';
@@ -55,6 +56,19 @@ async function waitFor(root: HTMLElement, predicate: () => boolean): Promise<voi
     });
   }
   throw new Error(`Log screen did not reach the expected state: ${root.textContent}`);
+}
+
+async function waitForDay(
+  logRepo: ReturnType<typeof createLogRepo>,
+  predicate: (day: DayBundle | undefined) => boolean,
+): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (predicate(await logRepo.getDay(DATE))) return;
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 5));
+    });
+  }
+  throw new Error('The saved day did not reach the expected state.');
 }
 
 function card(root: HTMLElement, heading: string): HTMLElement {
@@ -142,11 +156,30 @@ describe('Log screen accessible persistence behavior', () => {
     );
     if (!pinnedSex) throw new Error('Pinned intimacy tracker is missing.');
     await act(async () => pinnedSex.click());
-    await clickButton(sex, 'Add event');
+    // The entry opens ready to fill: no "Add event" first and no Save button after.
+    expect(sex.textContent).not.toContain('Save Sex and intimacy');
+    expect(sex.textContent).not.toContain('Add another');
     await chooseWithin(sex, 'Vaginal');
     await chooseWithin(sex, 'External condom');
-    await clickButton(sex, 'Save Sex and intimacy');
-    await waitFor(root, () => root.querySelector('[role="status"]')?.textContent === 'Saved privately.');
+    await chooseWithin(sex, 'Great');
+    await waitForDay(logRepo, (saved) => saved?.sex?.[0]?.satisfaction === 'high');
+    await expect(logRepo.getDay(DATE)).resolves.toMatchObject({
+      sex: [{ activity: ['vaginal'], protection: ['external_condom'], satisfaction: 'high' }],
+    });
+
+    // Tapping a single choice again removes just that field.
+    await chooseWithin(sex, 'Great');
+    await waitForDay(logRepo, (saved) => saved?.sex?.[0]?.satisfaction === undefined);
+    expect((await logRepo.getDay(DATE))?.sex?.[0]).not.toHaveProperty('satisfaction');
+
+    // A second entry can be added once the first has content, and removed again.
+    await clickButton(sex, 'Add another');
+    const second = sex.querySelector<HTMLElement>('[aria-label="Event 2"]');
+    if (!second) throw new Error('Second intimacy entry is missing.');
+    await chooseWithin(second, 'Oral');
+    await waitForDay(logRepo, (saved) => saved?.sex?.length === 2);
+    await clickButton(sex, 'Remove event 2');
+    await waitForDay(logRepo, (saved) => saved?.sex?.length === 1);
     await expect(logRepo.getDay(DATE)).resolves.toMatchObject({
       sex: [{ activity: ['vaginal'], protection: ['external_condom'] }],
     });

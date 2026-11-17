@@ -34,6 +34,8 @@ export interface LogScreenProps {
   readonly pinnedTrackers?: readonly Tracker[] | undefined;
   readonly temperatureUnit?: TemperatureUnit | undefined;
   readonly onPinnedTrackersChange?: ((trackers: readonly Tracker[]) => void) | undefined;
+  /** The tracker to open on, for example Sex from the quick-log "details" button. */
+  readonly initialTracker?: Tracker | undefined;
   /** Trackers offered for pinning; defaults to the in-scope set. */
   readonly offeredTrackers?: readonly Tracker[] | undefined;
 }
@@ -150,6 +152,7 @@ export function LogScreen({
   temperatureUnit = 'celsius',
   onPinnedTrackersChange,
   offeredTrackers = OFFERED_TRACKERS,
+  initialTracker,
 }: LogScreenProps) {
   const [selectedDate, setSelectedDate] = useState<LocalDate>(() => initialDate ?? todayLocal());
   const [dateText, setDateText] = useState(() => format(selectedDate));
@@ -168,7 +171,7 @@ export function LogScreen({
   const pinnedTrackers = pinnedTrackersProp ?? localPinnedTrackers;
   const updatePinnedTrackers = onPinnedTrackersChange ?? setLocalPinnedTrackers;
   const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(
-    () => pinnedTrackersProp?.[0] ?? DEFAULT_PINNED_TRACKERS[0] ?? 'flow',
+    () => initialTracker ?? pinnedTrackersProp?.[0] ?? DEFAULT_PINNED_TRACKERS[0] ?? 'flow',
   );
   const [customizing, setCustomizing] = useState(false);
   const pending = getPendingEdits(pendingDrafts);

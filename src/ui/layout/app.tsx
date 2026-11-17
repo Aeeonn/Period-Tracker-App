@@ -207,10 +207,12 @@ function RepositoryLogScreen({
   pinnedTrackers,
   onPinnedTrackersChange,
   localDate,
+  initialTracker,
 }: {
   readonly pinnedTrackers: readonly Tracker[];
   readonly onPinnedTrackersChange: (trackers: readonly Tracker[]) => void;
   readonly localDate: LocalDate | undefined;
+  readonly initialTracker: Tracker | undefined;
 }) {
   const { logRepo, settingsRepo } = useRepositories();
   const [temperatureUnit, setTemperatureUnit] = useState<TemperatureUnit>('celsius');
@@ -234,6 +236,7 @@ function RepositoryLogScreen({
       pinnedTrackers={pinnedTrackers}
       onPinnedTrackersChange={onPinnedTrackersChange}
       localDate={localDate}
+      initialTracker={initialTracker}
       temperatureUnit={temperatureUnit}
     />
   );
@@ -274,6 +277,7 @@ export function AppShell({
     [repositories.settingsRepo],
   );
   const [logSelectedDate, setLogSelectedDate] = useState<LocalDate | undefined>();
+  const [logSelectedTracker, setLogSelectedTracker] = useState<Tracker | undefined>();
   const selectedTab =
     activeTab === 'settings' ? SETTINGS_TAB : (tabs.find((tab) => tab.id === activeTab) ?? tabs[0]);
   const syntheticPreview = new URLSearchParams(window.location.search).get('today') === 'synthetic';
@@ -382,8 +386,9 @@ export function AppShell({
     };
   }, [repositories, role, selectedTab?.id, syntheticPreview, onboardingStatus, onContentShown]);
 
-  const openLogTab = (date?: LocalDate) => {
+  const openLogTab = (date?: LocalDate, tracker?: Tracker) => {
     setLogSelectedDate(date);
+    setLogSelectedTracker(tracker);
     setActiveTab('log');
     window.location.hash = 'log';
   };
@@ -549,6 +554,7 @@ export function AppShell({
               pinnedTrackers={pinnedTrackers}
               onPinnedTrackersChange={changePinnedTrackers}
               localDate={logSelectedDate}
+              initialTracker={logSelectedTracker}
             />
           ) : role === 'owner' && selectedTab.id === 'today' ? (
             todayProps ? (
@@ -556,7 +562,7 @@ export function AppShell({
                 {...todayProps}
                 logRepo={syntheticPreview ? null : undefined}
                 pinnedTrackers={pinnedTrackers}
-                onOpenLog={openLogTab}
+                onOpenLog={(tracker) => openLogTab(undefined, tracker)}
               />
             ) : todayLoadFailed ? (
               <p role="alert">Today's data could not be loaded. Try reopening the app.</p>
@@ -585,7 +591,14 @@ export function AppShell({
               class={tab.id === 'log' ? 'shell-tab shell-tab--primary' : 'shell-tab'}
               href={`#${tab.id}`}
               aria-current={activeTab === tab.id ? 'page' : undefined}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                // Opening Log from the tab bar starts on today and the first pinned tracker.
+                if (tab.id === 'log') {
+                  setLogSelectedDate(undefined);
+                  setLogSelectedTracker(undefined);
+                }
+                setActiveTab(tab.id);
+              }}
             >
               <span class="shell-tab__icon-wrap">
                 <TabIcon name={tab.icon} />

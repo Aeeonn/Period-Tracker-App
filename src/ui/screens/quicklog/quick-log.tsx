@@ -123,7 +123,7 @@ export interface QuickLogSheetProps {
   readonly localDate: LocalDate;
   readonly initialTracker?: Tracker | undefined;
   readonly pinnedTrackers?: readonly Tracker[];
-  readonly onOpenLog?: (() => void) | undefined;
+  readonly onOpenLog?: ((tracker?: Tracker) => void) | undefined;
   readonly logRepo?: LogRepo | null | undefined;
 }
 
@@ -355,6 +355,17 @@ export function QuickLogSheet({
               disabled={!logRepo || saving}
               onChoose={(value: SexActivity) => void saveSexActivity(value)}
             />
+            {onOpenLog ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  onOpenChange(false);
+                  onOpenLog('sex');
+                }}
+              >
+                Log with comfort and satisfaction
+              </Button>
+            ) : null}
             <p class="quick-log__helper">
               Private. There's no way to share this in this version. Logging never implies consent.
             </p>
