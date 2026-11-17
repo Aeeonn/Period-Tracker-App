@@ -23,6 +23,7 @@ import {
 import { registerServiceWorker, type UpdateReadyNotice } from '../sw/client.ts';
 import { AppShell } from '../ui/layout/app.tsx';
 import { LockControlsContext, type LockControls } from '../ui/layout/lock-controls.tsx';
+import { LOCK_TIMEOUT_CHOICES_SEC, snapLockTimeoutSec } from '../lock/core/lock-timeout.ts';
 import { createPasskeyAuthenticator } from '../lock/passkey/index.ts';
 import { LockScreen } from '../ui/screens/lock/core/lock-screen.tsx';
 import { OnboardingIntro, type OnboardingRole } from '../ui/screens/onboarding/index.ts';
@@ -37,8 +38,7 @@ import {
 } from './unlocked-preview.ts';
 
 export const APP_AUTO_LOCK_TIMEOUT_MS = 60_000;
-/** The "Lock after inactivity" choices offered in Settings (security-privacy.md T3). */
-export const LOCK_TIMEOUT_CHOICES_SEC: readonly number[] = [0, 60, 300, 900];
+export { LOCK_TIMEOUT_CHOICES_SEC, snapLockTimeoutSec };
 
 export function lockTimeoutMsForSetting(seconds: unknown): number | undefined {
   return typeof seconds === 'number' && LOCK_TIMEOUT_CHOICES_SEC.includes(seconds)
@@ -359,7 +359,7 @@ export function AppRuntime() {
         if (!unlockedPreview) {
           try {
             const profile = await settingsRepo.getProfile();
-            const timeoutMs = lockTimeoutMsForSetting(profile?.lockTimeoutSec);
+            const timeoutMs = lockTimeoutMsForSetting(snapLockTimeoutSec(profile?.lockTimeoutSec));
             if (timeoutMs !== undefined) lockTimeoutMsRef.current = timeoutMs;
           } catch {
             // Keep the current timeout; the profile screen reports its own read errors.

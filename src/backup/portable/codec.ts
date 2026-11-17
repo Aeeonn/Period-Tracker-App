@@ -515,6 +515,40 @@ function isExcludedEntity(entity: EntityName): boolean {
   );
 }
 
+/**
+ * The logical id a record must carry, derived from its own contents the same way
+ * the repositories derive it (`src/data/repos`). A file whose id and contents
+ * disagree could overwrite one record with another's data, so import rejects it.
+ * Entities without a repository yet have no fixed derivation and are not checked.
+ */
+function expectedLogicalId(entity: EntityName, body: unknown): string | undefined {
+  if (!isObject(body)) return undefined;
+  switch (entity) {
+    case 'Profile':
+      return 'profile';
+    case 'BackupMeta':
+      return 'backup-meta';
+    case 'DayBundle':
+      return isString(body.localDate) ? body.localDate : undefined;
+    case 'PeriodOverride':
+      return JSON.stringify([body.localDate, body.kind]);
+    case 'ContraceptionState':
+      return JSON.stringify([body.startDate, body.method]);
+    case 'PregnancyRecord':
+    case 'ReminderRule':
+      return isString(body.id) ? body.id : undefined;
+    case 'DeviceIdentity':
+      return isString(body.deviceId) ? body.deviceId : undefined;
+    default:
+      return undefined;
+  }
+}
+
+function logicalIdMatchesBody(entity: EntityName, logicalId: unknown, body: unknown): boolean {
+  const expected = expectedLogicalId(entity, body);
+  return expected === undefined || logicalId === expected;
+}
+
 function isLogicalRecord(value: unknown): value is LogicalRecord {
   if (!isObject(value) || !isOneOf(value.entity, ENTITY_NAMES)) return false;
   const entity = value.entity;
@@ -532,7 +566,8 @@ function isLogicalRecord(value: unknown): value is LogicalRecord {
   return (
     value.deleted === false &&
     hasExactKeys(value, ['entity', 'logicalId', 'authorDevice', 'hlc', 'deleted', 'body']) &&
-    isEntityBody(entity, value.body)
+    isEntityBody(entity, value.body) &&
+    logicalIdMatchesBody(entity, value.logicalId, value.body)
   );
 }
 
@@ -569,6 +604,39 @@ export function createPortableDocument(
   };
 }
 
+/** The oldest schema version whose portable files this build can still read. */
+export const PORTABLE_MIN_SCHEMA_VERSION = 1;
+
+/**
+ * One step per schema bump, keyed by the version it reads; each returns the same
+ * file one version newer. A schema bump without its step fails
+ * `tests/backup/portable-upgrade.test.ts`, so older backups are never stranded.
+ */
+export type PortableUpgradeSteps = Readonly<Record<number, (document: unknown) => unknown>>;
+export const PORTABLE_UPGRADE_STEPS: PortableUpgradeSteps = {};
+
+/** Brings an older file up to `schemaVersion`, or returns `undefined` if a step is missing. */
+function upgradePortableDocument(
+  value: Record<string, unknown>,
+  fromVersion: number,
+  schemaVersion: number,
+  steps: PortableUpgradeSteps,
+): unknown {
+  if (fromVersion < PORTABLE_MIN_SCHEMA_VERSION) return undefined;
+  let current: unknown = value;
+  for (let version = fromVersion; version < schemaVersion; version += 1) {
+    const step = Object.prototype.hasOwnProperty.call(steps, version) ? steps[version] : undefined;
+    if (step === undefined) return undefined;
+    try {
+      current = step(current);
+    } catch {
+      return undefined;
+    }
+    if (!isObject(current) || current.schemaVersion !== version + 1) return undefined;
+  }
+  return current;
+}
+
 export type ParsedPortableFile =
   | { readonly ok: true; readonly document: PortableDocument }
   | { readonly ok: false; readonly error: 'invalid_file' | 'newer_schema' };
@@ -576,6 +644,7 @@ export type ParsedPortableFile =
 export async function parsePortableFile(
   file: Blob,
   schemaVersion: number,
+  upgradeSteps: PortableUpgradeSteps = PORTABLE_UPGRADE_STEPS,
 ): Promise<ParsedPortableFile> {
   let value: unknown;
   try {
@@ -585,6 +654,10 @@ export async function parsePortableFile(
   }
   if (isObject(value) && isInteger(value.schemaVersion) && value.schemaVersion > schemaVersion) {
     return { ok: false, error: 'newer_schema' };
+  }
+  // A file from an older schema is upgraded step by step, then checked like any other.
+  if (isObject(value) && isInteger(value.schemaVersion) && value.schemaVersion < schemaVersion) {
+    value = upgradePortableDocument(value, value.schemaVersion, schemaVersion, upgradeSteps);
   }
   if (!isPortableDocument(value) || value.schemaVersion !== schemaVersion) {
     return { ok: false, error: 'invalid_file' };

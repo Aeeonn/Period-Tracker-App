@@ -14,6 +14,7 @@ import {
 import { useRepositories } from '../../../layout/repositories.tsx';
 import { useLockControls } from '../../../layout/lock-controls.tsx';
 import { FaceIdSettingsCard } from '../../lock/passkey/index.ts';
+import { snapLockTimeoutSec } from '../../../../lock/core/lock-timeout.ts';
 import { Button, Card } from '../../../components/base';
 import { TrackerPinList } from '../../log/tracker-pin-list.tsx';
 import { OFFERED_TRACKERS } from '../../log/types.ts';
@@ -281,7 +282,7 @@ export function SettingsScreen({
           </label>
           <select
             id="settings-lock-timeout"
-            value={profile.lockTimeoutSec}
+            value={snapLockTimeoutSec(profile.lockTimeoutSec) ?? DEFAULT_SETTINGS_PROFILE.lockTimeoutSec}
             disabled={profileControlsDisabled}
             onChange={(event) => {
               const selected = lockTimeoutOptions.find(

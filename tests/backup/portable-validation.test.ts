@@ -115,7 +115,7 @@ function fullDayBody(): Record<string, unknown> {
 
 function supportedRecords(): LogicalRecord[] {
   return [
-    record('DeviceIdentity', 'device', {
+    record('DeviceIdentity', DEVICE_ID, {
       deviceId: DEVICE_ID,
       role: DEVICE_ROLES[0],
       signPub: 'synthetic-signing-key',
@@ -134,23 +134,23 @@ function supportedRecords(): LogicalRecord[] {
       recentContentCards: [{ cardId: 'cycle-basics', shownOn: '2038-01-03' }],
       pinnedTrackers: ['mood', 'flow'],
     }),
-    record('DayBundle', 'day', fullDayBody()),
-    record('PeriodOverride', 'period-override', {
+    record('DayBundle', '2038-01-02', fullDayBody()),
+    record('PeriodOverride', JSON.stringify(['2038-01-03', PERIOD_OVERRIDE_KINDS[0]]), {
       localDate: '2038-01-03',
       kind: PERIOD_OVERRIDE_KINDS[0],
     }),
-    record('ContraceptionState', 'contraception', {
+    record('ContraceptionState', JSON.stringify(['2038-01-01', CONTRACEPTION_METHODS[0]]), {
       method: CONTRACEPTION_METHODS[0],
       startDate: '2038-01-01',
       regimen: { activeDays: 21, breakDays: 7, continuous: false },
     }),
-    record('PregnancyRecord', 'pregnancy', {
+    record('PregnancyRecord', 'synthetic-pregnancy', {
       id: 'synthetic-pregnancy',
       eddSource: EDD_SOURCES[0],
       fetusCount: 1,
       outcome: PREGNANCY_OUTCOMES[0],
     }),
-    record('ReminderRule', 'reminder', {
+    record('ReminderRule', 'synthetic-reminder', {
       id: 'synthetic-reminder',
       kind: REMINDER_KINDS[0],
       localTime: '09:00',
@@ -258,6 +258,9 @@ describe('portable record schema validation', () => {
         ...profile,
         body: { ...profile.body, recentContentCards: 'not-an-array' },
       } as unknown as LogicalRecord,
+      // The logical id must match the record's own contents.
+      { ...profile, logicalId: 'another-profile' } as LogicalRecord,
+      { ...day, logicalId: '2038-02-02' } as LogicalRecord,
       {
         ...profile,
         body: { ...profile.body, pinnedTrackers: 'flow' },

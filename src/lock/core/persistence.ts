@@ -76,7 +76,11 @@ function isWrappedKey(value: unknown): value is WrappedKey {
   return isObject(value) && typeof value.iv === 'string' && typeof value.ct === 'string';
 }
 
-function validateConfiguration(value: unknown): LockConfiguration {
+/**
+ * Checks stored lock metadata. Exported so the damaged-passkey path can be
+ * tested without a real IndexedDB.
+ */
+export function validateConfiguration(value: unknown): LockConfiguration {
   if (!isObject(value) || value.version !== 1) {
     throw new DOMException('Lock metadata is invalid', 'DataError');
   }
@@ -89,8 +93,7 @@ function validateConfiguration(value: unknown): LockConfiguration {
     passphrase.iterations !== 600_000 ||
     !isWrappedKey(passphrase.wrapped) ||
     typeof recoveryCode.salt !== 'string' ||
-    !isWrappedKey(recoveryCode.wrapped) ||
-    (value.passkey !== undefined && !isValidPasskeyWrap(value.passkey))
+    !isWrappedKey(recoveryCode.wrapped)
   ) {
     throw new DOMException('Lock metadata is invalid', 'DataError');
   }
@@ -99,6 +102,14 @@ function validateConfiguration(value: unknown): LockConfiguration {
     if (decodeBase64Url(recoveryCode.salt).length !== 16) throw new TypeError();
   } catch {
     throw new DOMException('Lock metadata is invalid', 'DataError');
+  }
+  if (value.passkey !== undefined && !isValidPasskeyWrap(value.passkey)) {
+    // A damaged Face ID wrap can unlock nothing, so it is ignored: the passkey method
+    // stays closed while the passphrase and recovery code keep working (ADR-0016).
+    // The next configuration write drops the damaged field.
+    const withoutPasskey = { ...value };
+    delete withoutPasskey.passkey;
+    return withoutPasskey as unknown as LockConfiguration;
   }
   return value as unknown as LockConfiguration;
 }
