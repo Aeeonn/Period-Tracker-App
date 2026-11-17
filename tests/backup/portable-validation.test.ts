@@ -132,6 +132,7 @@ function supportedRecords(): LogicalRecord[] {
       lockTimeoutSec: 300,
       quickHideEnabled: false,
       recentContentCards: [{ cardId: 'cycle-basics', shownOn: '2038-01-03' }],
+      pinnedTrackers: ['mood', 'flow'],
     }),
     record('DayBundle', 'day', fullDayBody()),
     record('PeriodOverride', 'period-override', {
@@ -256,6 +257,18 @@ describe('portable record schema validation', () => {
       {
         ...profile,
         body: { ...profile.body, recentContentCards: 'not-an-array' },
+      } as unknown as LogicalRecord,
+      {
+        ...profile,
+        body: { ...profile.body, pinnedTrackers: 'flow' },
+      } as unknown as LogicalRecord,
+      {
+        ...profile,
+        body: { ...profile.body, pinnedTrackers: ['flow', 'not-a-tracker'] },
+      } as unknown as LogicalRecord,
+      {
+        ...profile,
+        body: { ...profile.body, pinnedTrackers: ['flow', 'flow'] },
       } as unknown as LogicalRecord,
       {
         ...profile,

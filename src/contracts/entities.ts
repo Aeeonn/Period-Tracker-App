@@ -62,6 +62,7 @@ import type {
   Theme,
   WeightUnit,
   ZeroToThree,
+  Tracker,
 } from './enums.ts';
 import type { LocalDate, LocalDateTime, LocalTime } from './localdate.ts';
 import type { EcdhWrappedKey } from './crypto.ts';
@@ -118,6 +119,12 @@ export interface Profile {
   readonly lockTimeoutSec: number;
   readonly quickHideEnabled: boolean;
   readonly recentContentCards?: readonly RecentContentCard[];
+  /**
+   * The trackers she pinned, in her order (ADR-0018). Absent means "not chosen
+   * yet": the UI falls back to its default pins. Display preference only; it
+   * never changes what is stored for a day.
+   */
+  readonly pinnedTrackers?: readonly Tracker[];
 }
 
 /* ------------------------------------------------------------------------ */

@@ -184,6 +184,17 @@ describe('Settings screen accessible behavior', () => {
     await act(async () => button(root, 'Hide Flow').click());
     expect(onPinnedTrackersChange).toHaveBeenLastCalledWith(['mood']);
 
+    // Another screen stored pinned trackers after Settings loaded; the next
+    // settings change must keep them.
+    const stored = await settingsRepo.getProfile();
+    if (!stored) throw new Error('Synthetic profile is missing.');
+    await settingsRepo.putProfile({ ...stored, pinnedTrackers: ['mood'] });
+    await choose(theme, 'light');
+    await expect(settingsRepo.getProfile()).resolves.toMatchObject({
+      theme: 'light',
+      pinnedTrackers: ['mood'],
+    });
+
     // Trackers for dropped features (ADR-0017) are not offered for pinning.
     const offered = [...root.querySelectorAll('.tracker-pin-list button')].map((candidate) =>
       candidate.getAttribute('aria-label'),

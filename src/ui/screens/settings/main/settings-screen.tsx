@@ -108,13 +108,17 @@ export function SettingsScreen({
   const updateProfile = async (patch: Partial<Profile>): Promise<void> => {
     if (loading || loadError !== null || saving) return;
     const previous = profile;
-    const next: Profile = { ...previous, ...patch };
-    setProfile(next);
+    setProfile({ ...previous, ...patch });
     setSaving(true);
     setSaveMessage('');
     setSaveError('');
     try {
+      // Apply the change to the latest stored profile: other screens also write to it
+      // (pinned trackers, recently shown cards), and those must not be overwritten.
+      const stored = await settingsRepo.getProfile();
+      const next: Profile = { ...(stored ?? previous), ...patch };
       await settingsRepo.putProfile(next);
+      setProfile(next);
       if (patch.theme !== undefined) onThemeChange(patch.theme);
       if (patch.lockTimeoutSec !== undefined) {
         lockControls?.onLockTimeoutChange(patch.lockTimeoutSec);
@@ -304,8 +308,8 @@ export function SettingsScreen({
 
         <Card class="settings-card" heading="Your trackers">
           <p class="settings-screen__help">
-            Pin the things you want close by and arrange them with the arrows. This list lasts for
-            this app session.
+            Pin the things you want close by and arrange them with the arrows. Your choices are
+            saved on this device.
           </p>
           <TrackerPinList
             trackers={OFFERED_TRACKERS}

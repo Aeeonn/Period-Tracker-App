@@ -98,6 +98,16 @@ function isRecentContentCard(value: unknown): boolean {
   );
 }
 
+/** A list of known tracker names with no repeats (Profile.pinnedTrackers, ADR-0018). */
+function isPinnedTrackerList(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length <= TRACKERS.length &&
+    value.every((item) => isOneOf(item, TRACKERS)) &&
+    new Set(value).size === value.length
+  );
+}
+
 function isLocalDateTime(value: unknown): boolean {
   return (
     isString(value) &&
@@ -344,6 +354,7 @@ function isEntityBody(entity: EntityName, value: unknown): boolean {
           'lockTimeoutSec',
           'quickHideEnabled',
           'recentContentCards',
+          'pinnedTrackers',
         ]) &&
         (value.birthYear === undefined || isInteger(value.birthYear)) &&
         (value.typicalCycleLength === undefined || isInteger(value.typicalCycleLength)) &&
@@ -360,7 +371,8 @@ function isEntityBody(entity: EntityName, value: unknown): boolean {
         isBoolean(value.quickHideEnabled) &&
         (value.recentContentCards === undefined ||
           (Array.isArray(value.recentContentCards) &&
-            value.recentContentCards.every(isRecentContentCard)))
+            value.recentContentCards.every(isRecentContentCard))) &&
+        (value.pinnedTrackers === undefined || isPinnedTrackerList(value.pinnedTrackers))
       );
     case 'DayBundle':
       return isDayBundle(value);

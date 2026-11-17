@@ -111,6 +111,18 @@ test('Settings @settings keeps deletion cancellable and persists profile choices
   await page.getByText('Sources for educational content').click();
   expect(await page.locator('.settings-sources a').count()).toBeGreaterThan(0);
   await expectSettingsAccessible(page);
+
+  // Pinned trackers are stored in the profile, so the hidden Flow tracker stays hidden
+  // after the app is reopened and unlocked.
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Unlock this device' })).toBeVisible();
+  await page.getByLabel('Passphrase', { exact: true }).fill(syntheticPassphrase);
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await expect(page.locator('.shell-root')).toBeVisible();
+  await page.getByRole('link', { name: 'Log', exact: true }).click();
+  const pinned = page.getByRole('group', { name: 'Pinned trackers' });
+  await expect(pinned.getByRole('button', { name: 'Symptoms', exact: true })).toBeVisible();
+  await expect(pinned.getByRole('button', { name: 'Flow', exact: true })).toHaveCount(0);
 });
 
 test('Portable export and import @export offers a dry-run before applying a file', async ({ page }) => {

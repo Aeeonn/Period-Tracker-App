@@ -20,6 +20,7 @@ import { RepositoriesContext, type Repositories, useRepositories } from './repos
 import { LogScreen } from '../screens/log';
 import { applyThemePreference, SettingsScreen } from '../screens/settings/main/index.ts';
 import { DEFAULT_PINNED_TRACKERS } from '../screens/log/types.ts';
+import { readPinnedTrackers, savePinnedTrackers } from '../screens/log/pinned-trackers.ts';
 import type { TemperatureUnit, Theme, Tracker } from '../../contracts/enums.ts';
 import type { UpdateReadyNotice } from '../../sw/client.ts';
 import {
@@ -258,6 +259,20 @@ export function AppShell({
   const [pinnedTrackers, setPinnedTrackers] = useState<readonly Tracker[]>(() => [
     ...DEFAULT_PINNED_TRACKERS,
   ]);
+  // Pin changes are saved to the profile one after another, so the last choice wins.
+  const pinSaveQueue = useRef<Promise<void>>(Promise.resolve());
+  const pinRevision = useRef(0);
+  const changePinnedTrackers = useCallback(
+    (next: readonly Tracker[]) => {
+      pinRevision.current += 1;
+      setPinnedTrackers(next);
+      pinSaveQueue.current = pinSaveQueue.current
+        .then(() => savePinnedTrackers(repositories.settingsRepo, next))
+        // A failed save keeps the choice for this session; it is retried on the next change.
+        .catch(() => undefined);
+    },
+    [repositories.settingsRepo],
+  );
   const [logSelectedDate, setLogSelectedDate] = useState<LocalDate | undefined>();
   const selectedTab =
     activeTab === 'settings' ? SETTINGS_TAB : (tabs.find((tab) => tab.id === activeTab) ?? tabs[0]);
@@ -279,11 +294,17 @@ export function AppShell({
   useEffect(() => {
     let mounted = true;
     const revision = themeRevision.current;
+    const pinsAtStart = pinRevision.current;
     void repositories.settingsRepo
       .getProfile()
       .then((profile) => {
         if (mounted && themeRevision.current === revision) {
           applyThemePreference(profile?.theme ?? 'system');
+        }
+        // Restore her saved pins, unless she already changed them while this was loading.
+        const savedPins = readPinnedTrackers(profile?.pinnedTrackers);
+        if (mounted && savedPins !== undefined && pinRevision.current === pinsAtStart) {
+          setPinnedTrackers(savedPins);
         }
       })
       .catch(() => undefined);
@@ -520,13 +541,13 @@ export function AppShell({
           {selectedTab.id === 'settings' ? (
             <SettingsScreen
               pinnedTrackers={pinnedTrackers}
-              onPinnedTrackersChange={setPinnedTrackers}
+              onPinnedTrackersChange={changePinnedTrackers}
               onThemeChange={handleThemeChange}
             />
           ) : role === 'owner' && selectedTab.id === 'log' ? (
             <RepositoryLogScreen
               pinnedTrackers={pinnedTrackers}
-              onPinnedTrackersChange={setPinnedTrackers}
+              onPinnedTrackersChange={changePinnedTrackers}
               localDate={logSelectedDate}
             />
           ) : role === 'owner' && selectedTab.id === 'today' ? (
