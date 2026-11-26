@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_FLO_UNLOCKED_PREVIEW?: string;
+  readonly VITE_RELAY_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
 }

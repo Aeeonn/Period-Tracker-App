@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS couples (
+  id TEXT PRIMARY KEY,
+  write_key_hash TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS snapshots (
+  couple_id TEXT PRIMARY KEY REFERENCES couples (id) ON DELETE CASCADE,
+  iv TEXT NOT NULL,
+  ct TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);

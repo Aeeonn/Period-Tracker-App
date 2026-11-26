@@ -1,0 +1,11 @@
+dist
+dist-e2e
+coverage
+test-results
+playwright-report
+.wrangler
+node_modules
+package-lock.json
+docs
+*.md
+public/icons

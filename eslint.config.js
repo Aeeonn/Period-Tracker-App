@@ -9,9 +9,20 @@ export default tseslint.config(
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
+      'dist-e2e/**',
+      'public/sw.js',
+      '.wrangler/**',
     ],
   },
   ...tseslint.configs.recommended,
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
+      ],
+    },
+  },
   {
     files: ['src/**/*.{js,jsx,ts,tsx}'],
     rules: {

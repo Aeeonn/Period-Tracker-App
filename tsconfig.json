@@ -22,11 +22,11 @@
     "skipLibCheck": true
   },
   "include": [
-    "tools/**/*.ts",
-    "tests/**/*.ts",
-    "tests/**/*.tsx",
     "src/**/*.ts",
     "src/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "relay/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
     "playwright.config.ts"

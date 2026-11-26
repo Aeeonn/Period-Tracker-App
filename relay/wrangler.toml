@@ -1,0 +1,35 @@
+# Flo Lite relay Worker. It stores one encrypted snapshot per couple.
+# Deploy (owner only, after creating the D1 database and pasting its id below):
+#   npx wrangler d1 create flo-lite
+#   npx wrangler d1 execute flo-lite --remote --file relay/schema.sql --config relay/wrangler.toml
+#   npx wrangler deploy --config relay/wrangler.toml
+# Logs, traces and observability are off.
+
+name = "flo-lite-relay"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+preview_urls = false
+send_metrics = false
+logpush = false
+upload_source_maps = false
+
+[observability]
+enabled = false
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+persist = false
+
+[observability.traces]
+enabled = false
+persist = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flo-lite"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:5173"

@@ -1,11 +1,11 @@
 {
-  "name": "Cycle companion",
-  "short_name": "Cycle",
-  "description": "A static preview of a private cycle-tracking app shell.",
+  "name": "Flo",
+  "short_name": "Flo",
+  "description": "A private cycle tracker for two.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8f7f3",
-  "theme_color": "#f8f7f3",
+  "background_color": "#fbf8ff",
+  "theme_color": "#fbf8ff",
   "icons": [
     {
       "src": "/icons/icon-192.png",
