@@ -112,7 +112,8 @@ export function isHormonal(method: Contraception): boolean {
 }
 
 export type Role = 'owner' | 'partner';
-export type Theme = 'system' | 'light' | 'dark';
+export const THEMES = ['system', 'light', 'dark'] as const;
+export type Theme = (typeof THEMES)[number];
 
 export interface Settings {
   readonly role: Role;

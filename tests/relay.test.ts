@@ -18,6 +18,10 @@ async function setup() {
   return { store, keys, call };
 }
 
+/** Valid-looking sealed box: a 12-byte IV and a ciphertext holding at least the tag. */
+const IV = 'a'.repeat(16);
+const CT = 'b'.repeat(24);
+
 const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
 
 describe('relay', () => {
@@ -27,12 +31,12 @@ describe('relay', () => {
     const put = await call('/snapshot', {
       method: 'PUT',
       headers: bearer(keys.writeKey),
-      body: JSON.stringify({ iv: 'aXY', ct: 'Y3Q' }),
+      body: JSON.stringify({ iv: IV, ct: CT }),
     });
     expect(put.status).toBe(204);
     const get = await call('/snapshot');
     expect(get.status).toBe(200);
-    expect(await get.json()).toEqual({ iv: 'aXY', ct: 'Y3Q', updatedAt: 1000 });
+    expect(await get.json()).toEqual({ iv: IV, ct: CT, updatedAt: 1000 });
     expect(store.couples.get(keys.coupleId)).not.toBe(keys.writeKey);
   });
 
@@ -42,7 +46,7 @@ describe('relay', () => {
       const put = await call('/snapshot', {
         method: 'PUT',
         headers: bearer(token),
-        body: JSON.stringify({ iv: 'aXY', ct: 'Y3Q' }),
+        body: JSON.stringify({ iv: IV, ct: CT }),
       });
       expect(put.status).toBe(403);
       expect((await call('', { method: 'DELETE', headers: bearer(token) })).status).toBe(403);
@@ -63,7 +67,7 @@ describe('relay', () => {
     await call('/snapshot', {
       method: 'PUT',
       headers: bearer(keys.writeKey),
-      body: JSON.stringify({ iv: 'aXY', ct: 'Y3Q' }),
+      body: JSON.stringify({ iv: IV, ct: CT }),
     });
     expect((await call('', { method: 'DELETE', headers: bearer(keys.writeKey) })).status).toBe(204);
     expect(store.snapshots.size).toBe(0);
@@ -82,10 +86,21 @@ describe('relay', () => {
       body: JSON.stringify({ iv: 'has space', ct: 'x' }),
     });
     expect(bad.status).toBe(400);
+    for (const box of [
+      { iv: 'a'.repeat(15), ct: CT },
+      { iv: IV, ct: 'b'.repeat(21) },
+    ]) {
+      const short = await call('/snapshot', {
+        method: 'PUT',
+        headers: bearer(keys.writeKey),
+        body: JSON.stringify(box),
+      });
+      expect(short.status).toBe(400);
+    }
     const huge = await call('/snapshot', {
       method: 'PUT',
       headers: bearer(keys.writeKey),
-      body: JSON.stringify({ iv: 'aXY', ct: 'a'.repeat(MAX_BODY_BYTES) }),
+      body: JSON.stringify({ iv: IV, ct: 'a'.repeat(MAX_BODY_BYTES) }),
     });
     expect(huge.status).toBe(400);
   });

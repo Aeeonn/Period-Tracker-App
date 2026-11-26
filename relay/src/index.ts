@@ -134,11 +134,29 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
 
 async function readJson(request: Request): Promise<Record<string, unknown> | null> {
   const declared = Number(request.headers.get('content-length') ?? '0');
-  if (declared > MAX_BODY_BYTES) return null;
-  const text = await request.text();
-  if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) return null;
+  if (declared > MAX_BODY_BYTES || request.body === null) return null;
+  // Read with a byte cap, so a body without a content-length can't be read whole.
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   try {
-    const value: unknown = JSON.parse(text);
+    const value: unknown = JSON.parse(new TextDecoder().decode(bytes));
     return typeof value === 'object' && value !== null && !Array.isArray(value)
       ? (value as Record<string, unknown>)
       : null;
@@ -202,7 +220,15 @@ export async function handle(
     if (!ok) return reply(403, { error: 'forbidden' });
     const body = await readJson(request);
     const { iv, ct } = body ?? {};
-    if (typeof iv !== 'string' || typeof ct !== 'string' || !B64.test(iv) || !B64.test(ct)) {
+    if (
+      typeof iv !== 'string' ||
+      typeof ct !== 'string' ||
+      !B64.test(iv) ||
+      !B64.test(ct) ||
+      // A 12-byte IV is 16 characters; the ciphertext holds at least the 16-byte tag.
+      iv.length !== 16 ||
+      ct.length < 22
+    ) {
       return reply(400, { error: 'bad_body' });
     }
     await store.putSnapshot(id, iv, ct, now);

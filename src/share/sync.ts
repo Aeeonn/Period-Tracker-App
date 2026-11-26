@@ -48,7 +48,7 @@ async function uploadOnce(): Promise<void> {
 
 /** Upload her current snapshot if anything is pending. Errors leave it pending. */
 export async function uploadPending(): Promise<void> {
-  if (running !== undefined) {
+  while (running !== undefined) {
     // Let the current upload finish, then send again so nothing newer is missed.
     await running;
   }
@@ -82,8 +82,16 @@ export async function refreshPartner(): Promise<PartnerShare | undefined> {
   const result = await fetchSnapshot(share);
   let next: PartnerShare;
   if (result.status === 'ok') {
-    const { ended: _ended, ...rest } = share;
-    next = { ...rest, lastSnapshot: result.snapshot, lastFetchedAt: Date.now() };
+    if (
+      share.lastSnapshot !== undefined &&
+      result.snapshot.createdAt < share.lastSnapshot.createdAt
+    ) {
+      // Never go back to an older snapshot, e.g. one from before she paused.
+      next = { ...share, lastFetchedAt: Date.now() };
+    } else {
+      const { ended: _ended, ...rest } = share;
+      next = { ...rest, lastSnapshot: result.snapshot, lastFetchedAt: Date.now() };
+    }
   } else if (result.status === 'missing') {
     // Her data is gone from the server, so his copy goes too.
     const { lastSnapshot: _dropped, ...rest } = share;

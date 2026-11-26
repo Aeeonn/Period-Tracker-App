@@ -1,19 +1,11 @@
 import { useState } from 'preact/hooks';
 import * as storage from '../../data/storage.ts';
 import { CONTRACEPTION, type Contraception, type Theme } from '../../data/types.ts';
-import { deleteCouple } from '../../share/relay-client.ts';
+import { scheduleUpload } from '../../share/sync.ts';
 import { useApp } from '../app.tsx';
 import { Button, Card } from '../components.tsx';
 import { CONTRACEPTION_LABEL } from '../labels.ts';
-
-function download(name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  URL.revokeObjectURL(url);
-}
+import { confirmDeleteEverything, download } from '../recovery.tsx';
 
 function Lengths() {
   const { settings, saveSettings } = useApp();
@@ -110,6 +102,7 @@ function Backup() {
       return;
     await storage.importData(result);
     await reload();
+    await scheduleUpload();
     setMessage(`Imported ${result.days.length} days.`);
   }
 
@@ -150,26 +143,11 @@ function Backup() {
 }
 
 export function SettingsScreen() {
-  const { settings, share, saveSettings, reload } = useApp();
+  const { settings, saveSettings, reload } = useApp();
   const owner = settings.role === 'owner';
 
   async function deleteAll() {
-    if (!confirm('Delete everything on this phone? This cannot be undone.')) return;
-    if (share?.role === 'owner') {
-      try {
-        await deleteCouple(share);
-      } catch {
-        if (
-          !confirm(
-            "Could not reach the sharing server to remove your shared data. Delete this phone's data anyway?",
-          )
-        )
-          return;
-      }
-    }
-    await storage.deleteEverything();
-    location.hash = '';
-    await reload();
+    if (await confirmDeleteEverything()) await reload();
   }
 
   return (

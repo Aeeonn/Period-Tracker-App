@@ -112,6 +112,12 @@ describe('runEngine', () => {
     expect(output.episodes[0]!.assumedDays).toEqual(['2026-01-02', '2026-01-03']);
   });
 
+  it('leaves a period that may still be going out of the typical period length', () => {
+    const days = [...period('2026-01-01', 6), ...period('2026-01-29', 2)];
+    const output = runEngine({ today: date('2026-01-31'), days, contraception: 'none' });
+    expect(output.prediction).toMatchObject({ kind: 'prediction', periodLength: 6 });
+  });
+
   it('ignores logs after today', () => {
     const output = runEngine({
       today: date('2026-01-01'),

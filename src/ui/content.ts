@@ -54,7 +54,7 @@ export const EMERGENCY_CARD: InfoCard = {
   title: 'Get emergency care now',
   body: [
     'Very heavy bleeding with chest pain, breathlessness, or dizziness needs emergency care now.',
-    'Call 911 or go to the nearest emergency department.',
+    'Call 9-1-1 or go to the nearest emergency department.',
   ],
   sources: [SOURCES.ACOG_ABNORMAL_BLEEDING],
 };
@@ -81,7 +81,7 @@ export const INFO_CARDS: readonly InfoCard[] = [
     id: 'not-birth-control',
     title: 'This is not birth control',
     body: [
-      'Fertile-window estimates are rough. Lower — not zero. Pregnancy is possible on any day you have sex without contraception.',
+      'Fertile-window estimates are rough. Outside the window the chance is lower, not zero. Pregnancy is possible on any day you have sex without contraception.',
     ],
     sources: [SOURCES.ASRM_FERTILITY],
   },

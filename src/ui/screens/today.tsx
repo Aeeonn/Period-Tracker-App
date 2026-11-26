@@ -75,7 +75,8 @@ export function Today() {
             {fertility.copperIud ? ' Your method does not change ovulation.' : ''}
           </p>
           <p class="muted">
-            Lower — not zero. Pregnancy is possible on any day you have sex without contraception.
+            Outside this window the chance is lower, not zero. Pregnancy is possible on any day you
+            have sex without contraception.
           </p>
         </Card>
       ) : null}

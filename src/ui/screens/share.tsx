@@ -90,6 +90,8 @@ export function ShareScreen() {
   async function update(change: Partial<Pick<OwnerShare, 'categories' | 'paused'>>) {
     await saveShare({ ...owner, ...change, pendingUpload: true });
     await scheduleUpload();
+    // Pausing takes effect for him straight away rather than after the usual short delay.
+    if (change.paused === true) void uploadPending();
   }
 
   function toggleCategory(category: ShareCategory, on: boolean) {

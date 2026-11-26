@@ -120,7 +120,8 @@ export function PartnerView({ snapshot, today }: { snapshot: Snapshot; today: Lo
             {shortLabel(snapshot.fertility.window.end)}.
           </p>
           <p class="muted">
-            Lower — not zero. Pregnancy is possible on any day of sex without contraception.
+            Outside this window the chance is lower, not zero. Pregnancy is possible on any day of
+            sex without contraception.
           </p>
         </Card>
       ) : null}

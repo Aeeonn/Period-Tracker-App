@@ -68,10 +68,12 @@ test('her logs, sharing choices, pause and stop reach his phone', async ({ brows
   expect(stored).not.toContain('Great');
 
   await owner.getByRole('switch', { name: /Pause sharing/ }).check();
-  await expect(owner.getByText(/^Waiting to send/)).toBeVisible();
-  await expect(owner.getByText(/^Sent /)).toBeVisible({ timeout: 10_000 });
-  await partner.getByRole('button', { name: 'Refresh' }).click();
-  await expect(partner.getByRole('heading', { name: 'Sharing is paused' })).toBeVisible();
+  await expect(async () => {
+    await partner.getByRole('button', { name: 'Refresh' }).click();
+    await expect(partner.getByRole('heading', { name: 'Sharing is paused' })).toBeVisible({
+      timeout: 1000,
+    });
+  }).toPass({ timeout: 10_000 });
   await expect(partner.getByText(/Sex \(Great\)/)).toHaveCount(0);
 
   owner.once('dialog', (dialog) => void dialog.accept());

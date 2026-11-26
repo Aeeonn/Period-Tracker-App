@@ -222,7 +222,11 @@ function forecast(
     ...(state === 'late' ? { daysLate: diffDays(center, input.today) } : {}),
     cyclesUsed: used,
     cycleLength,
-    periodLength: estimatePeriodLength(episodes, input.periodLength ?? PARAMS.defaultPeriodLength),
+    periodLength: estimatePeriodLength(
+      episodes,
+      input.periodLength ?? PARAMS.defaultPeriodLength,
+      input.today,
+    ),
     ...(label ? { variability: label } : {}),
   };
 }

@@ -33,10 +33,22 @@ function distance(date: LocalDate, draft: Draft): number {
   return 0;
 }
 
-/** Median of the last six completed periods' bleeding days, rounded half up. */
-export function estimatePeriodLength(episodes: readonly Episode[], fallback: number): number {
+/**
+ * Median of the last six completed periods' bleeding days, rounded half up.
+ * A period that ended within the last two days may still be going, so it is left out.
+ */
+export function estimatePeriodLength(
+  episodes: readonly Episode[],
+  fallback: number,
+  today: LocalDate,
+): number {
   const lengths = episodes
-    .filter((episode) => episode.assumedDays.length === 0 && !episode.shortInterval)
+    .filter(
+      (episode) =>
+        episode.assumedDays.length === 0 &&
+        !episode.shortInterval &&
+        diffDays(episode.end, today) > 2,
+    )
     .slice(-6)
     .map((episode) => episode.bleedingDays)
     .sort((a, b) => a - b);
@@ -108,7 +120,7 @@ export function deriveEpisodes(
   // A single logged start day implies an ongoing period until the expected length or a "none" log.
   const latest = drafts.at(-1);
   if (latest === undefined || latest.bleedingDates.size !== 1) return episodes;
-  const expected = estimatePeriodLength(episodes.slice(0, -1), options.defaultPeriodLength);
+  const expected = estimatePeriodLength(episodes.slice(0, -1), options.defaultPeriodLength, today);
   const elapsed = diffDays(latest.start, today);
   const stoppedOn = [...byDate.values()]
     .filter((day) => day.flow === 'none' && compare(day.date, latest.start) > 0)
