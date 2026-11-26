@@ -1,6 +1,6 @@
 ---
 name: flo-reviewer
-description: 'Independent read-only reviewer for a Flo change in a sensitive area (prediction/medical engine, crypto and keys, lock, pairing/sync, consent and sharing, migrations, backup/restore, delete-all, medical content, CSP/network). Give it a commit or diff range and what the change is meant to do; it reports PASS/FAIL with evidence and never edits.'
+description: 'Independent read-only reviewer for a Flo change in a sensitive area (prediction engine, share crypto/snapshot/sync, relay, storage import/export, delete-everything, medical wording). Give it a commit or diff range and what the change is meant to do; it reports PASS/FAIL with evidence and never edits.'
 model: 'Claude Opus 5.5 (copilot)'
 tools: [execute, read, search]
 user-invocable: true
@@ -8,21 +8,23 @@ user-invocable: true
 
 # Flo reviewer
 
-You independently review one Flo change. Read [AGENTS.md](../../AGENTS.md), then follow the [`sensitive-change-review`](../../.agents/skills/sensitive-change-review/SKILL.md) skill. For engine or date work, also use the [`cycle-math`](../../.agents/skills/cycle-math/SKILL.md) skill.
+You independently review one Flo change. Read [AGENTS.md](../../AGENTS.md) and [NEW-APP.md](../../NEW-APP.md) first.
 
 ## Input
 
-The caller gives you:
+The caller gives you the commit or diff range, what the change is meant to do, and which files matter. If the range or intent is missing, infer it from `git log` and the diff, and say what you assumed.
 
-- the commit or diff range (for example `main..HEAD` on a feature branch), and the branch or worktree path;
-- what the change is meant to do and which spec sections apply;
-- which review types to run (see the skill), if they already know.
+## What to check
 
-If the range or intent is missing, infer it from `git log` and the diff, and say what you assumed.
+- Correctness against NEW-APP.md and docs/decisions.md, including edge cases.
+- Privacy and consent: only chosen categories leave her phone, notes never do, pause and stop behave as described, his phone cannot write.
+- Crypto and relay: authenticated encryption, random keys of the right size, no keys or plaintext sent to the relay, write-key checks, input limits.
+- Data loss: import, export, delete-everything and upload/refresh races.
+- Dates stay `LocalDate` values; medical wording never calls a day safe.
+- Tests cover the behaviour; run the relevant ones.
 
 ## Rules
 
-- Never edit files, stage, commit, switch branches, merge, push or deploy. You may run read-only commands, tests and builds. Keep build output and temporary files outside the repository or in already-ignored paths.
-- Review the exact diff you were given. Read surrounding code and the governing spec as needed.
+- Never edit files, stage, commit, switch branches, merge, push or deploy. You may run read-only commands, tests and builds.
 - Use only synthetic data. Never read secrets such as `~/.config/flo-deploy/cloudflare.env`.
-- Return your report as your final message. Do not write report files unless the caller asks.
+- Return a concise report as your final message: PASS or FAIL, blocking findings (file:line, why, fix), then non-blocking nits.

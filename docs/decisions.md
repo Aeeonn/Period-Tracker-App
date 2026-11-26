@@ -16,6 +16,16 @@ This file lists the project owner's standing decisions in plain language. It rep
 - The owner prefers to keep moving rather than wait on reports. Don't stop for confirmation on routine, in-scope work; ask only for the items listed in [AGENTS.md](../AGENTS.md#ask-the-owner-first).
 - Local development defaults to the unlocked development mode (`npm run dev`) because the passphrase and recovery-code screens slowed testing. The lock feature stays in the product (`npm run dev:secured`, production builds).
 
+## Flo Lite (2026-11-25)
+
+The app is being rebuilt as Flo Lite on `rewrite/flo-lite` ([NEW-APP.md](../NEW-APP.md)). Work stays on that branch until the owner decides to replace `main`. On that branch, this section and NEW-APP.md win over everything below; the older sections describe the original app and its process (ADRs, plan files, gates, lock) and are kept as history.
+
+- **No lock for now.** No passphrase, recovery code or Face ID. A lock can come back later through `storage.ts`.
+- **Partner view in the first version**, with shared data end-to-end encrypted (AES-GCM with a read key only the two phones hold; the relay keeps a hash of her write key).
+- **Kept fields:** period (flow, pain, discharge, symptoms), energy, mood, desire, sex, sleep, activity, alcohol, water, private notes. **Dropped:** weight, stress, tests, STI tests and everything listed as dropped in the scope section below.
+- **Contraception:** hormonal IUD; the fertile window is not shown with hormonal methods.
+- **Agent assumptions, not yet confirmed by the owner:** sex is logged as "had sex" plus optional comfort and satisfaction; water is counted in glasses and activity in minutes; the self-harm crisis prompt (W-11) was not carried over because mood logging no longer includes it; the emergency card tells her to call 9-1-1; the partner sees about six months of shared logs.
+
 ## Scope (2026-11-15)
 
 The owner narrowed the plan to what the two of them need ([ADR-0017](adr/0017-narrowed-scope.md)). The current roadmap is at the top of [roadmap.md](plan/roadmap.md#current-roadmap-narrowed-2026-11-15). Nothing already built is removed.

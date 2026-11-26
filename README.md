@@ -1,15 +1,32 @@
-# Period-Tracker-App
+# Flo Lite
 
-Flo is a private, local-first cycle-tracking web app for iPhone. **Contributors and coding agents: start with [AGENTS.md](AGENTS.md)**, then [docs/status.md](docs/status.md) and [docs/decisions.md](docs/decisions.md).
+A small, private period, sex and intimacy tracker for one couple, as an iPhone web app. She logs on her phone; he sees only what she chooses to share, end-to-end encrypted. See [NEW-APP.md](NEW-APP.md) for the reasoning and design, and [AGENTS.md](AGENTS.md) for how to work on it.
 
-Use synthetic data only in development, tests and previews. A synthetic preview must be deployed with an explicit non-`main` alias: `tools/deploy/pages-preview.sh app --branch <alias>`. Without `--branch`, the script deploys to the Pages production branch.
+Use synthetic data only in development, tests and previews.
 
-## Unlocked development preview
+## Run it
 
-`npm run dev` starts the explicitly named `unlocked-preview` mode. It keeps the encrypted record-store pipeline, but automatically creates and stores a random preview-only lock credential in this browser. The credential is not a security boundary: the preview has **no passphrase protection**. Use synthetic data only; never enter real health information.
+```sh
+npm ci --ignore-scripts
+npm run dev        # http://localhost:5173
+npm run check      # typecheck, lint, format check, unit tests
+npm run e2e        # Playwright WebKit (iPhone SE and iPhone 13)
+```
 
-The preview uses a separate `app-unlocked-preview` IndexedDB database and a separate browser-stored credential. It requires Web Locks, IndexedDB, and localStorage; if they are unavailable, it reports an error without resetting data. Stopping the preview or returning to secured mode does not modify the existing `app` database. Run `npm run dev:secured` to use the normal secured local development mode. A normal production build is secured unless it is explicitly opted in.
+Sharing needs the relay. Without `VITE_RELAY_URL` the Share screen says sharing is not set up. To try it locally:
 
-For an intentional Cloudflare Pages **Preview** build only, set `VITE_FLO_UNLOCKED_PREVIEW=true` in the environment that runs the build. With a Git-integrated Pages build, use the Pages Preview environment; with a direct upload, including the existing preview script, set it in the shell that builds the files. A Pages dashboard variable alone cannot change an already-built upload. Do not set it for Production. To turn the bypass off, remove the variable (or set it to `false`) and rebuild; locally, stop `npm run dev` and use `npm run dev:secured` instead.
+```sh
+npm run relay:dev                                   # http://localhost:8787 (needs a local D1, see below)
+VITE_RELAY_URL=http://localhost:8787 npm run dev
+```
 
-Preview data and its browser credential remain on this origin when the bypass is turned off. Re-enabling the lock returns to the original secured `app` store; preview data is not copied into it. The existing explicit **Delete All** action attempts to remove origin-wide local data, including both the secured and preview stores, and reports any incomplete deletion.
+## Relay setup (owner)
+
+The relay is one Cloudflare Worker with one D1 table. It stores only the couple ID, a hash of her write key and the latest encrypted snapshot.
+
+1. Create a D1 database (`npx wrangler d1 create flo-lite`) and put its id in `relay/wrangler.toml` (`database_id`).
+2. Apply the schema: `npx wrangler d1 execute flo-lite --remote --file relay/schema.sql --config relay/wrangler.toml`.
+3. Set `ALLOWED_ORIGINS` in `relay/wrangler.toml` to the app's address(es).
+4. Deploy with `npm run relay:deploy`, then build the app with `VITE_RELAY_URL=<worker URL>`.
+
+For a local relay, run step 2 with `--local` instead of `--remote`.

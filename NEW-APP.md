@@ -51,7 +51,7 @@ When she turns on sharing, her phone creates three random values:
 
 1. **Pairing.** Her phone registers the couple ID with the server, along with a hash of the write key. It then shows a pairing code containing only the couple ID and the read key. She sends it by AirDrop or Messages, and he pastes it into his app.
 2. **Updates.** A few seconds after she changes something, her phone builds a snapshot of the categories she shares, encrypts it with the read key and uploads it with the write key. Each new snapshot replaces the previous one.
-3. **His view.** His app downloads the snapshot when it opens and when he pulls to refresh. It shows when her next period is expected, her cycle day and phase, a "higher" or "lower" fertility estimate only when her contraception allows it (not with her hormonal IUD), and about six months of shared logs.
+3. **His view.** His app downloads the snapshot when it opens, when he comes back to it and when he taps Refresh. It shows when her next period is expected, her cycle day and phase, a "higher" or "lower" fertility estimate only when her contraception allows it (not with her hormonal IUD), and about six months of shared logs.
 4. **Her controls.** An on/off switch per category (all off at first), a one-tap pause, "see what he sees", and unpair. Unpairing deletes the data from the server and erases the keys from her phone.
 
 The server is one small Cloudflare Worker with one D1 table: couple ID, encrypted snapshot, write-key hash and last-updated time.
@@ -68,47 +68,30 @@ The server is one small Cloudflare Worker with one D1 table: couple ID, encrypte
 
 Medical content is informational only. The app never calls a day safe or a chance zero.
 
-## Reused from the current app
+## What was built (2026-11-25)
 
-- the prediction engine in `src/engine/` and its tests, trimmed to period days plus contraception method;
-- date handling in `src/lib/localdate/`;
-- the calendar logic, the Today cycle ring, the tap-to-select log editor and the visual style in `src/ui/tokens.ts`;
-- `src/crypto/envelope/aes-gcm.ts`, for encrypting the shared snapshot;
-- the heavy-bleeding warning (W-01) and a few information cards with their sources.
+The first version is on this branch. The old app's code, plans and gates were removed here; they remain on `main` and in Git history.
 
-**Tools and packages:** Preact, Vite, TypeScript and `idb` for the app; Vitest, Playwright (WebKit), ESLint and Prettier for checks; `wrangler` for the server. All are already pinned in this repo. `jsqr` and `qrcode-generator` are dropped.
-
-## Planned structure
+- **Reused:** the `LocalDate` date code, the visual style tokens, the period and fertile-window logic (trimmed into a much smaller engine), the heavy-bleeding warning and the wording and sources of a few information cards.
+- **New:** a single IndexedDB database (version 1), the log, calendar, patterns, settings, share and partner screens, the sharing code and the relay Worker.
+- **Packages:** Preact and `idb` for the app; Vite, TypeScript, Vitest, Playwright (WebKit), ESLint, Prettier, `fake-indexeddb` and `wrangler` for development. The QR, signals, coverage, property-testing and DOM-emulation packages were removed.
 
 ```
 src/
-  lib/date/      LocalDate (copied)
-  engine/        prediction engine (copied, trimmed)
-  data/          db.ts (schema v1), storage.ts (the only file that reads or writes data)
-  share/         snapshot.ts, crypto.ts, relay-client.ts
-  ui/            today/, calendar/, log/, patterns/, partner/, settings/, tokens.ts
-  sw.ts          basic offline cache
-relay/           the Cloudflare Worker and its table
+  lib/date.ts    LocalDate calendar dates
+  data/          types.ts, storage.ts (the only file that reads or writes data)
+  engine/        episodes.ts, index.ts (predictions and warnings), patterns.ts
+  share/         crypto.ts, snapshot.ts, relay-client.ts, sync.ts
+  ui/            app.tsx, components.tsx, labels.ts, content.ts, styles.css, screens/
+relay/           the Cloudflare Worker, its D1 schema and wrangler.toml
+public/sw.js     basic offline cache
 ```
-
-## Build order
-
-1. **Setup:** project skeleton, home-screen install support, offline cache and test setup.
-2. **Logging:** storage, the log editor (sex and desire first) and the calendar.
-3. **Predictions:** the trimmed engine, the Today screen and the settings screen.
-4. **Patterns:** desire, satisfaction and comfort by cycle phase, then the other fields.
-5. **Export and import:** a plain JSON file, clearly marked as sensitive.
-6. **Partner sharing:** the server, pairing, her controls and his partner screen.
-7. **Preview and real use:** a preview with fake data, a check on both iPhones, then real use once approved.
-
-**Later, if they decide:** a passphrase or Face ID lock, encrypting the data stored on her phone, push notifications, and more intimacy content.
 
 ## Testing
 
-- the engine and date tests copied from the current app;
-- unit tests for storage, building and filtering the shared snapshot, share encryption, and the server rejecting uploads or deletes without her write key;
-- about five Playwright tests: log a day, see the prediction, pair the phones, pause sharing and unpair;
-- a check command that runs only the type check, lint and unit tests.
+- unit tests for dates, the engine, patterns, storage, building and filtering the shared snapshot, share encryption, and the server rejecting uploads or deletes without her write key;
+- Playwright tests on WebKit iPhone SE and iPhone 13: set up, log a period and reload; and a two-phone flow that pairs, shares one category, checks notes and unshared categories stay hidden, pauses and stops sharing;
+- `npm run check` runs only the type check, lint, format check and unit tests.
 
 Tests use made-up data only.
 
