@@ -4,8 +4,8 @@
   "description": "A private cycle tracker for two.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fbf8ff",
-  "theme_color": "#fbf8ff",
+  "background_color": "#f9f5ff",
+  "theme_color": "#f9f5ff",
   "icons": [
     {
       "src": "/icons/icon-192.png",

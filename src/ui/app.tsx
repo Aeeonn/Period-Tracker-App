@@ -1,10 +1,19 @@
-import { createContext } from 'preact';
-import { useCallback, useContext, useEffect, useMemo, useState } from 'preact/hooks';
+import { createContext, type JSX } from 'preact';
+import { useCallback, useContext, useEffect, useId, useMemo, useState } from 'preact/hooks';
 import * as storage from '../data/storage.ts';
 import type { DayLog, Settings, ShareState } from '../data/types.ts';
 import { runEngine, type EngineOutput } from '../engine/index.ts';
 import { todayLocal, type LocalDate } from '../lib/date.ts';
 import { onShareUpdated, scheduleUpload, uploadPending } from '../share/sync.ts';
+import {
+  CalendarIcon,
+  CycleIcon,
+  HeartIcon,
+  Logo,
+  PatternsIcon,
+  SlidersIcon,
+  UsersIcon,
+} from './icons.tsx';
 import { Calendar } from './screens/calendar.tsx';
 import { LogDay } from './screens/log.tsx';
 import { Onboarding } from './screens/onboarding.tsx';
@@ -37,6 +46,27 @@ export function useApp(): AppState {
 export function navigate(path: string): void {
   location.hash = `#/${path}`;
 }
+
+const THEME_COLOR = { light: '#f9f5ff', dark: '#15111c' } as const;
+
+interface Tab {
+  readonly id: string;
+  readonly label: string;
+  readonly Icon: (props: { class?: string }) => JSX.Element;
+}
+
+const OWNER_TABS: readonly Tab[] = [
+  { id: 'today', label: 'Today', Icon: CycleIcon },
+  { id: 'calendar', label: 'Calendar', Icon: CalendarIcon },
+  { id: 'patterns', label: 'Patterns', Icon: PatternsIcon },
+  { id: 'share', label: 'Share', Icon: UsersIcon },
+  { id: 'settings', label: 'Settings', Icon: SlidersIcon },
+];
+
+const PARTNER_TABS: readonly Tab[] = [
+  { id: 'partner', label: 'Her cycle', Icon: HeartIcon },
+  { id: 'settings', label: 'Settings', Icon: SlidersIcon },
+];
 
 function useRoute(): string {
   const read = () => location.hash.replace(/^#\/?/, '');
@@ -75,6 +105,7 @@ interface Loaded {
 export function App() {
   const today = useToday();
   const route = useRoute();
+  const logoId = useId();
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined);
 
   const reload = useCallback(async () => {
@@ -102,6 +133,10 @@ export function App() {
   useEffect(() => {
     if (theme === 'system') delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = theme;
+    for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+      const scheme = meta.media.includes('dark') ? 'dark' : 'light';
+      meta.content = THEME_COLOR[theme === 'system' ? scheme : theme];
+    }
   }, [theme]);
 
   const settings = loaded?.settings;
@@ -117,7 +152,13 @@ export function App() {
     [today, loaded?.days, settings],
   );
 
-  if (loaded === undefined) return <main class="screen" aria-busy="true" />;
+  if (loaded === undefined) {
+    return (
+      <main class="screen screen--bare splash" aria-busy="true">
+        <Logo class="splash__logo" id={logoId} />
+      </main>
+    );
+  }
   if (settings === undefined) return <Onboarding onDone={reload} />;
 
   const state: AppState = {
@@ -162,27 +203,32 @@ export function App() {
     screen = <Today />;
   }
 
-  const tabs = owner
-    ? [
-        ['today', 'Today'],
-        ['calendar', 'Calendar'],
-        ['patterns', 'Patterns'],
-        ['share', 'Share'],
-        ['settings', 'Settings'],
-      ]
-    : [
-        ['partner', 'Her cycle'],
-        ['settings', 'Settings'],
-      ];
-  const current = page === '' || page === 'log' ? (owner ? 'today' : 'partner') : page;
+  const tabs: readonly Tab[] = owner ? OWNER_TABS : PARTNER_TABS;
+  const fallback = owner ? 'today' : 'partner';
+  const current = tabs.some((tab) => tab.id === page) ? page : fallback;
+  const active = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.id === current),
+  );
 
   return (
     <AppContext.Provider value={state}>
-      <main class="screen">{screen}</main>
-      <nav class="tabs" aria-label="Main">
-        {tabs.map(([id, label]) => (
-          <a key={id} href={`#/${id}`} aria-current={current === id ? 'page' : undefined}>
-            {label}
+      <main class="screen">
+        <div class="screen__body" key={page === 'log' ? 'log' : current}>
+          {screen}
+        </div>
+      </main>
+      <nav class="tabs" aria-label="Main" data-count={tabs.length} data-active={active}>
+        <span class="tabs__indicator" aria-hidden="true" />
+        {tabs.map(({ id, label, Icon }) => (
+          <a
+            key={id}
+            class="tabs__link"
+            href={`#/${id}`}
+            aria-current={current === id ? 'page' : undefined}
+          >
+            <Icon class="tabs__icon" />
+            <span class="tabs__label">{label}</span>
           </a>
         ))}
       </nav>
