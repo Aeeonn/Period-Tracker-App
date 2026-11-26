@@ -27,16 +27,17 @@ All of this slowed down the parts they actually want. A focused app of about 4,0
 
 ## Decisions
 
-| Topic                      | Decision                                                                                                                                                                                                        |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Partner view               | Built in the first version. It's half the point of the app.                                                                                                                                                     |
-| Lock and passphrase        | Left out for now. Data on her phone is protected by the iPhone's own lock. All data access goes through one file (`storage.ts`), so a lock or local encryption can be added later without changing the screens. |
-| Shared data                | Encrypted on her phone before it's uploaded, from the first version. The server only ever stores data it can't read. Adding this later would mean changing both phones and the server at once.                  |
-| Who can change shared data | Only her phone. His pairing code lets him read; it can't upload, change or delete anything.                                                                                                                     |
-| Fields kept                | Flow, pain, discharge, symptoms, energy, mood, desire, sex (comfort and satisfaction), sleep, activity, alcohol, water and private notes.                                                                       |
-| Fields removed             | Weight, stress, the tests log, STI tests, temperature, ovulation tests, pill and medication tracking, and the pregnancy, postpartum and perimenopause modes.                                                    |
-| Notes                      | Never shared.                                                                                                                                                                                                   |
-| Existing data              | None, so the new database starts at version 1.                                                                                                                                                                  |
+| Topic                      | Decision                                                                                                                                                                                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Partner view               | Built in the first version. It's half the point of the app.                                                                                                                                                                                                                   |
+| Lock and passphrase        | Left out for now. Data on her phone is protected by the iPhone's own lock. All data access goes through one file (`storage.ts`), so a lock or local encryption can be added later without changing the screens.                                                               |
+| Shared data                | Encrypted on her phone before it's uploaded, from the first version (confirmed 2026-11-25). The server only ever stores data it can't read.                                                                                                                                   |
+| Contraception              | Hormonal IUD (confirmed 2026-11-25). The app hides the fertility estimate on both phones. Hormonal IUDs often make periods lighter, irregular or absent, so period predictions must show their uncertainty and handle long gaps. She can still change the method in Settings. |
+| Who can change shared data | Only her phone. His pairing code lets him read; it can't upload, change or delete anything.                                                                                                                                                                                   |
+| Fields kept                | Flow, pain, discharge, symptoms, energy, mood, desire, sex (comfort and satisfaction), sleep, activity, alcohol, water and private notes.                                                                                                                                     |
+| Fields removed             | Weight, stress, the tests log, STI tests, temperature, ovulation tests, pill and medication tracking, and the pregnancy, postpartum and perimenopause modes.                                                                                                                  |
+| Notes                      | Never shared.                                                                                                                                                                                                                                                                 |
+| Existing data              | None, so the new database starts at version 1.                                                                                                                                                                                                                                |
 
 ## How sharing works
 
@@ -50,7 +51,7 @@ When she turns on sharing, her phone creates three random values:
 
 1. **Pairing.** Her phone registers the couple ID with the server, along with a hash of the write key. It then shows a pairing code containing only the couple ID and the read key. She sends it by AirDrop or Messages, and he pastes it into his app.
 2. **Updates.** A few seconds after she changes something, her phone builds a snapshot of the categories she shares, encrypts it with the read key and uploads it with the write key. Each new snapshot replaces the previous one.
-3. **His view.** His app downloads the snapshot when it opens and when he pulls to refresh. It shows when her next period is expected, her cycle day and phase, a "higher" or "lower" fertility estimate when her contraception allows it, and about six months of shared logs.
+3. **His view.** His app downloads the snapshot when it opens and when he pulls to refresh. It shows when her next period is expected, her cycle day and phase, a "higher" or "lower" fertility estimate only when her contraception allows it (not with her hormonal IUD), and about six months of shared logs.
 4. **Her controls.** An on/off switch per category (all off at first), a one-tap pause, "see what he sees", and unpair. Unpairing deletes the data from the server and erases the keys from her phone.
 
 The server is one small Cloudflare Worker with one D1 table: couple ID, encrypted snapshot, write-key hash and last-updated time.
@@ -120,5 +121,4 @@ When the new app is ready and checked on both phones:
 
 ## Open questions
 
-1. **Her IUD type:** copper or hormonal. A hormonal IUD hides the fertility estimate on both screens; a copper IUD doesn't. It can stay unset until she chooses it in the app.
-2. **Encrypted sharing:** kept from the start, as recommended. Confirm or change.
+None right now. Her IUD type (hormonal) and encrypted sharing were confirmed on 2026-11-25.
