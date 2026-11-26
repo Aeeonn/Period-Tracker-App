@@ -6,7 +6,7 @@ _Last updated: 2026-11-25._ Keep this short: current state, what's next and open
 
 - **Branch `rewrite/flo-lite`** holds Flo Lite, the simple rebuild described in [NEW-APP.md](../NEW-APP.md). `main` still holds the original app until the owner decides to replace it.
 - **Built:** her setup and his setup; Today (cycle ring, next-period estimate, fertile-window card only when meaningful, heavy-bleeding warning, info cards); Calendar; a tap-to-save log (sex and desire first, period, body, mood, sleep, activity, alcohol, water, private notes); Patterns by cycle phase; Settings (cycle and period length, contraception, theme, export/import, delete everything); Share (pairing code, per-category switches, pause, "see what he sees", stop sharing); his read-only partner view; offline service worker; the relay Worker.
-- **Not deployed.** The relay needs a D1 database and its id in `relay/wrangler.toml` (owner step, see the [README](../README.md#relay-setup-owner)). No real-iPhone check yet.
+- **Live at https://flo-lite.pages.dev** (deployed 2026-11-25 from this branch; relay `flo-lite-relay` with D1 `flo-lite`). See [docs/deploy/flo-lite.md](deploy/flo-lite.md) and the README's "Getting started on the iPhones". Checked live with synthetic data in emulated WebKit only; not yet on a real iPhone.
 
 ## Last verification
 
@@ -16,9 +16,8 @@ _Last updated: 2026-11-25._ Keep this short: current state, what's next and open
 
 ## Next up
 
-1. Owner: create the D1 database and approve deploying the relay; choose the app address.
-2. Deploy a synthetic preview with sharing on, and check both iPhones (install, log, pair, pause, stop, offline reopen).
-3. Then the owner decides on real use and on replacing `main` with this branch (tag the old app `flo-v1-final` first).
+1. Owner: install on both iPhones from the Home Screen and try it (install, log, pair, pause, stop, offline reopen). Report anything confusing or broken.
+2. Then the owner decides on replacing `main` with this branch (tag the old app `flo-v1-final` first).
 
 ## Open follow-ups
 

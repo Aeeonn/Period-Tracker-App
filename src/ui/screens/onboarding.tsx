@@ -168,6 +168,13 @@ function PartnerSetup({ onDone, onBack }: { onDone: () => Promise<void>; onBack:
   );
 }
 
+function installed(): boolean {
+  return (
+    matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
 export function Onboarding({ onDone }: { onDone: () => Promise<void> }) {
   const [role, setRole] = useState<'owner' | 'partner' | undefined>(undefined);
   return (
@@ -183,6 +190,15 @@ export function Onboarding({ onDone }: { onDone: () => Promise<void> }) {
             A private cycle tracker for the two of you. Everything stays on this phone unless you
             choose to share.
           </p>
+          {installed() ? null : (
+            <Card heading="First, add Flo to your Home Screen">
+              <p>
+                In Safari, tap the Share button, then <strong>Add to Home Screen</strong>. Open Flo
+                from the new icon and set it up there. Data saved in a Safari tab stays separate
+                from the Home Screen app, and Safari may clear it if you don't visit for a while.
+              </p>
+            </Card>
+          )}
           <Card heading="I'm tracking my cycle">
             <p>Log your period, body, mood, desire and sex, and see your patterns.</p>
             <Button onClick={() => setRole('owner')}>Set up my tracker</Button>

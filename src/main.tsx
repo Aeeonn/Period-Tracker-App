@@ -13,3 +13,6 @@ render(
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   void navigator.serviceWorker.register('/sw.js');
 }
+
+// Ask the browser not to clear her data under storage pressure.
+void navigator.storage?.persist?.().catch(() => false);

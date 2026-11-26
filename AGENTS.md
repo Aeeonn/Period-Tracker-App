@@ -44,6 +44,7 @@ The original, much larger app lives on `main` and in Git history. It is referenc
 | `npm run e2e`                    | Playwright (builds `dist-e2e/` with a fake relay URL, one worker).     |
 | `npm run relay:dev`              | Run the relay locally with Wrangler.                                   |
 | `tools/deploy/pages-preview.sh --branch <alias>` | Synthetic-data preview on Cloudflare Pages (never `main`). |
+| `tools/deploy/app.sh`            | Deploy the live app (https://flo-lite.pages.dev) from a clean, committed tree. |
 
 ## How to work
 
@@ -56,12 +57,14 @@ The original, much larger app lives on `main` and in Git history. It is referenc
 ## Ask the owner first
 
 - Adding or upgrading any dependency or tool.
-- Cloudflare accounts, D1 databases, tokens, DNS, deploying the relay, or any production deployment.
+- Cloudflare accounts, new D1 databases or Workers, tokens, DNS, or changing the relay's stored data.
 - Real health data, or starting real use.
 - Destructive actions on history or other branches (force-push, deleting branches, rewriting `main`).
 - Product decisions not covered by NEW-APP.md or docs/decisions.md.
 
 Synthetic-only Pages previews are allowed without asking; record them in `docs/deploy/`.
+
+**The live app is in real use** (https://flo-lite.pages.dev, approved 2026-11-25). She may have real data on her phone: never touch the live D1 data except to verify that test pairings were removed. Redeploy the app or relay only from verified, committed work (`npm run build && npm run check && npm run e2e` passing), test the live site with synthetic data in a fresh browser context, and record each deploy in [docs/deploy/flo-lite.md](docs/deploy/flo-lite.md). Keep stored data compatible: a change to the stored day or settings shape, or to the snapshot format, needs a migration or a version check and a review.
 
 ## Privacy and safety rules
 

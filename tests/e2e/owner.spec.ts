@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('set up, log a period, and keep it after reload', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { name: /add Flo to your Home Screen/ })).toBeVisible();
   await page.getByRole('button', { name: 'Set up my tracker' }).click();
   await page.getByLabel('Usual cycle length (days)').fill('29');
   await page.getByLabel('Birth control').selectOption('hormonal_iud');
@@ -27,7 +28,7 @@ test('set up, log a period, and keep it after reload', async ({ page }) => {
   await page.getByRole('link', { name: 'Calendar' }).click();
   await expect(page.locator('.calendar__day.is-today.is-period')).toHaveCount(1);
   await page.getByRole('link', { name: 'Patterns' }).click();
-  await expect(page.getByRole('heading', { name: 'Period', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nothing to show yet' })).toBeVisible();
 
   page.once('dialog', (dialog) => void dialog.accept());
   await page.getByRole('link', { name: 'Settings' }).click();

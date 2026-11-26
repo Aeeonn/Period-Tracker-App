@@ -25,6 +25,7 @@ The app is being rebuilt as Flo Lite on `rewrite/flo-lite` ([NEW-APP.md](../NEW-
 - **Kept fields:** period (flow, pain, discharge, symptoms), energy, mood, desire, sex, sleep, activity, alcohol, water, private notes. **Dropped:** weight, stress, tests, STI tests and everything listed as dropped in the scope section below.
 - **Contraception:** hormonal IUD; the fertile window is not shown with hormonal methods.
 - **Agent assumptions, not yet confirmed by the owner:** sex is logged as "had sex" plus optional comfort and satisfaction; water is counted in glasses and activity in minutes; the self-harm crisis prompt (W-11) was not carried over because mood logging no longer includes it; the emergency card tells her to call 9-1-1; the partner sees about six months of shared logs.
+- **Real use (2026-11-25):** the owner asked for "a fully working app so she can actually give it a try". The agent read this as approval to create the D1 database `flo-lite`, deploy the relay Worker `flo-lite-relay` and the Pages project `flo-lite`, and put the app at https://flo-lite.pages.dev for real use. It is deployed from `rewrite/flo-lite` with `tools/deploy/app.sh`; `main` is unchanged. Agent's reading, not yet confirmed: redeploying verified commits from this branch to the same project is covered; new Cloudflare resources, domains or tokens still need asking.
 
 ## Scope (2026-11-15)
 

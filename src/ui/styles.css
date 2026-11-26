@@ -465,6 +465,24 @@ details.ui-card > summary {
   min-block-size: 44px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  list-style: none;
+}
+
+details.ui-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.ui-card > summary::after {
+  content: '\203A';
+  font-size: 1.5em;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+
+details.ui-card[open] > summary::after {
+  transform: rotate(90deg);
 }
 
 .field {
