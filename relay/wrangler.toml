@@ -29,7 +29,7 @@ persist = false
 [[d1_databases]]
 binding = "DB"
 database_name = "flo-lite"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "bdfa53fd-bafd-4177-a245-19828c0c2e43"
 
 [vars]
-ALLOWED_ORIGINS = "http://localhost:5173"
+ALLOWED_ORIGINS = "https://flo-lite.pages.dev"
