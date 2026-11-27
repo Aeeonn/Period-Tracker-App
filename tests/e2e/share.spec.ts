@@ -47,6 +47,7 @@ test('her logs, sharing choices, pause and stop reach his phone', async ({ brows
   await owner.getByRole('switch', { name: 'Had sex' }).check();
   await owner.getByRole('button', { name: 'Great', exact: true }).click();
   await owner.getByRole('button', { name: 'Calm' }).click();
+  await owner.getByRole('button', { name: /^Notes/ }).click();
   await owner.locator('textarea').fill('secret note');
   await owner.getByRole('button', { name: 'Done' }).click();
 

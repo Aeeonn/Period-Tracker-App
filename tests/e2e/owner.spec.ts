@@ -11,7 +11,9 @@ test('set up, log a period, and keep it after reload', async ({ page }) => {
   await page.getByRole('button', { name: 'Log today' }).click();
   await page.getByRole('button', { name: 'Heavy', exact: true }).click();
   await page.getByRole('switch', { name: /Soaking/ }).check();
+  await page.getByRole('button', { name: /^Body/ }).click();
   await page.getByRole('button', { name: 'Dizzy or faint' }).click();
+  await page.getByRole('button', { name: /^Habits/ }).click();
   await page.getByRole('button', { name: 'More water' }).click();
   await page.getByRole('button', { name: 'More water' }).click();
   await expect(page.getByText('2 glasses')).toBeVisible();

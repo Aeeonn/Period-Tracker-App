@@ -102,6 +102,22 @@ export function PageHeader(props: {
   );
 }
 
+/** A friendly illustrated card for empty, waiting and paused states. */
+export function EmptyState(props: {
+  art: ComponentChildren;
+  title: string;
+  class?: string;
+  children?: ComponentChildren;
+}) {
+  return (
+    <section class={cx('ui-card empty', props.class)}>
+      {props.art}
+      <h2 class="empty__title">{props.title}</h2>
+      {props.children}
+    </section>
+  );
+}
+
 /** Single choice from a list; pressing the selected chip again clears it. */
 export function Choice<T extends string>(props: {
   label: string;
