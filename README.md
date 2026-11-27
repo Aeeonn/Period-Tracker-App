@@ -35,11 +35,12 @@ VITE_RELAY_URL=http://localhost:8787 npm run dev
 
 ## Relay setup
 
-The relay is one Cloudflare Worker with one D1 table. It stores only the couple ID, a hash of her write key and the latest encrypted snapshot. It is already set up (see above); to recreate it:
+The relay is one Cloudflare Worker with a D1 database. For sharing it stores only the couple ID, a hash of her write key and the latest encrypted snapshot. For reminders it stores each phone's push address and keys, a hash of its secret, and the times to wake it; a cron every 5 minutes sends a tiny encrypted wake-up and the phone writes the reminder itself. It is already set up (see above); to recreate it:
 
 1. Create a D1 database (`npx wrangler d1 create flo-lite`) and put its id in `relay/wrangler.toml` (`database_id`).
 2. Apply the schema: `npx wrangler d1 execute flo-lite --remote --file relay/schema.sql --config relay/wrangler.toml`.
-3. Set `ALLOWED_ORIGINS` in `relay/wrangler.toml` to the app's address(es).
-4. Deploy with `npm run relay:deploy`, then build the app with `VITE_RELAY_URL=<worker URL>`.
+3. Set `ALLOWED_ORIGINS` and `VAPID_SUBJECT` in `relay/wrangler.toml` to the app's address(es).
+4. For reminders, generate a P-256 private key as a JWK and store it with `npx wrangler secret put VAPID_PRIVATE_JWK --config relay/wrangler.toml` (never commit it). Changing it later means both phones must turn reminders off and on again.
+5. Deploy with `npm run relay:deploy`, then build the app with `VITE_RELAY_URL=<worker URL>`.
 
 For a local relay, run step 2 with `--local` instead of `--remote`.

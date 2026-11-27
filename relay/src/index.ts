@@ -18,7 +18,7 @@ import {
   type VapidJwk,
 } from './push.ts';
 
-/** A phone's push subscription. Only his phone is linked to a couple, for her "period started" signal. */
+/** A phone's push subscription. Only his phone is linked to a couple, for her opaque partner signal. */
 export interface Device {
   readonly id: string;
   readonly secretHash: string;
@@ -391,10 +391,12 @@ const globalFetch: typeof fetch = (input, init) => fetch(input, init);
 /** Push gone for good: the phone unsubscribed or the app was removed. */
 const gone = (status: number): boolean => status === 404 || status === 410 || status === BROKEN;
 const delivered = (status: number): boolean => status >= 200 && status < 300;
+/** Network errors, rate limits and server errors may succeed later; other refusals will not. */
+const retryable = (status: number): boolean => status === 0 || status === 429 || status >= 500;
 
 /**
  * Send the reminders that are due: one silent-text "tick" per phone, however
- * many of its times fell due. A failed send is retried on later runs until the
+ * many of its times fell due. A send that fails for a passing reason is retried on later runs until the
  * reminder is more than {@link STALE_MS} late, and is then dropped.
  */
 export async function runDue(
@@ -420,8 +422,8 @@ export async function runDue(
     if (gone(status)) {
       await store.deleteDevice(device.id);
       result.removed += 1;
-    } else if (delivered(status)) {
-      result.sent += 1;
+    } else if (!retryable(status)) {
+      if (delivered(status)) result.sent += 1;
       await store.clearDue(device.id, now);
     }
   }

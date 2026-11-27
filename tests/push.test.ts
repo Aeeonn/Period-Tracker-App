@@ -292,6 +292,13 @@ describe('relay push', () => {
     expect(store.times.get(DEVICE)).toEqual([]);
   });
 
+  it('does not retry a send the push service refuses for good', async () => {
+    const { store, register, push } = await setup(403);
+    await register();
+    expect((await runDue(env, store, NOW + 60_000, push.fetcher)).sent).toBe(0);
+    expect(store.times.get(DEVICE)).toEqual([]);
+  });
+
   it('tells only his linked phone that her period started, and unlinks when sharing stops', async () => {
     const { store, register, push, call } = await setup();
     const keys = newShareKeys();
