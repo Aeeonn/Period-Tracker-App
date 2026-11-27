@@ -6,8 +6,8 @@ _Last updated: 2026-11-26._ Keep this short: current state, what's next and open
 
 - **Branch `rewrite/flo-lite`** holds Flo Lite, the simple rebuild described in [NEW-APP.md](../NEW-APP.md). `main` still holds the original app until the owner decides to replace it.
 - **Built:** her setup and his setup; Today (cycle ring, next-period estimate, fertile-window card only when meaningful, heavy-bleeding warning, info cards); Calendar; a tap-to-save log (sex and desire first, period, body, mood, sleep, activity, alcohol, water, private notes); Patterns by cycle phase; Settings (cycle and period length, contraception, theme, export/import, delete everything); Share (pairing code, per-category switches, pause, "see what he sees", stop sharing); his read-only partner view; offline service worker; the relay Worker.
-- **UI revamp (2026-11-26, not deployed yet):** a new purple-pastel design system with light and dark themes, inline SVG icons and a floating tab bar with an animated indicator; a lively cycle ring; a log grouped into collapsible sections with a progress bar, emoji and level tiles, and a small celebration on save; Patterns as bars and meters; illustrated empty, waiting and paused states; a warmer partner view; friendlier onboarding and error screens. All motion respects reduced motion. Copy meaning and the medical and consent wording are unchanged; data shapes, sharing, crypto, relay and engine are untouched. Commits `afdb60c` to `f8f67bd`.
-- **Live at https://flo-lite.pages.dev** (deployed 2026-11-25 from this branch, before the UI revamp; relay `flo-lite-relay` with D1 `flo-lite`). See [docs/deploy/flo-lite.md](deploy/flo-lite.md) and the README's "Getting started on the iPhones". Checked live with synthetic data in emulated WebKit only; not yet on a real iPhone.
+- **UI revamp (2026-11-26, deployed):** a new purple-pastel design system with light and dark themes, inline SVG icons and a floating tab bar with an animated indicator; a lively cycle ring; a log grouped into collapsible sections with a progress bar, emoji and level tiles, and a small celebration on save; Patterns as bars and meters; illustrated empty, waiting and paused states; a warmer partner view; friendlier onboarding and error screens. All motion respects reduced motion. Copy meaning and the medical and consent wording are unchanged; data shapes, sharing, crypto, relay and engine are untouched. Commits `afdb60c` to `f8f67bd`.
+- **Live at https://flo-lite.pages.dev** (last deployed 2026-11-26 from this branch with the UI revamp, `b3bcad2`; the branch is pushed to GitHub; relay `flo-lite-relay` with D1 `flo-lite`). See [docs/deploy/flo-lite.md](deploy/flo-lite.md) and the README's "Getting started on the iPhones". Checked live with synthetic data in emulated WebKit only; not yet on a real iPhone.
 
 ## Last verification
 
@@ -18,7 +18,7 @@ _Last updated: 2026-11-26._ Keep this short: current state, what's next and open
 
 ## Next up
 
-1. Owner: look over the UI revamp on this branch (preview deploy or `npm run dev`), then install on both iPhones from the Home Screen and try it (install, log, pair, pause, stop, offline reopen). Report anything confusing or broken.
+1. Owner: open https://flo-lite.pages.dev, then install on both iPhones from the Home Screen and try it (install, log, pair, pause, stop, offline reopen). Report anything confusing or broken.
 2. Then the owner decides on replacing `main` with this branch (tag the old app `flo-v1-final` first).
 
 ## Open follow-ups
