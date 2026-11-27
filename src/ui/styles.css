@@ -710,6 +710,42 @@ strong {
   gap: 0.5rem;
 }
 
+.chips--scale {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chips--scale[data-count='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.chips--scale > .ui-chip {
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.5rem 0.4rem;
+  border-radius: 1rem;
+  text-align: center;
+  overflow-wrap: break-word;
+}
+
+.chips--scale .ui-chip__icon {
+  justify-content: center;
+  min-height: 1.25rem;
+}
+
+@media (min-width: 23rem) {
+  .chips--scale[data-count='6'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 30rem) {
+  .chips--scale[data-count='4'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .ui-chip {
   display: inline-flex;
   align-items: center;
@@ -787,6 +823,17 @@ strong {
 .ui-chip[aria-pressed='true'] .drops path,
 .ui-chip[aria-pressed='true'] .drops circle {
   fill: currentColor;
+}
+
+.drops--empty path {
+  fill: none;
+  stroke: var(--period);
+  stroke-width: 1.2;
+}
+
+.ui-chip[aria-pressed='true'] .drops--empty path {
+  fill: none;
+  stroke: currentColor;
 }
 
 /* Cards */

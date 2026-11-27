@@ -118,19 +118,26 @@ export function EmptyState(props: {
   );
 }
 
-/** Single choice from a list; pressing the selected chip again clears it. */
+/**
+ * Single choice from a list; pressing the selected chip again clears it.
+ * `scale` lays short ordered options out as equal tiles so rows never end with a lone chip.
+ */
 export function Choice<T extends string>(props: {
   label: string;
   options: readonly T[];
   labels: Record<T, string>;
   value: T | undefined;
   decor?: Partial<Record<T, ComponentChildren>>;
+  layout?: 'scale';
   onChange: (value: T | undefined) => void;
 }) {
   return (
     <fieldset class="field">
       <legend>{props.label}</legend>
-      <div class="chips">
+      <div
+        class={cx('chips', props.layout === 'scale' && 'chips--scale')}
+        data-count={props.layout === 'scale' ? props.options.length : undefined}
+      >
         {props.options.map((option) => (
           <button
             key={option}
@@ -241,6 +248,15 @@ export function Drops(props: { count: number }) {
           d="M4 1c1.9 2.3 3.5 4.2 3.5 6.2a3.5 3.5 0 0 1-7 0C.5 5.2 2.1 3.3 4 1z"
         />
       ))}
+    </svg>
+  );
+}
+
+/** An outlined drop for "no flow". Decorative. */
+export function EmptyDrop() {
+  return (
+    <svg class="drops drops--empty" viewBox="0 0 9 12" width="9" height="12" focusable="false">
+      <path d="M4.5 1.5c1.8 2.2 3.3 4 3.3 5.9a3.3 3.3 0 0 1-6.6 0c0-1.9 1.5-3.7 3.3-5.9z" />
     </svg>
   );
 }

@@ -25,6 +25,7 @@ import {
   Button,
   Choice,
   Drops,
+  EmptyDrop,
   LevelBars,
   MultiChoice,
   PageHeader,
@@ -78,6 +79,7 @@ const PAIN_DECOR = levels<Pain>({ none: 0, mild: 1, moderate: 2, severe: 3 });
 const ENERGY_DECOR = levels<Level>({ low: 1, medium: 2, high: 3 });
 const SLEEP_DECOR = levels<SleepQuality>({ poor: 1, okay: 2, good: 3 });
 const FLOW_DECOR: Partial<Record<Flow, ComponentChildren>> = {
+  none: <EmptyDrop />,
   spotting: <Drops count={0} />,
   light: <Drops count={1} />,
   medium: <Drops count={2} />,
@@ -266,6 +268,7 @@ export function LogDay({ date: param }: { date: string | undefined }) {
               options={SATISFACTION}
               labels={SATISFACTION_LABEL}
               decor={SATISFACTION_EMOJI}
+              layout="scale"
               value={sex.satisfaction}
               onChange={(satisfaction) =>
                 update('sex', {
@@ -281,6 +284,7 @@ export function LogDay({ date: param }: { date: string | undefined }) {
           options={DESIRE}
           labels={DESIRE_LABEL}
           decor={DESIRE_DECOR}
+          layout="scale"
           value={draft.desire}
           onChange={(value) => update('desire', value)}
         />
@@ -292,6 +296,7 @@ export function LogDay({ date: param }: { date: string | undefined }) {
           options={FLOW}
           labels={FLOW_LABEL}
           decor={FLOW_DECOR}
+          layout="scale"
           value={draft.flow}
           onChange={(value) => update('flow', value)}
         />
@@ -312,6 +317,7 @@ export function LogDay({ date: param }: { date: string | undefined }) {
           options={PAIN}
           labels={PAIN_LABEL}
           decor={PAIN_DECOR}
+          layout="scale"
           value={draft.pain}
           onChange={(value) => update('pain', value)}
         />
@@ -330,6 +336,7 @@ export function LogDay({ date: param }: { date: string | undefined }) {
           options={LEVEL}
           labels={LEVEL_LABEL}
           decor={ENERGY_DECOR}
+          layout="scale"
           value={draft.energy}
           onChange={(value) => update('energy', value)}
         />
@@ -368,6 +375,7 @@ export function LogDay({ date: param }: { date: string | undefined }) {
           options={SLEEP_QUALITY}
           labels={SLEEP_QUALITY_LABEL}
           decor={SLEEP_DECOR}
+          layout="scale"
           value={draft.sleepQuality}
           onChange={(value) => update('sleepQuality', value)}
         />

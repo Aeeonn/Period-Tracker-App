@@ -204,7 +204,12 @@ export function App() {
   }
 
   const tabs: readonly Tab[] = owner ? OWNER_TABS : PARTNER_TABS;
-  const fallback = owner ? 'today' : 'partner';
+  // A past day is opened from the calendar and returns there, so keep that tab lit.
+  const fallback = !owner
+    ? 'partner'
+    : page === 'log' && param !== undefined && param !== today
+      ? 'calendar'
+      : 'today';
   const current = tabs.some((tab) => tab.id === page) ? page : fallback;
   const active = Math.max(
     0,
