@@ -8,7 +8,15 @@
  * notification text from its own data.
  */
 
-import { fromB64url, parseVapidJwk, sendPush, vapidPublicKey, type VapidJwk } from './push.ts';
+import {
+  BROKEN,
+  fromB64url,
+  isPushKey,
+  parseVapidJwk,
+  sendPush,
+  vapidPublicKey,
+  type VapidJwk,
+} from './push.ts';
 
 /** A phone's push subscription. Only his phone is linked to a couple, for her "period started" signal. */
 export interface Device {
@@ -381,12 +389,13 @@ function vapidOf(env: Env): { jwk: VapidJwk; subject: string } | null {
 const globalFetch: typeof fetch = (input, init) => fetch(input, init);
 
 /** Push gone for good: the phone unsubscribed or the app was removed. */
-const gone = (status: number): boolean => status === 404 || status === 410;
+const gone = (status: number): boolean => status === 404 || status === 410 || status === BROKEN;
 const delivered = (status: number): boolean => status >= 200 && status < 300;
 
 /**
  * Send the reminders that are due: one silent-text "tick" per phone, however
- * many of its times fell due. Reminders more than {@link STALE_MS} late are dropped.
+ * many of its times fell due. A failed send is retried on later runs until the
+ * reminder is more than {@link STALE_MS} late, and is then dropped.
  */
 export async function runDue(
   env: Env,
@@ -400,20 +409,21 @@ export async function runDue(
   for (const device of await store.dueDevices(now, MAX_SENDS)) {
     if (device.latest < now - STALE_MS) {
       result.dropped += 1;
-    } else {
-      const status = await sendPush(device, { k: 'tick' }, vapid, {
-        ttl: 60 * 60,
-        nowMs: now,
-        fetcher,
-      });
-      if (gone(status)) {
-        await store.deleteDevice(device.id);
-        result.removed += 1;
-        continue;
-      }
-      if (delivered(status)) result.sent += 1;
+      await store.clearDue(device.id, now);
+      continue;
     }
-    await store.clearDue(device.id, now);
+    const status = await sendPush(device, { k: 'tick' }, vapid, {
+      ttl: 60 * 60,
+      nowMs: now,
+      fetcher,
+    });
+    if (gone(status)) {
+      await store.deleteDevice(device.id);
+      result.removed += 1;
+    } else if (delivered(status)) {
+      result.sent += 1;
+      await store.clearDue(device.id, now);
+    }
   }
   return result;
 }
@@ -469,7 +479,8 @@ export async function handle(
         p256dh[0] !== 4 ||
         auth?.byteLength !== 16 ||
         times === null ||
-        (coupleId !== null && (typeof coupleId !== 'string' || !ID.test(coupleId)))
+        (coupleId !== null && (typeof coupleId !== 'string' || !ID.test(coupleId))) ||
+        !(await isPushKey(p256dh))
       ) {
         return reply(400, { error: 'bad_body' });
       }
@@ -528,11 +539,12 @@ export async function handle(
     if (ok === null) return reply(404, { error: 'no_couple' });
     if (!ok) return reply(403, { error: 'forbidden' });
     const body = await readJson(request);
-    if (body?.kind !== 'period_started') return reply(400, { error: 'bad_body' });
+    // The relay only learns that her phone wants his phone woken, not why.
+    if (body?.kind !== 'signal') return reply(400, { error: 'bad_body' });
     if (vapid === null) return reply(503, { error: 'push_off' });
     let sent = 0;
     for (const device of await store.coupleDevices(id, MAX_COUPLE_DEVICES)) {
-      const status = await sendPush(device, { k: 'period_started' }, vapid, {
+      const status = await sendPush(device, { k: 's' }, vapid, {
         ttl: 24 * 60 * 60,
         nowMs: now,
         fetcher,

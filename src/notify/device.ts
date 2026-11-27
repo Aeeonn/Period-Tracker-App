@@ -265,7 +265,7 @@ export function announcePeriodStart(output: EngineOutput, today: LocalDate): Pro
     const response = await relay(`/v1/couples/${share.coupleId}/events`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${share.writeKey}` },
-      body: JSON.stringify({ kind: 'period_started' }),
+      body: JSON.stringify({ kind: 'signal' }),
     });
     if (response.ok) await updateNotify({ lastAnnouncedStart: start });
   })()

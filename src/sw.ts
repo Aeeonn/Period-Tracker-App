@@ -3,8 +3,8 @@
  * reminders. A push carries only a signal such as {"k":"tick"}; the text is
  * written here from this phone's own data, so the relay never sees it.
  */
-import { getNotify, getSettings, updateNotify } from './data/storage.ts';
-import { todayLocal } from './lib/date.ts';
+import { getNotify, getSettings, getShare, updateNotify } from './data/storage.ts';
+import { diffDays, todayLocal } from './lib/date.ts';
 import { currentPlan, syncReminders } from './notify/device.ts';
 import { DISCREET, type Planned } from './notify/plan.ts';
 import { refreshPartner } from './share/sync.ts';
@@ -123,10 +123,23 @@ async function notesFor(kind: string): Promise<Note[]> {
     ];
   }
   if (!prefs.enabled) return [];
-  if (kind === 'period_started') {
+  if (kind === 's') {
     if ((await getSettings())?.role !== 'partner' || prefs.off.includes('partner_period_started'))
       return [];
     await refreshPartner().catch(() => undefined);
+    // Say it only if what she shares right now shows a period that started today or yesterday.
+    const share = await getShare();
+    const snapshot = share?.role === 'partner' && !share.ended ? share.lastSnapshot : undefined;
+    const start = snapshot?.period?.cycleStart;
+    if (
+      snapshot === undefined ||
+      snapshot.paused ||
+      !snapshot.categories.includes('period') ||
+      start === undefined ||
+      diffDays(start, today) < 0 ||
+      diffDays(start, today) > 1
+    )
+      return [];
     return [
       {
         title: prefs.discreet ? DISCREET.title : 'Her period started',

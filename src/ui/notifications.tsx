@@ -146,8 +146,8 @@ export function Notifications() {
             : 'A heads-up a few days before her period, from what she shares with you.'}
         </p>
         <p class="muted small">
-          Reminders are written on this phone. The sharing server only knows when to wake it, not
-          why.
+          Reminders are written on this phone. The sharing server only learns when to wake each
+          phone, and that timing could hint at the cycle.
         </p>
         <Button block disabled={busy} onClick={() => void turnOn()}>
           <BellIcon />

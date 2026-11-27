@@ -179,6 +179,7 @@ describe('relay push', () => {
       { endpoint: 'http://web.push.apple.com/x' },
       { endpoint: 'https://web.push.apple.com:8443/x' },
       { p256dh: b64url(new Uint8Array(65)) },
+      { p256dh: b64url(new Uint8Array(65).fill(1, 1).fill(4, 0, 1)) },
       { auth: b64url(new Uint8Array(8)) },
       { times: [NOW + 1] },
       { times: [NOW - 2 * 60 * 60_000] },
@@ -259,6 +260,38 @@ describe('relay push', () => {
     expect(store.devices.size).toBe(0);
   });
 
+  it('retries a failed send, and a broken key does not block other phones', async () => {
+    const { store, register, push } = await setup(503);
+    await register();
+    expect(await runDue(env, store, NOW + 60_000, push.fetcher)).toEqual({
+      sent: 0,
+      dropped: 0,
+      removed: 0,
+    });
+    expect(store.times.get(DEVICE)).toEqual([NOW + 60_000]);
+    // A record that slipped past validation: not a point on the curve.
+    await store.saveDevice(
+      {
+        id: 'B'.repeat(22),
+        secretHash: 'x',
+        endpoint: ENDPOINT,
+        p256dh: b64url(new Uint8Array(65).fill(1, 1).fill(4, 0, 1)),
+        auth: b64url(new Uint8Array(16)),
+        coupleId: null,
+      },
+      [NOW + 30_000],
+      NOW,
+    );
+    const ok = pushService(201);
+    expect(await runDue(env, store, NOW + 60_000, ok.fetcher)).toEqual({
+      sent: 1,
+      dropped: 0,
+      removed: 1,
+    });
+    expect(store.devices.has('B'.repeat(22))).toBe(false);
+    expect(store.times.get(DEVICE)).toEqual([]);
+  });
+
   it('tells only his linked phone that her period started, and unlinks when sharing stops', async () => {
     const { store, register, push, call } = await setup();
     const keys = newShareKeys();
@@ -268,14 +301,15 @@ describe('relay push', () => {
     });
     await register({ coupleId: keys.coupleId });
     await register({}, SECRET, 'H'.repeat(22));
-    const event = (token: string, kind = 'period_started') =>
+    const event = (token: string, kind = 'signal') =>
       call(`/v1/couples/${keys.coupleId}/events`, {
         method: 'POST',
         headers: { authorization: `Bearer ${token}` },
         body: JSON.stringify({ kind }),
       });
     expect((await event(keys.readKey)).status).toBe(403);
-    expect((await event(keys.writeKey, 'sex')).status).toBe(400);
+    // The relay accepts only an opaque wake-up, never what it is about.
+    expect((await event(keys.writeKey, 'period_started')).status).toBe(400);
     const sent = await event(keys.writeKey);
     expect(await sent.json()).toEqual({ sent: 1 });
     expect(push.sent).toHaveLength(1);

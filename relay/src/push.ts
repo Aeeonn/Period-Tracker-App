@@ -163,18 +163,45 @@ export interface PushTarget {
   readonly auth: string;
 }
 
-/** Send one push and return the push service's HTTP status (0 on a network error). */
+/** True when the bytes are a point on P-256 that Web Crypto accepts. */
+export async function isPushKey(raw: Uint8Array): Promise<boolean> {
+  try {
+    await crypto.subtle.importKey(
+      'raw',
+      new Uint8Array(raw),
+      { name: 'ECDH', namedCurve: 'P-256' },
+      false,
+      [],
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The subscription's keys cannot be used; the device should be forgotten. */
+export const BROKEN = -1;
+
+/**
+ * Send one push and return the push service's HTTP status: 0 on a network
+ * error, or {@link BROKEN} when the subscription keys cannot encrypt.
+ */
 export async function sendPush(
   target: PushTarget,
   message: Record<string, string>,
   vapid: { readonly jwk: VapidJwk; readonly subject: string },
   options: { readonly ttl: number; readonly nowMs: number; readonly fetcher: typeof fetch },
 ): Promise<number> {
-  const body = await encryptPayload(
-    encoder.encode(JSON.stringify(message)),
-    fromB64url(target.p256dh),
-    fromB64url(target.auth),
-  );
+  let body: Uint8Array<ArrayBuffer>;
+  try {
+    body = await encryptPayload(
+      encoder.encode(JSON.stringify(message)),
+      fromB64url(target.p256dh),
+      fromB64url(target.auth),
+    );
+  } catch {
+    return BROKEN;
+  }
   try {
     const response = await options.fetcher(target.endpoint, {
       method: 'POST',
