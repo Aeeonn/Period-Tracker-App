@@ -1,6 +1,7 @@
 import { Component, type ComponentChildren } from 'preact';
 import * as storage from '../data/storage.ts';
 import { todayLocal } from '../lib/date.ts';
+import { removePushDevice } from '../notify/device.ts';
 import { deleteCouple } from '../share/relay-client.ts';
 import { OopsArt } from './art.tsx';
 import { Button, Card } from './components.tsx';
@@ -31,6 +32,7 @@ export async function confirmDeleteEverything(): Promise<boolean> {
         return false;
     }
   }
+  await removePushDevice();
   await storage.deleteEverything();
   location.hash = '';
   return true;

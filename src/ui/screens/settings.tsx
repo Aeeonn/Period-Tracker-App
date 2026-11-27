@@ -1,12 +1,21 @@
 import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import * as storage from '../../data/storage.ts';
-import { CONTRACEPTION, type Contraception, type Theme } from '../../data/types.ts';
+import {
+  CONTRACEPTION,
+  isIud,
+  IUD_YEARS,
+  type Contraception,
+  type Theme,
+} from '../../data/types.ts';
+import { parse } from '../../lib/date.ts';
+import { refreshReminders } from '../../notify/device.ts';
 import { scheduleUpload } from '../../share/sync.ts';
 import { useApp } from '../app.tsx';
 import { Badge, Button, Card, PageHeader, Segmented } from '../components.tsx';
 import {
   AlertIcon,
+  CalendarIcon,
   ChevronDownIcon,
   CycleIcon,
   DownloadIcon,
@@ -18,6 +27,7 @@ import {
   UploadIcon,
 } from '../icons.tsx';
 import { CONTRACEPTION_LABEL } from '../labels.ts';
+import { Notifications } from '../notifications.tsx';
 import { confirmDeleteEverything, download } from '../recovery.tsx';
 
 type Note = { readonly kind: 'ok' | 'error'; readonly text: string } | undefined;
@@ -37,7 +47,7 @@ function Message({ note }: { note: Note }) {
 }
 
 function Lengths() {
-  const { settings, saveSettings } = useApp();
+  const { settings, saveSettings, today } = useApp();
   const [cycle, setCycle] = useState(settings.cycleLength?.toString() ?? '');
   const [period, setPeriod] = useState(settings.periodLength?.toString() ?? '');
   const [note, setNote] = useState<Note>();
@@ -65,6 +75,19 @@ function Lengths() {
 
   async function saveContraception(contraception: Contraception) {
     await saveSettings({ ...settings, contraception });
+    setNote({ kind: 'ok', text: 'Saved.' });
+  }
+
+  async function saveIud(change: { insertedOn?: string; years?: string }) {
+    const { iudInsertedOn, iudYears, ...rest } = settings;
+    const inserted =
+      change.insertedOn === undefined ? iudInsertedOn : (parse(change.insertedOn) ?? undefined);
+    const years = change.years === undefined ? iudYears : Number(change.years) || undefined;
+    await saveSettings({
+      ...rest,
+      ...(inserted ? { iudInsertedOn: inserted } : {}),
+      ...(years ? { iudYears: years } : {}),
+    });
     setNote({ kind: 'ok', text: 'Saved.' });
   }
 
@@ -104,6 +127,45 @@ function Lengths() {
             <ChevronDownIcon />
           </span>
         </label>
+        {isIud(settings.contraception) ? (
+          <>
+            <div class="field">
+              <label class="field__label" for="iud-inserted">
+                IUD inserted on
+              </label>
+              <span class="select">
+                <input
+                  id="iud-inserted"
+                  type="date"
+                  max={today}
+                  value={settings.iudInsertedOn ?? ''}
+                  onChange={(e) => void saveIud({ insertedOn: e.currentTarget.value })}
+                />
+                <CalendarIcon />
+              </span>
+            </div>
+            <label class="field">
+              <span class="field__label">Replace after</span>
+              <span class="select">
+                <select
+                  value={settings.iudYears?.toString() ?? ''}
+                  onChange={(e) => void saveIud({ years: e.currentTarget.value })}
+                >
+                  <option value="">Not sure</option>
+                  {IUD_YEARS.map((years) => (
+                    <option key={years} value={years}>
+                      {years} years
+                    </option>
+                  ))}
+                </select>
+                <ChevronDownIcon />
+              </span>
+              <span class="field__hint">
+                Optional, for a reminder before it is due. Ask your clinic if unsure.
+              </span>
+            </label>
+          </>
+        ) : null}
         <Message note={note} />
         <Button type="submit" variant="secondary" block>
           Save lengths
@@ -151,9 +213,10 @@ function Backup() {
         <Button
           variant="secondary"
           onClick={() =>
-            void storage
-              .exportData(today)
-              .then((data) => download(`flo-${today}.json`, JSON.stringify(data, null, 2)))
+            void storage.exportData(today).then((data) => {
+              download(`flo-${today}.json`, JSON.stringify(data, null, 2));
+              return refreshReminders();
+            })
           }
         >
           <DownloadIcon />
@@ -191,6 +254,7 @@ export function SettingsScreen() {
     <div class="stack">
       <PageHeader eyebrow="Make it yours" title="Settings" />
       {owner ? <Lengths /> : null}
+      <Notifications />
       <Card heading="Appearance" icon={<SunIcon />} tone="accent">
         <Segmented
           legend="Theme"

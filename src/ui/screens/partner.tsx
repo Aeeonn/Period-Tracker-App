@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import * as storage from '../../data/storage.ts';
+import { removePushDevice } from '../../notify/device.ts';
 import { refreshPartner } from '../../share/sync.ts';
 import { EndedArt, WaitingArt } from '../art.tsx';
 import { useApp } from '../app.tsx';
@@ -53,6 +54,7 @@ export function PartnerHome() {
 
   async function disconnect() {
     if (!confirm('Disconnect and remove everything she shared from this phone?')) return;
+    await removePushDevice();
     await storage.deleteEverything();
     location.hash = '';
     await reload();

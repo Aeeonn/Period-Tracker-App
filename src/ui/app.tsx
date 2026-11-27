@@ -4,6 +4,7 @@ import * as storage from '../data/storage.ts';
 import type { DayLog, Settings, ShareState } from '../data/types.ts';
 import { runEngine, type EngineOutput } from '../engine/index.ts';
 import { todayLocal, type LocalDate } from '../lib/date.ts';
+import { announcePeriodStart, refreshReminders } from '../notify/device.ts';
 import { onShareUpdated, scheduleUpload, uploadPending } from '../share/sync.ts';
 import {
   CalendarIcon,
@@ -151,6 +152,14 @@ export function App() {
       }),
     [today, loaded?.days, settings],
   );
+
+  // Keep the reminder schedule current, and tell his phone when her period starts if she chose to.
+  useEffect(() => {
+    const role = loaded?.settings?.role;
+    if (role === undefined) return;
+    void refreshReminders();
+    if (role === 'owner') void announcePeriodStart(output, today);
+  }, [loaded, output, today]);
 
   if (loaded === undefined) {
     return (

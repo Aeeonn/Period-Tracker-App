@@ -115,12 +115,22 @@ export type Role = 'owner' | 'partner';
 export const THEMES = ['system', 'light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
 
+export function isIud(method: Contraception): boolean {
+  return method === 'hormonal_iud' || method === 'copper_iud';
+}
+
+/** How long an IUD lasts varies by brand; she picks what her clinic told her. */
+export const IUD_YEARS = [3, 5, 8, 10, 12] as const;
+
 export interface Settings {
   readonly role: Role;
   readonly cycleLength?: number;
   readonly periodLength?: number;
   readonly contraception: Contraception;
   readonly theme: Theme;
+  /** Only used for the IUD replacement reminder. */
+  readonly iudInsertedOn?: LocalDate;
+  readonly iudYears?: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -164,6 +174,57 @@ export interface PartnerShare {
 }
 
 export type ShareState = OwnerShare | PartnerShare;
+
+export const OWNER_REMINDERS = [
+  'daily_log',
+  'period_soon',
+  'period_check',
+  'period_end',
+  'backup',
+  'iud',
+] as const;
+export const PARTNER_REMINDERS = ['partner_period_soon', 'partner_period_started'] as const;
+export type Reminder = (typeof OWNER_REMINDERS)[number] | (typeof PARTNER_REMINDERS)[number];
+
+/** Notification choices for this phone. Kept apart from Settings so an import never changes them. */
+export interface NotifyPrefs {
+  readonly enabled: boolean;
+  /** Local time of day for every reminder, "HH:MM". */
+  readonly time: string;
+  /** "Period coming up" goes this many days before the expected start. */
+  readonly daysBefore: number;
+  /** Generic wording on the lock screen. */
+  readonly discreet: boolean;
+  readonly off: readonly Reminder[];
+  /** Her choice: tell his phone when she logs the first day of a period. */
+  readonly tellPartner: boolean;
+  /** The day notifications were first turned on; the first backup reminder counts from here. */
+  readonly since?: LocalDate;
+  readonly lastExportOn?: LocalDate;
+  readonly lastAnnouncedStart?: LocalDate;
+  /** The last day a scheduled reminder was shown, so one day never gets two. */
+  readonly lastShownOn?: LocalDate;
+}
+
+export const DEFAULT_NOTIFY: NotifyPrefs = {
+  enabled: false,
+  time: '21:00',
+  daysBefore: 3,
+  discreet: false,
+  off: [],
+  tellPartner: false,
+};
+
+/** This phone's registration with the relay for push. `secret` never leaves the phone except as a bearer token. */
+export interface PushDevice {
+  readonly id: string;
+  readonly secret: string;
+  readonly endpoint: string;
+  /** The relay's public VAPID key the subscription was made with. */
+  readonly serverKey: string;
+  /** What was last sent to the relay, so unchanged schedules aren't re-sent. */
+  readonly sentKey?: string;
+}
 
 /** Shape of an export file. */
 export interface ExportFile {

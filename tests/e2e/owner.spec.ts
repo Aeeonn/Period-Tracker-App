@@ -34,6 +34,8 @@ test('set up, log a period, and keep it after reload', async ({ page }) => {
 
   page.once('dialog', (dialog) => void dialog.accept());
   await page.getByRole('link', { name: 'Settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Reminders' })).toBeVisible();
+  await expect(page.getByText(/Home Screen/).first()).toBeVisible();
   await page.getByRole('button', { name: 'Delete everything' }).click();
   await expect(page.getByRole('button', { name: 'Set up my tracker' })).toBeVisible();
 });

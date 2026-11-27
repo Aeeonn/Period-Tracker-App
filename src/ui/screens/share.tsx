@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useId, useState } from 'preact/hooks';
+import * as storage from '../../data/storage.ts';
 import { SHARE_CATEGORIES, type OwnerShare, type ShareCategory } from '../../data/types.ts';
 import { newShareKeys, pairingCode } from '../../share/crypto.ts';
 import { createCouple, deleteCouple, RELAY_URL } from '../../share/relay-client.ts';
@@ -19,6 +20,7 @@ import {
 } from '../components.tsx';
 import {
   AlertIcon,
+  BellIcon,
   CheckIcon,
   CopyIcon,
   DropIcon,
@@ -179,6 +181,7 @@ export function ShareScreen() {
 
   const owner: OwnerShare = share;
   const code = pairingCode(owner);
+  const periodShared = owner.categories.includes('period') && !owner.paused;
 
   async function update(change: Partial<Pick<OwnerShare, 'categories' | 'paused'>>) {
     await saveShare({ ...owner, ...change, pendingUpload: true });
@@ -332,6 +335,8 @@ export function ShareScreen() {
         </div>
       </Card>
 
+      <TellHim enabled={periodShared} />
+
       <Button
         variant="secondary"
         block
@@ -369,5 +374,43 @@ export function ShareScreen() {
         </Button>
       </section>
     </div>
+  );
+}
+
+/** Her choice to have his phone told when she logs the first day of a period. */
+function TellHim({ enabled }: { enabled: boolean }) {
+  const { output } = useApp();
+  const [on, setOn] = useState<boolean>();
+
+  useEffect(() => {
+    void storage.getNotify().then((prefs) => setOn(prefs.tellPartner));
+  }, []);
+
+  async function change(next: boolean) {
+    // Only periods that start from now on are announced, not one already under way.
+    const prefs = await storage.updateNotify({
+      tellPartner: next,
+      ...(next && output.cycleStart ? { lastAnnouncedStart: output.cycleStart } : {}),
+    });
+    setOn(prefs.tellPartner);
+  }
+
+  if (on === undefined) return null;
+  return (
+    <section class="ui-card">
+      <Toggle
+        label="Tell him when my period starts"
+        detail={
+          enabled
+            ? 'When you log the first day, his phone gets a notification saying only that it started. He needs reminders turned on.'
+            : 'Share your period with him to use this.'
+        }
+        icon={<BellIcon />}
+        tone="period"
+        checked={on && enabled}
+        disabled={!enabled}
+        onChange={(next) => void change(next)}
+      />
+    </section>
   );
 }

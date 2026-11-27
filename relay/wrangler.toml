@@ -1,4 +1,5 @@
-# Flo Lite relay Worker. It stores one encrypted snapshot per couple.
+# Flo Lite relay Worker. It stores one encrypted snapshot per couple and sends
+# reminder pushes. Push needs the VAPID_PRIVATE_JWK secret (wrangler secret put).
 # Deploy (owner only, after creating the D1 database and pasting its id below):
 #   npx wrangler d1 create flo-lite
 #   npx wrangler d1 execute flo-lite --remote --file relay/schema.sql --config relay/wrangler.toml
@@ -31,5 +32,9 @@ binding = "DB"
 database_name = "flo-lite"
 database_id = "bdfa53fd-bafd-4177-a245-19828c0c2e43"
 
+[triggers]
+crons = ["*/5 * * * *"]
+
 [vars]
 ALLOWED_ORIGINS = "https://flo-lite.pages.dev"
+VAPID_SUBJECT = "https://flo-lite.pages.dev"

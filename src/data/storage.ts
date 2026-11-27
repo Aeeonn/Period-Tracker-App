@@ -3,10 +3,12 @@ import { parse } from '../lib/date.ts';
 import {
   COMFORT,
   CONTRACEPTION,
+  DEFAULT_NOTIFY,
   DEFAULT_SETTINGS,
   DESIRE,
   DISCHARGE,
   FLOW,
+  IUD_YEARS,
   LEVEL,
   MOODS,
   PAIN,
@@ -16,6 +18,8 @@ import {
   THEMES,
   type DayLog,
   type ExportFile,
+  type NotifyPrefs,
+  type PushDevice,
   type Settings,
   type ShareState,
 } from './types.ts';
@@ -98,7 +102,31 @@ export async function saveShare(share: ShareState | undefined): Promise<void> {
   else await database.put('meta', share, 'share');
 }
 
+export async function getNotify(): Promise<NotifyPrefs> {
+  const stored = (await (await db()).get('meta', 'notify')) as Partial<NotifyPrefs> | undefined;
+  return { ...DEFAULT_NOTIFY, ...stored };
+}
+
+/** Change some notification choices, keeping the rest. */
+export async function updateNotify(change: Partial<NotifyPrefs>): Promise<NotifyPrefs> {
+  const next = { ...(await getNotify()), ...change };
+  await (await db()).put('meta', next, 'notify');
+  return next;
+}
+
+export async function getPushDevice(): Promise<PushDevice | undefined> {
+  return (await (await db()).get('meta', 'push')) as PushDevice | undefined;
+}
+
+export async function savePushDevice(device: PushDevice | undefined): Promise<void> {
+  const database = await db();
+  if (device === undefined) await database.delete('meta', 'push');
+  else await database.put('meta', device, 'push');
+}
+
 export async function exportData(today: LocalDate): Promise<ExportFile> {
+  // Exporting counts as a backup, which resets the backup reminder.
+  await updateNotify({ lastExportOn: today });
   return {
     app: 'flo-lite',
     version: 1,
@@ -190,10 +218,15 @@ function readDay(raw: unknown): DayLog | undefined {
 
 function readSettings(raw: unknown): Settings | undefined {
   if (!isRecord(raw) || !oneOf(CONTRACEPTION, raw.contraception)) return undefined;
-  const { cycleLength, periodLength, theme } = raw;
+  const { cycleLength, periodLength, theme, iudYears } = raw;
   if (cycleLength !== undefined && !wholeNumber(cycleLength, 15, 90)) return undefined;
   if (periodLength !== undefined && !wholeNumber(periodLength, 1, 14)) return undefined;
   if (theme !== undefined && !oneOf(THEMES, theme)) return undefined;
+  if (iudYears !== undefined && !(IUD_YEARS as readonly unknown[]).includes(iudYears))
+    return undefined;
+  const iudInsertedOn =
+    raw.iudInsertedOn === undefined ? undefined : parse(raw.iudInsertedOn as string);
+  if (iudInsertedOn === null) return undefined;
   return {
     // An export always comes from her phone.
     role: 'owner',
@@ -201,6 +234,8 @@ function readSettings(raw: unknown): Settings | undefined {
     theme: theme ?? 'system',
     ...(cycleLength !== undefined ? { cycleLength } : {}),
     ...(periodLength !== undefined ? { periodLength } : {}),
+    ...(iudInsertedOn !== undefined ? { iudInsertedOn } : {}),
+    ...(iudYears !== undefined ? { iudYears: iudYears as number } : {}),
   };
 }
 

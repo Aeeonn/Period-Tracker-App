@@ -10,7 +10,6 @@ export default tseslint.config(
       'playwright-report/**',
       'test-results/**',
       'dist-e2e/**',
-      'public/sw.js',
       '.wrangler/**',
     ],
   },

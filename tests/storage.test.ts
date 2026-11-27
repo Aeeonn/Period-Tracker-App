@@ -38,6 +38,41 @@ describe('storage', () => {
     );
   });
 
+  it('keeps IUD dates through an export, and rejects invalid ones', async () => {
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      contraception: 'hormonal_iud' as const,
+      iudInsertedOn: date('2024-02-29'),
+      iudYears: 8,
+    };
+    await storage.saveSettings(settings);
+    const file = JSON.parse(JSON.stringify(await storage.exportData(date('2026-01-03'))));
+    expect((storage.readExport(file) as { settings: unknown }).settings).toMatchObject({
+      iudInsertedOn: '2024-02-29',
+      iudYears: 8,
+    });
+    for (const bad of [{ iudYears: 4 }, { iudInsertedOn: '2024-02-30' }]) {
+      expect(typeof storage.readExport({ ...file, settings: { ...file.settings, ...bad } })).toBe(
+        'string',
+      );
+    }
+  });
+
+  it('keeps reminder choices apart from imports, and counts an export as a backup', async () => {
+    expect((await storage.getNotify()).enabled).toBe(false);
+    await storage.updateNotify({ enabled: true, discreet: true });
+    const file = await storage.exportData(date('2026-01-03'));
+    expect(await storage.getNotify()).toMatchObject({
+      enabled: true,
+      discreet: true,
+      lastExportOn: '2026-01-03',
+    });
+    await storage.importData(file);
+    expect((await storage.getNotify()).discreet).toBe(true);
+    await storage.deleteEverything();
+    expect((await storage.getNotify()).enabled).toBe(false);
+  });
+
   it('rejects files that would break the app and keeps only known fields', () => {
     const file = {
       app: 'flo-lite',

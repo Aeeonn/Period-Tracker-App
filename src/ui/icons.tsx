@@ -58,6 +58,13 @@ export const SlidersIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const BellIcon = (p: IconProps) => (
+  <Svg class={p.class}>
+    <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z" />
+    <path d="M10 21a2.2 2.2 0 0 0 4 0" />
+  </Svg>
+);
+
 export const DropIcon = (p: IconProps) => (
   <Svg class={p.class}>
     <path d="M12 3.5c3.2 3.8 6 7.2 6 10.4a6 6 0 0 1-12 0c0-3.2 2.8-6.6 6-10.4z" />
