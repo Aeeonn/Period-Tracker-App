@@ -77,6 +77,13 @@ export const StarIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const FlameIcon = (p: IconProps) => (
+  <Svg class={p.class}>
+    <path d="M12 21a6.5 6.5 0 0 1-6.5-6.5c0-2.6 1.4-4.4 2.9-6 .2 1.6.9 2.7 2.1 3.3-.2-3 1.1-6 3.5-8.8.5 2.8 2 4.6 3.4 6.4 1.3 1.6 2.1 3.2 2.1 5.1A6.5 6.5 0 0 1 12 21z" />
+    <path d="M12 21a2.7 2.7 0 0 1-2.7-2.7c0-1.4 1-2.4 2.1-3.4.2 1 .8 1.6 1.6 1.9.5-.5.8-1.2.9-2 .7.9 1 1.9 1 2.9A2.9 2.9 0 0 1 12 21z" />
+  </Svg>
+);
+
 export const PulseIcon = (p: IconProps) => (
   <Svg class={p.class}>
     <path d="M3 12.5h3.5l2.2-5 4.3 10 2.3-5H21" />

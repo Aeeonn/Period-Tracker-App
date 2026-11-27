@@ -821,7 +821,7 @@ strong {
   background: linear-gradient(160deg, var(--tone-soft) 0%, var(--surface-solid) 82%);
 }
 
-.card--tone .badge {
+.card--tone > .ui-card__head > .badge {
   background: var(--surface-solid);
   color: var(--tone);
 }
@@ -1493,7 +1493,8 @@ textarea:focus-visible {
 
 .status-line[data-state='sent']::before,
 .status-line[data-state='pending']::before,
-.status-line[data-state='offline']::before {
+.status-line[data-state='offline']::before,
+.status-line[data-state='error']::before {
   content: '';
   flex: none;
   width: 0.5rem;
@@ -1511,8 +1512,36 @@ textarea:focus-visible {
   background: var(--peach);
 }
 
+.status-line[data-state='error'] {
+  color: var(--period-strong);
+  font-weight: 650;
+}
+
+.status-line[data-state='error']::before {
+  background: var(--period);
+}
+
 .status-line:empty {
   display: none;
+}
+
+.callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  background: var(--sun-soft);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.callout .icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--sun);
 }
 
 .code {
@@ -2783,6 +2812,20 @@ a.calendar__day:active {
   overflow: visible;
 }
 
+.share-intro .hero__art {
+  display: block;
+  margin-inline: auto;
+}
+
+.share-intro .list {
+  margin-bottom: 0.5rem;
+}
+
+.pill .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
 .code-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2798,6 +2841,8 @@ a.calendar__day:active {
 }
 
 .phone {
+  --card-pad: 0.875rem;
+
   position: relative;
   width: 100%;
   max-width: 24rem;
@@ -2806,6 +2851,11 @@ a.calendar__day:active {
   border-radius: 2.5rem;
   background: var(--phone-frame);
   box-shadow: var(--shadow-raised);
+}
+
+/* The preview opens on tap, so it should not wait for the screen entrance delay. */
+.screen__body > .stack > .phone {
+  animation: rise-in 460ms var(--ease-out) backwards;
 }
 
 .phone__screen {
@@ -2968,12 +3018,25 @@ a.calendar__day:active {
   height: 2.75rem;
 }
 
+.code-input {
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+
 .recovery {
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: 100vh;
   min-height: 100svh;
+}
+
+.recovery__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
 }
 
 .recovery__art {
@@ -2991,8 +3054,18 @@ a.calendar__day:active {
 }
 
 .about .logo {
+  flex: none;
   width: 2.25rem;
   height: 2.25rem;
+}
+
+.about__text {
+  min-width: 0;
+}
+
+.about__name {
+  font-family: var(--font-display);
+  font-weight: 800;
 }
 
 /* Motion */

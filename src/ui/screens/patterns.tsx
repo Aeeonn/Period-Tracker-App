@@ -12,12 +12,12 @@ import { useApp } from '../app.tsx';
 import { Badge, EmptyState, PageHeader, type Tone } from '../components.tsx';
 import {
   CheckIcon,
+  FlameIcon,
   HeartIcon,
   MoonIcon,
   PatternsIcon,
   PulseIcon,
   SmileIcon,
-  SparkleIcon,
   StarIcon,
 } from '../icons.tsx';
 import { MOOD_EMOJI, MOOD_LABEL } from '../labels.ts';
@@ -218,7 +218,7 @@ export function Patterns() {
           </section>
           <Metric
             title="Desire medium or high"
-            icon={<SparkleIcon />}
+            icon={<FlameIcon />}
             tone="fertile"
             rows={shareRows(patterns, (p) => p.desire)}
           />
