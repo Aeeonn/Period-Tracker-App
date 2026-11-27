@@ -71,6 +71,20 @@ export const MOOD_LABEL: Record<Mood, string> = {
   mood_swings: 'Mood swings',
 };
 
+/** Decorative only: always shown next to the mood's name. */
+export const MOOD_EMOJI: Record<Mood, string> = {
+  happy: '😊',
+  calm: '😌',
+  loving: '🥰',
+  playful: '😜',
+  confident: '😎',
+  irritable: '😤',
+  anxious: '😟',
+  sad: '😢',
+  low: '😔',
+  mood_swings: '🎢',
+};
+
 export const LEVEL_LABEL: Record<Level, string> = { low: 'Low', medium: 'Medium', high: 'High' };
 
 export const DESIRE_LABEL: Record<Desire, string> = {

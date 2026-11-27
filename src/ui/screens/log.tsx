@@ -15,7 +15,6 @@ import {
   type Desire,
   type Flow,
   type Level,
-  type Mood,
   type Pain,
   type Satisfaction,
   type SleepQuality,
@@ -50,6 +49,7 @@ import {
   DISCHARGE_LABEL,
   FLOW_LABEL,
   LEVEL_LABEL,
+  MOOD_EMOJI,
   MOOD_LABEL,
   PAIN_LABEL,
   SATISFACTION_LABEL,
@@ -64,19 +64,6 @@ type SectionId = 'sex' | 'period' | 'body' | 'mood' | 'habits' | 'notes';
 
 const SECTION_COUNT = 6;
 const NOTES_DELAY_MS = 800;
-
-const MOOD_EMOJI: Record<Mood, string> = {
-  happy: '😊',
-  calm: '😌',
-  loving: '🥰',
-  playful: '😜',
-  confident: '😎',
-  irritable: '😤',
-  anxious: '😟',
-  sad: '😢',
-  low: '😔',
-  mood_swings: '🎢',
-};
 
 const SATISFACTION_EMOJI: Record<Satisfaction, string> = { low: '😕', okay: '🙂', high: '🤩' };
 
