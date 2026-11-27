@@ -2,7 +2,9 @@ import { Component, type ComponentChildren } from 'preact';
 import * as storage from '../data/storage.ts';
 import { todayLocal } from '../lib/date.ts';
 import { deleteCouple } from '../share/relay-client.ts';
+import { OopsArt } from './art.tsx';
 import { Button, Card } from './components.tsx';
+import { DownloadIcon, LockIcon, RefreshIcon, TrashIcon } from './icons.tsx';
 
 export function download(name: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
@@ -46,34 +48,46 @@ export class Recovery extends Component<{ children: ComponentChildren }, { faile
     if (!this.state.failed) return this.props.children;
     const today = todayLocal();
     return (
-      <main class="screen stack">
-        <h1>Something went wrong</h1>
-        <Card heading="Your data is still on this phone">
-          <p>Try reloading. If this keeps happening, export your data, then start fresh.</p>
-          <div class="row">
-            <Button onClick={() => location.reload()}>Reload</Button>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                void storage
-                  .exportData(today)
-                  .then((data) => download(`flo-${today}.json`, JSON.stringify(data, null, 2)))
-              }
-            >
-              Export
-            </Button>
-          </div>
+      <main class="screen screen--bare recovery">
+        <div class="stack">
+          <header class="recovery__head">
+            <OopsArt class="recovery__art" />
+            <h1>Something went wrong</h1>
+            <p class="muted">Flo ran into a problem it could not handle.</p>
+          </header>
+          <Card heading="Your data is still on this phone" icon={<LockIcon />} tone="mint">
+            <p>Try reloading. If this keeps happening, export your data, then start fresh.</p>
+            <div class="row">
+              <Button onClick={() => location.reload()}>
+                <RefreshIcon />
+                Reload
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  void storage
+                    .exportData(today)
+                    .then((data) => download(`flo-${today}.json`, JSON.stringify(data, null, 2)))
+                }
+              >
+                <DownloadIcon />
+                Export
+              </Button>
+            </div>
+          </Card>
           <Button
             variant="danger"
+            block
             onClick={() =>
               void confirmDeleteEverything().then((deleted) => {
                 if (deleted) location.reload();
               })
             }
           >
+            <TrashIcon />
             Delete everything on this phone
           </Button>
-        </Card>
+        </div>
       </main>
     );
   }

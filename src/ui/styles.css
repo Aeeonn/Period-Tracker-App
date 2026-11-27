@@ -370,6 +370,10 @@ strong {
   margin-top: 0.1rem;
 }
 
+.nowrap {
+  white-space: nowrap;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -620,6 +624,7 @@ strong {
   line-height: 1.2;
   text-align: center;
   text-decoration: none;
+  text-wrap: balance;
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
@@ -1119,7 +1124,8 @@ textarea:focus-visible {
   display: block;
 }
 
-.select select {
+.select select,
+.select input {
   padding-right: 2.75rem;
 }
 
